@@ -248,7 +248,7 @@ export default function AdminProductsPage() {
               <Label className="font-cairo">التصنيف</Label>
               <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
                 <SelectTrigger className="font-cairo mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}</SelectContent>
+                <SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
