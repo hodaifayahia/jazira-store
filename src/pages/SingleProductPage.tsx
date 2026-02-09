@@ -180,7 +180,10 @@ export default function SingleProductPage() {
     );
   }
 
-  const images = product.images || [];
+  const productImages = product.images || [];
+  // Merge variation images into gallery (deduplicated)
+  const variationImages = (variations || []).map(v => v.image_url).filter((url): url is string => !!url);
+  const images = [...productImages, ...variationImages.filter(url => !productImages.includes(url))];
   const outOfStock = (product.stock ?? 0) <= 0;
   const avgRating = reviews && reviews.length > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
@@ -420,14 +423,26 @@ export default function SingleProductPage() {
                         return (
                           <button
                             key={v.id}
-                            onClick={() => setSelectedVariations(prev => ({ ...prev, [type]: isSelected ? '' : v.variation_value }))}
-                            className={`px-4 py-2 rounded-xl border text-sm font-cairo font-medium transition-all ${
+                            onClick={() => {
+                              setSelectedVariations(prev => ({ ...prev, [type]: isSelected ? '' : v.variation_value }));
+                              // Switch gallery to variation image if available
+                              if (!isSelected && v.image_url) {
+                                const idx = images.indexOf(v.image_url);
+                                if (idx >= 0) {
+                                  setSelectedImage(idx);
+                                }
+                              }
+                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-cairo font-medium transition-all ${
                               isSelected
                                 ? 'border-primary bg-primary/10 text-primary'
                                 : 'border-border hover:border-primary/30 text-foreground'
                             } ${(v.stock ?? 0) <= 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
                             disabled={(v.stock ?? 0) <= 0}
                           >
+                            {v.image_url && (
+                              <img src={v.image_url} alt={v.variation_value} className="w-6 h-6 rounded-md object-cover" />
+                            )}
                             {v.variation_value}
                             {Number(v.price_adjustment) > 0 && (
                               <span className="font-roboto text-xs text-muted-foreground mr-1">(+{formatPrice(Number(v.price_adjustment))})</span>
