@@ -1,9 +1,8 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ArrowRight, Zap } from 'lucide-react';
-import { usePageTitle } from '@/hooks/usePageTitle';
+import { ShoppingCart, Minus, Plus, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
@@ -14,11 +13,10 @@ import { Link } from 'react-router-dom';
 
 export default function SingleProductPage() {
   const { id } = useParams<{ id: string }>();
-  const { addItem, setCheckoutIntent } = useCart();
+  const { addItem } = useCart();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [qty, setQty] = useState(1);
-  const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -29,8 +27,6 @@ export default function SingleProductPage() {
     },
     enabled: !!id,
   });
-
-  usePageTitle(product ? `${product.name} - DZ Store` : 'DZ Store');
 
   if (isLoading) {
     return (
@@ -62,39 +58,23 @@ export default function SingleProductPage() {
 
   const images = product.images || [];
   const outOfStock = (product.stock ?? 0) <= 0;
-  const mainIdx = product.main_image_index ?? 0;
-  const categories = Array.isArray(product.category) ? product.category : [product.category];
 
   const handleAdd = () => {
     for (let i = 0; i < qty; i++) {
-      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[mainIdx] || images[0] || '', stock: product.stock ?? 0, shippingPrice: Number(product.shipping_price ?? 0) });
+      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
     }
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
 
-  const handleDirectOrder = () => {
-    setCheckoutIntent({
-      type: 'direct',
-      items: [{
-        id: product.id,
-        name: product.name,
-        price: Number(product.price),
-        image: images[mainIdx] || images[0] || '',
-        stock: product.stock ?? 0,
-        quantity: qty,
-        shippingPrice: Number(product.shipping_price ?? 0),
-      }],
-    });
-    navigate('/checkout');
-  };
-
   return (
     <div className="container py-8">
+      {/* Back link */}
       <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowRight className="w-4 h-4" />
         العودة إلى المنتجات
       </Link>
 
+      {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 font-cairo">
         <Link to="/" className="hover:text-foreground">الرئيسية</Link>
         <ChevronRight className="w-3 h-3 rotate-180" />
@@ -104,10 +84,11 @@ export default function SingleProductPage() {
       </nav>
 
       <div className="grid md:grid-cols-2 gap-8">
+        {/* Images */}
         <div>
           <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3">
-            {images[(selectedImage ?? mainIdx)] ? (
-              <img src={images[(selectedImage ?? mainIdx)]} alt={product.name} className="w-full h-full object-cover" />
+            {images[selectedImage] ? (
+              <img src={images[selectedImage]} alt={product.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 <ShoppingCart className="w-16 h-16" />
@@ -117,20 +98,17 @@ export default function SingleProductPage() {
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
               {images.map((img, i) => (
-                <button key={i} onClick={() => setSelectedImage(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 shrink-0 ${i === (selectedImage ?? mainIdx) ? 'border-primary' : 'border-transparent'}`}>
-                  <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                <button key={i} onClick={() => setSelectedImage(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 shrink-0 ${i === selectedImage ? 'border-primary' : 'border-transparent'}`}>
+                  <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
           )}
         </div>
 
+        {/* Info */}
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-1 mb-1">
-            {categories.map(cat => (
-              <Badge key={cat} className="font-cairo bg-secondary text-secondary-foreground">{cat}</Badge>
-            ))}
-          </div>
+          <Badge className="font-cairo bg-secondary text-secondary-foreground">{product.category}</Badge>
           <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
           <p className="font-roboto font-bold text-2xl text-primary">{formatPrice(Number(product.price))}</p>
           
@@ -145,21 +123,15 @@ export default function SingleProductPage() {
           )}
 
           {!outOfStock && (
-            <div className="space-y-3 pt-4">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border rounded-lg">
-                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))}><Minus className="w-4 h-4" /></Button>
-                  <span className="w-10 text-center font-roboto font-bold">{qty}</span>
-                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))}><Plus className="w-4 h-4" /></Button>
-                </div>
-                <Button onClick={handleAdd} className="font-cairo font-semibold gap-2 flex-1" variant="outline">
-                  <ShoppingCart className="w-4 h-4" />
-                  إضافة إلى السلة
-                </Button>
+            <div className="flex items-center gap-4 pt-4">
+              <div className="flex items-center border rounded-lg">
+                <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))}><Minus className="w-4 h-4" /></Button>
+                <span className="w-10 text-center font-roboto font-bold">{qty}</span>
+                <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))}><Plus className="w-4 h-4" /></Button>
               </div>
-              <Button onClick={handleDirectOrder} className="font-cairo font-semibold gap-2 w-full">
-                <Zap className="w-4 h-4" />
-                طلب مباشرة
+              <Button onClick={handleAdd} className="font-cairo font-semibold gap-2 flex-1">
+                <ShoppingCart className="w-4 h-4" />
+                إضافة إلى السلة
               </Button>
             </div>
           )}

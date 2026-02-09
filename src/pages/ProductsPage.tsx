@@ -3,13 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Search, SlidersHorizontal } from 'lucide-react';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
-import { useCategories } from '@/hooks/useCategories';
 
+const CATEGORIES = ['الكل', 'أدوات منزلية', 'منتجات زينة', 'إكسسوارات'];
 const SORT_OPTIONS = [
   { value: 'newest', label: 'الأحدث' },
   { value: 'cheapest', label: 'الأرخص' },
@@ -17,21 +16,17 @@ const SORT_OPTIONS = [
 ];
 
 export default function ProductsPage() {
-  usePageTitle('تصفح منتجاتنا - DZ Store');
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'الكل';
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState('newest');
 
-  const { data: categoriesSettings } = useCategories();
-  const categoryNames = ['الكل', ...(categoriesSettings?.map(c => c.name) || [])];
-
   const { data: products, isLoading } = useQuery({
     queryKey: ['products', category, sort],
     queryFn: async () => {
       let query = supabase.from('products').select('*').eq('is_active', true);
-      if (category !== 'الكل') query = query.contains('category', [category]);
+      if (category !== 'الكل') query = query.eq('category', category);
       if (sort === 'newest') query = query.order('created_at', { ascending: false });
       else if (sort === 'cheapest') query = query.order('price', { ascending: true });
       else if (sort === 'expensive') query = query.order('price', { ascending: false });
@@ -74,7 +69,7 @@ export default function ProductsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {categoryNames.map(c => (
+            {CATEGORIES.map(c => (
               <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>
             ))}
           </SelectContent>
@@ -95,22 +90,17 @@ export default function ProductsPage() {
         <ProductGridSkeleton />
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(p => {
-            const mainIdx = p.main_image_index ?? 0;
-            const cats = Array.isArray(p.category) ? p.category : [p.category];
-            return (
-              <ProductCard
-                key={p.id}
-                id={p.id}
-                name={p.name}
-                price={Number(p.price)}
-                image={p.images?.[mainIdx] || p.images?.[0] || ''}
-                category={cats.join('، ')}
-                stock={p.stock ?? 0}
-                shippingPrice={Number(p.shipping_price ?? 0)}
-              />
-            );
-          })}
+          {filtered.map(p => (
+            <ProductCard
+              key={p.id}
+              id={p.id}
+              name={p.name}
+              price={Number(p.price)}
+              image={p.images?.[0] || ''}
+              category={p.category}
+              stock={p.stock ?? 0}
+            />
+          ))}
         </div>
       ) : (
         <div className="text-center py-16">

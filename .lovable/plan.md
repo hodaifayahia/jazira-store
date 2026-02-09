@@ -1,36 +1,39 @@
 
 
-## Fix: Dashboard Display Issues
+## Checkout Page Enhancements
 
-### Problem Identified
+The checkout page at `/checkout` already exists with most core functionality. This plan covers the gaps between the current implementation and your requirements.
 
-There are two issues:
+### Changes (all in `src/pages/CheckoutPage.tsx`)
 
-1. **Home page (/)**: Shows "no products" message because the products table is empty. This is correct behavior -- you need to add products first via the admin panel.
+**1. Inline Form Validation**
+- Add error state variables for each field (nameError, phoneError, wilayaError, paymentError)
+- Show red error text below each field when validation fails
+- Validate name minimum 3 characters with message "الاسم يجب أن يكون 3 أحرف على الأقل"
+- Validate phone with regex, show "رقم الهاتف غير صحيح" inline
+- Clear errors on field change
 
-2. **Admin Layout race condition**: The `AdminLayout` component has a bug where both `onAuthStateChange` and `getSession` run simultaneously and can interfere with each other, potentially causing a blank screen or redirect loop when navigating to `/admin`.
+**2. Remove Coupon Button**
+- Add an "x" button next to the discount line in the order summary
+- Clicking it resets discount to 0, couponApplied to false, and clears couponCode
 
-### Fix: AdminLayout Authentication (src/components/AdminLayout.tsx)
+**3. File Upload Improvements**
+- Validate file size (max 5MB) on selection, show error toast if exceeded
+- Restrict accepted file types to `.jpg,.png,.pdf` for baridimob and `.jpg,.png` for flexy
+- Show a file preview after upload: image thumbnail for images, filename for PDFs
 
-The current code has both `onAuthStateChange` and `getSession` running at the same time, both setting `loading`, `user`, and `isAdmin`. This creates a race condition. The fix separates initial load from ongoing auth changes:
+**4. Flexy Step-by-Step Instructions**
+- Add numbered Arabic instructions below the flexy details explaining how to send a Flexy recharge
 
-| Issue | Current | Fixed |
-|-------|---------|-------|
-| Initial load | Both `onAuthStateChange` and `getSession` control `loading` state | Only `getSession` controls initial `loading` state |
-| Auth listener | Sets `loading` to false, can cause premature render | Does NOT touch `loading`, only updates user/admin state |
-| Cleanup | No `isMounted` guard | Uses `isMounted` flag to prevent state updates after unmount |
+**5. Minor UI Polish**
+- Change shipping display from "—" to "اختر الولاية" when no wilaya selected
+- Update copy toast to "تم النسخ ✅"
+- Add a Loader2 spinner icon to the submit button during submission
 
-### What Changes
+### Technical Details
 
-**File: `src/components/AdminLayout.tsx`**
-- Restructure the `useEffect` to separate initial auth check from ongoing listener
-- The `onAuthStateChange` listener updates user/admin state but does NOT set `loading = false`
-- The `getSession` call handles initial load and sets `loading = false` only after role check completes
-- Add `isMounted` cleanup flag to prevent React state updates on unmounted component
-
-### After the Fix
-
-- Navigate to `/admin/login`, log in with admin credentials, and the dashboard will display correctly
-- The home page will still show "no products" until you add products via `/admin/products`
-- All admin pages (dashboard, products, orders, coupons, settings, categories, wilayas) will load without blank screens
-
+- Only `src/pages/CheckoutPage.tsx` is modified
+- No changes to CartContext, App.tsx, or any other pages
+- Import `Loader2` and `X` from lucide-react for spinner and remove button icons
+- All validation is client-side with inline Arabic error messages
+- File preview uses `URL.createObjectURL` for image files
