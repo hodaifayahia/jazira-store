@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useStoreLogo } from '@/hooks/useStoreLogo';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'لوحة القيادة', icon: LayoutDashboard },
