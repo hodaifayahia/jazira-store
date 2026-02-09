@@ -10,8 +10,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon, Package } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
+import { TableSkeleton } from '@/components/LoadingSkeleton';
 
 const CATEGORIES = ['أدوات منزلية', 'منتجات زينة', 'إكسسوارات'];
 const PAGE_SIZE = 10;
