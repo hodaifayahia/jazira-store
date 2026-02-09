@@ -177,7 +177,6 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [name, setName] = useState(product?.name || '');
   const [description, setDescription] = useState(product?.description || '');
   const [price, setPrice] = useState(product ? String(product.price) : '');
-  const [shippingPrice, setShippingPrice] = useState(product ? String(product.shipping_price ?? 0) : '0');
   const [category, setCategory] = useState(product ? (Array.isArray(product.category) ? product.category[0] : product.category) : categoryNames[0] || '');
   const [stock, setStock] = useState(product ? String(product.stock) : '0');
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
