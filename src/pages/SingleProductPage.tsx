@@ -117,7 +117,7 @@ export default function SingleProductPage() {
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
               {images.map((img, i) => (
-                <button key={i} onClick={() => setSelectedImage(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 shrink-0 ${i === selectedImage ? 'border-primary' : 'border-transparent'}`}>
+                <button key={i} onClick={() => setSelectedImage(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 shrink-0 ${i === (selectedImage ?? mainIdx) ? 'border-primary' : 'border-transparent'}`}>
                   <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                 </button>
               ))}
