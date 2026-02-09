@@ -16,11 +16,12 @@ export default function OrderConfirmationPage() {
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', orderNumber],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .select('*, wilayas(name)')
         .eq('order_number', orderNumber!)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!orderNumber,
@@ -29,10 +30,11 @@ export default function OrderConfirmationPage() {
   const { data: orderItems } = useQuery({
     queryKey: ['order-items', order?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('order_items')
         .select('*, products(name)')
         .eq('order_id', order!.id);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!order?.id,

@@ -17,6 +17,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function ProductsPage() {
+  usePageTitle('تصفح منتجاتنا - DZ Store');
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'الكل';
   const [search, setSearch] = useState('');

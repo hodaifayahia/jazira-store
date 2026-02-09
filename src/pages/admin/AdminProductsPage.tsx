@@ -206,7 +206,7 @@ export default function AdminProductsPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Pagination */}
       {totalPages > 1 && (

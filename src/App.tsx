@@ -23,7 +23,18 @@ import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+    },
+    mutations: {
+      onError: () => {
+        // Global fallback — individual handlers can override
+      },
+    },
+  },
+});
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (

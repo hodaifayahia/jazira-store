@@ -143,7 +143,7 @@ export default function AdminWilayasPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={v => { if (!v) { setDialogOpen(false); setEditing(null); } else setDialogOpen(true); }}>

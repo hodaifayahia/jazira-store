@@ -11,6 +11,7 @@ const STATUS_STEPS = ['جديد', 'قيد المعالجة', 'تم الشحن', 
 const STATUS_ICONS = [Clock, Package, Truck, CheckCircle];
 
 export default function TrackOrderPage() {
+  usePageTitle('تتبع الطلب - DZ Store');
   const [orderNumber, setOrderNumber] = useState('');
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);

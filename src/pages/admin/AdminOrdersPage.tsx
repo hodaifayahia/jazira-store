@@ -148,7 +148,7 @@ export default function AdminOrdersPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Pagination */}
       {totalPages > 1 && (

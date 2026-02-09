@@ -69,7 +69,7 @@ export default function AdminSettingsPage() {
     }
   };
 
-  if (isLoading) return null;
+  if (isLoading) return <SettingsSkeleton />;
 
   const logoUrl = mergedSettings.store_logo_url;
 

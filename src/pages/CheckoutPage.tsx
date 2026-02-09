@@ -51,7 +51,8 @@ export default function CheckoutPage() {
   const { data: wilayas } = useQuery({
     queryKey: ['wilayas'],
     queryFn: async () => {
-      const { data } = await supabase.from('wilayas').select('*').eq('is_active', true).order('name');
+      const { data, error } = await supabase.from('wilayas').select('*').eq('is_active', true).order('name');
+      if (error) throw error;
       return data || [];
     },
   });
@@ -59,7 +60,8 @@ export default function CheckoutPage() {
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
-      const { data } = await supabase.from('settings').select('*');
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach(s => { map[s.key] = s.value || ''; });
       return map;

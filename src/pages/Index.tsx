@@ -15,6 +15,7 @@ const categories = [
 ];
 
 export default function IndexPage() {
+  usePageTitle('DZ Store - متجرك الإلكتروني في الجزائر');
   const { data: products, isLoading } = useQuery({
     queryKey: ['featured-products'],
     queryFn: async () => {
