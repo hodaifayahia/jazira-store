@@ -29,6 +29,8 @@ export default function SingleProductPage() {
     enabled: !!id,
   });
 
+  usePageTitle(product ? `${product.name} - DZ Store` : 'DZ Store');
+
   if (isLoading) {
     return (
       <div className="container py-8">
@@ -56,8 +58,6 @@ export default function SingleProductPage() {
       </div>
     );
   }
-
-  usePageTitle(product ? `${product.name} - DZ Store` : 'DZ Store');
 
   const images = product.images || [];
   const outOfStock = (product.stock ?? 0) <= 0;
