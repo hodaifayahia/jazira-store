@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, Copy } from 'lucide-react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
