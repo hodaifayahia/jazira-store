@@ -108,7 +108,7 @@ export default function IndexPage() {
             </p>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex gap-2 max-w-md animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            <form onSubmit={handleSearch} className="flex gap-2 max-w-md mx-auto animate-fade-in" style={{ animationDelay: '0.3s' }}>
               <div className="relative flex-1 group">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
                 <Input
