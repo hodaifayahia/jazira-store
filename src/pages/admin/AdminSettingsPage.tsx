@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Save } from 'lucide-react';
+import { Save, Upload, X, ImageIcon } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-settings'],
@@ -23,16 +24,22 @@ export default function AdminSettingsPage() {
   });
 
   const [form, setForm] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
   const mergedSettings = { ...settings, ...form };
 
   const updateSetting = useMutation({
     mutationFn: async (entries: { key: string; value: string }[]) => {
       for (const entry of entries) {
-        await supabase.from('settings').update({ value: entry.value }).eq('key', entry.key);
+        // upsert: try update, if no rows affected then insert
+        const { data } = await supabase.from('settings').update({ value: entry.value }).eq('key', entry.key).select();
+        if (!data || data.length === 0) {
+          await supabase.from('settings').insert({ key: entry.key, value: entry.value });
+        }
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-settings'] });
+      qc.invalidateQueries({ queryKey: ['store-logo'] });
       toast({ title: 'تم حفظ الإعدادات' });
       setForm({});
     },
@@ -45,10 +52,91 @@ export default function AdminSettingsPage() {
 
   const setField = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'حجم الملف كبير جداً (الحد الأقصى 2MB)', variant: 'destructive' });
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'يرجى اختيار ملف صورة', variant: 'destructive' });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `logo-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from('store').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('store').getPublicUrl(path);
+      const logoUrl = urlData.publicUrl;
+
+      // Save to settings
+      const { data } = await supabase.from('settings').update({ value: logoUrl }).eq('key', 'store_logo').select();
+      if (!data || data.length === 0) {
+        await supabase.from('settings').insert({ key: 'store_logo', value: logoUrl });
+      }
+      qc.invalidateQueries({ queryKey: ['admin-settings'] });
+      qc.invalidateQueries({ queryKey: ['store-logo'] });
+      toast({ title: 'تم رفع الشعار بنجاح ✅' });
+    } catch {
+      toast({ title: 'فشل رفع الشعار', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    const { data } = await supabase.from('settings').update({ value: '' }).eq('key', 'store_logo').select();
+    if (!data || data.length === 0) {
+      await supabase.from('settings').insert({ key: 'store_logo', value: '' });
+    }
+    qc.invalidateQueries({ queryKey: ['admin-settings'] });
+    qc.invalidateQueries({ queryKey: ['store-logo'] });
+    toast({ title: 'تم حذف الشعار' });
+  };
+
   if (isLoading) return null;
+
+  const currentLogo = mergedSettings.store_logo;
 
   return (
     <div className="space-y-6 max-w-2xl">
+      {/* Store Logo */}
+      <div className="bg-card border rounded-lg p-6 space-y-4">
+        <h2 className="font-cairo font-bold text-xl">شعار المتجر</h2>
+        <p className="font-cairo text-sm text-muted-foreground">يظهر في رأس الصفحة، التذييل، والأيقونة المفضلة (Favicon)</p>
+        <div className="flex items-center gap-4">
+          {currentLogo ? (
+            <div className="relative group">
+              <div className="w-20 h-20 rounded-xl border-2 border-dashed border-primary/30 overflow-hidden bg-muted flex items-center justify-center">
+                <img src={currentLogo} alt="شعار المتجر" className="w-full h-full object-contain p-1" />
+              </div>
+              <button
+                onClick={removeLogo}
+                className="absolute -top-2 -left-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="w-20 h-20 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center bg-muted/50">
+              <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
+            </div>
+          )}
+          <div className="space-y-2">
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+            <Button variant="outline" onClick={() => logoInputRef.current?.click()} disabled={uploading} className="font-cairo gap-2">
+              <Upload className="w-4 h-4" />
+              {uploading ? 'جاري الرفع...' : currentLogo ? 'تغيير الشعار' : 'رفع شعار'}
+            </Button>
+            <p className="font-cairo text-xs text-muted-foreground">PNG, JPG أو SVG — الحد الأقصى 2MB</p>
+          </div>
+        </div>
+      </div>
+
       {/* Payment Settings */}
       <div className="bg-card border rounded-lg p-6 space-y-4">
         <h2 className="font-cairo font-bold text-xl">إعدادات الدفع</h2>
