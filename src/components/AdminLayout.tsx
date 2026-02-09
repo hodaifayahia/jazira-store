@@ -24,6 +24,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkAdmin = async (userId: string) => {
       const { data } = await supabase
         .from('user_roles')
@@ -34,25 +36,28 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return !!data;
     };
 
+    // Listener for ongoing auth changes (does NOT control loading)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (!isMounted) return;
       if (!session?.user) {
         setUser(null);
         setIsAdmin(false);
-        setLoading(false);
         navigate('/admin/login');
         return;
       }
       setUser(session.user);
       const admin = await checkAdmin(session.user.id);
+      if (!isMounted) return;
       setIsAdmin(admin);
-      setLoading(false);
       if (!admin) {
         await supabase.auth.signOut();
         navigate('/admin/login');
       }
     });
 
+    // Initial load — only this sets loading = false
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
       if (!session?.user) {
         setLoading(false);
         navigate('/admin/login');
@@ -60,6 +65,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       }
       setUser(session.user);
       const admin = await checkAdmin(session.user.id);
+      if (!isMounted) return;
       setIsAdmin(admin);
       setLoading(false);
       if (!admin) {
@@ -68,7 +74,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogout = async () => {
