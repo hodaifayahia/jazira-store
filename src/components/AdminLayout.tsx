@@ -1,10 +1,27 @@
-import { useEffect, useState, ReactNode } from 'react';
+import { useEffect, useState, useCallback, ReactNode } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
+import { toast } from 'sonner';
+
+function playNotificationSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.value = 0.3;
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch {}
+}
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'لوحة القيادة', icon: LayoutDashboard },
@@ -21,9 +38,34 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [newOrderCount, setNewOrderCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { data: logoUrl } = useStoreLogo();
+
+  // Realtime new order notifications
+  useEffect(() => {
+    const channel = supabase
+      .channel('new-orders')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          const order = payload.new as any;
+          setNewOrderCount((c) => c + 1);
+          playNotificationSound();
+          toast(`🛒 طلب جديد #${order.order_number}`, {
+            description: order.customer_name,
+            action: {
+              label: 'عرض',
+              onClick: () => navigate('/admin/orders'),
+            },
+          });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [navigate]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -95,9 +137,25 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
-          <h1 className="font-cairo font-bold text-lg">
+          <h1 className="font-cairo font-bold text-lg flex-1">
             {NAV_ITEMS.find(i => i.href === location.pathname)?.label || 'لوحة التحكم'}
           </h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => {
+              setNewOrderCount(0);
+              navigate('/admin/orders');
+            }}
+          >
+            <Bell className="w-5 h-5" />
+            {newOrderCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {newOrderCount > 9 ? '9+' : newOrderCount}
+              </span>
+            )}
+          </Button>
         </header>
         <main className="p-4 md:p-6">{children}</main>
       </div>
