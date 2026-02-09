@@ -107,6 +107,27 @@ export default function SingleProductPage() {
     enabled: !!id,
   });
 
+  // Fetch variation_options to get color_code
+  const { data: variationOptions } = useQuery({
+    queryKey: ['variation-options'],
+    queryFn: async () => {
+      const { data } = await supabase.from('variation_options').select('*').eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  // Map variation to its color_code from variation_options
+  const getColorCode = (type: string, value: string) => {
+    if (!variationOptions) return null;
+    const opt = variationOptions.find(o => o.variation_type === type && o.variation_value === value);
+    return opt?.color_code || null;
+  };
+
+  const isColorType = (type: string) => {
+    const t = type.toLowerCase();
+    return t.includes('لون') || t.includes('color') || t.includes('colour');
+  };
+
   // Group variations by type
   const variationGroups = useMemo(() => {
     if (!variations || variations.length === 0) return {};
