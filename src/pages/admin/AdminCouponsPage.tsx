@@ -29,7 +29,7 @@ export default function AdminCouponsPage() {
   const { data: coupons, isLoading } = useQuery({
     queryKey: ['admin-coupons'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('coupons').select('*').order('created_at' as any, { ascending: false });
+      const { data, error } = await supabase.from('coupons').select('*').order('code', { ascending: true });
       if (error) throw error;
       return data || [];
     },
