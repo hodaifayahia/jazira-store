@@ -95,17 +95,22 @@ export default function ProductsPage() {
         <ProductGridSkeleton />
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(p => (
-            <ProductCard
-              key={p.id}
-              id={p.id}
-              name={p.name}
-              price={Number(p.price)}
-              image={p.images?.[0] || ''}
-              category={p.category}
-              stock={p.stock ?? 0}
-            />
-          ))}
+          {filtered.map(p => {
+            const mainIdx = p.main_image_index ?? 0;
+            const cats = Array.isArray(p.category) ? p.category : [p.category];
+            return (
+              <ProductCard
+                key={p.id}
+                id={p.id}
+                name={p.name}
+                price={Number(p.price)}
+                image={p.images?.[mainIdx] || p.images?.[0] || ''}
+                category={cats.join('، ')}
+                stock={p.stock ?? 0}
+                shippingPrice={Number(p.shipping_price ?? 0)}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-16">

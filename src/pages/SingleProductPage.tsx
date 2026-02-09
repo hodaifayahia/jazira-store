@@ -126,7 +126,11 @@ export default function SingleProductPage() {
         </div>
 
         <div className="space-y-4">
-          <Badge className="font-cairo bg-secondary text-secondary-foreground">{product.category}</Badge>
+          <div className="flex flex-wrap gap-1 mb-1">
+            {categories.map(cat => (
+              <Badge key={cat} className="font-cairo bg-secondary text-secondary-foreground">{cat}</Badge>
+            ))}
+          </div>
           <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
           <p className="font-roboto font-bold text-2xl text-primary">{formatPrice(Number(product.price))}</p>
           
