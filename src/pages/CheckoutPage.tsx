@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Copy, Upload, CheckCircle, Loader2, X, FileText } from 'lucide-react';
 
 export default function CheckoutPage() {
+  usePageTitle('إتمام الطلب - DZ Store');
   const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
