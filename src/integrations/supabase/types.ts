@@ -14,7 +14,209 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      coupons: {
+        Row: {
+          code: string
+          discount_type: string
+          discount_value: number
+          expiry_date: string | null
+          id: string
+          is_active: boolean | null
+        }
+        Insert: {
+          code: string
+          discount_type: string
+          discount_value: number
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean | null
+        }
+        Update: {
+          code?: string
+          discount_type?: string
+          discount_value?: number
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean | null
+        }
+        Relationships: []
+      }
+      order_items: {
+        Row: {
+          id: string
+          order_id: string
+          product_id: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          product_id: string
+          quantity: number
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          address: string | null
+          coupon_code: string | null
+          created_at: string | null
+          customer_name: string
+          customer_phone: string
+          discount_amount: number | null
+          id: string
+          order_number: string
+          payment_method: string | null
+          payment_receipt_url: string | null
+          shipping_cost: number | null
+          status: string | null
+          subtotal: number | null
+          total_amount: number | null
+          wilaya_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          coupon_code?: string | null
+          created_at?: string | null
+          customer_name: string
+          customer_phone: string
+          discount_amount?: number | null
+          id?: string
+          order_number: string
+          payment_method?: string | null
+          payment_receipt_url?: string | null
+          shipping_cost?: number | null
+          status?: string | null
+          subtotal?: number | null
+          total_amount?: number | null
+          wilaya_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          coupon_code?: string | null
+          created_at?: string | null
+          customer_name?: string
+          customer_phone?: string
+          discount_amount?: number | null
+          id?: string
+          order_number?: string
+          payment_method?: string | null
+          payment_receipt_url?: string | null
+          shipping_cost?: number | null
+          status?: string | null
+          subtotal?: number | null
+          total_amount?: number | null
+          wilaya_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_wilaya_id_fkey"
+            columns: ["wilaya_id"]
+            isOneToOne: false
+            referencedRelation: "wilayas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          images: string[] | null
+          is_active: boolean | null
+          name: string
+          price: number
+          stock: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          name: string
+          price: number
+          stock?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          stock?: number | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          id: string
+          key: string
+          value: string | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          value?: string | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
+      wilayas: {
+        Row: {
+          id: string
+          is_active: boolean | null
+          name: string
+          shipping_price: number
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean | null
+          name: string
+          shipping_price: number
+        }
+        Update: {
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          shipping_price?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
