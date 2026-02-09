@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
-
-const CATEGORIES = ['الكل', 'أدوات منزلية', 'منتجات زينة', 'إكسسوارات'];
+import { useCategories } from '@/hooks/useCategories';
 const SORT_OPTIONS = [
   { value: 'newest', label: 'الأحدث' },
   { value: 'cheapest', label: 'الأرخص' },
