@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
@@ -11,20 +12,53 @@ interface ProductCardProps {
   name: string;
   price: number;
   image: string;
+  images?: string[];
+  mainImageIndex?: number;
   category: string | string[];
   stock: number;
 }
 
-export default function ProductCard({ id, name, price, image, category, stock }: ProductCardProps) {
+export default function ProductCard({ id, name, price, image, images, mainImageIndex, category, stock }: ProductCardProps) {
   const { addItem } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const outOfStock = stock <= 0;
+
+  // Build the full image list, falling back to single image
+  const allImages = images && images.length > 0 ? images : (image ? [image] : []);
+  const initialIndex = mainImageIndex != null && mainImageIndex < allImages.length ? mainImageIndex : 0;
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({ id, name, price, image, stock });
+    addItem({ id, name, price, image: allImages[0] || '', stock });
     toast({ title: 'تمت الإضافة', description: `تمت إضافة "${name}" إلى السلة` });
+  };
+
+  const handleDirectOrder = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem({ id, name, price, image: allImages[0] || '', stock });
+    navigate('/checkout');
+  };
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex(i => (i === 0 ? allImages.length - 1 : i - 1));
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex(i => (i === allImages.length - 1 ? 0 : i + 1));
+  };
+
+  const handleDotClick = (e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex(index);
   };
 
   return (
@@ -32,9 +66,9 @@ export default function ProductCard({ id, name, price, image, category, stock }:
       <div className="bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
         {/* Image */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          {image ? (
+          {allImages.length > 0 ? (
             <img
-              src={image}
+              src={allImages[currentIndex]}
               alt={name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
               loading="lazy"
@@ -43,6 +77,36 @@ export default function ProductCard({ id, name, price, image, category, stock }:
             <div className="w-full h-full flex items-center justify-center text-muted-foreground/40">
               <ShoppingCart className="w-10 h-10" />
             </div>
+          )}
+
+          {/* Navigation arrows - only show if multiple images */}
+          {allImages.length > 1 && (
+            <>
+              <button
+                onClick={handlePrev}
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background shadow-sm"
+              >
+                <ChevronLeft className="w-4 h-4 text-foreground" />
+              </button>
+              <button
+                onClick={handleNext}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background shadow-sm"
+              >
+                <ChevronRight className="w-4 h-4 text-foreground" />
+              </button>
+              {/* Dots */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {allImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => handleDotClick(e, i)}
+                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                      i === currentIndex ? 'bg-background w-3' : 'bg-background/60'
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
           )}
 
           {outOfStock && (
@@ -65,15 +129,26 @@ export default function ProductCard({ id, name, price, image, category, stock }:
             <span className="font-roboto font-bold text-primary text-lg tracking-tight">
               {formatPrice(price)}
             </span>
-            <Button
-              size="sm"
-              disabled={outOfStock}
-              onClick={handleAdd}
-              className="font-cairo text-xs gap-1.5 rounded-xl h-8 px-3 shadow-sm hover:shadow transition-shadow"
-            >
-              <ShoppingCart className="w-3.5 h-3.5" />
-              إضافة
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={outOfStock}
+                onClick={handleAdd}
+                className="font-cairo text-xs gap-1 rounded-xl h-8 px-2.5"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="sm"
+                disabled={outOfStock}
+                onClick={handleDirectOrder}
+                className="font-cairo text-xs gap-1 rounded-xl h-8 px-3 shadow-sm hover:shadow transition-shadow"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                اطلب
+              </Button>
+            </div>
           </div>
         </div>
       </div>
