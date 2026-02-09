@@ -58,6 +58,7 @@ export default function SingleProductPage() {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
