@@ -103,7 +103,7 @@ export default function IndexPage() {
               تسوّق بثقة مع{' '}
               <span className="text-primary">DZ Store</span>
             </h1>
-            <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
               أفضل المنتجات المنزلية، الزينة والإكسسوارات بأسعار مناسبة مع التوصيل لجميع الولايات.
             </p>
 
