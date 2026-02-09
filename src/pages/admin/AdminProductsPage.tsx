@@ -151,7 +151,7 @@ export default function AdminProductsPage() {
               <Label className="font-cairo">الفئة</Label>
               <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
                 <SelectTrigger className="font-cairo mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}</SelectContent>
+                <SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label className="font-cairo">صور المنتج</Label><Input type="file" multiple accept="image/*" onChange={e => setImageFiles(Array.from(e.target.files || []))} className="mt-1" /></div>

@@ -98,7 +98,7 @@ export default function IndexPage() {
                 name={p.name}
                 price={Number(p.price)}
                 image={p.images?.[0] || ''}
-                category={p.category}
+                category={p.category || []}
                 stock={p.stock ?? 0}
               />
             ))}

@@ -43,7 +43,7 @@ export default function ProductCard({ id, name, price, image, category, stock }:
               <Badge variant="destructive" className="font-cairo text-sm px-3 py-1">غير متوفر</Badge>
             </div>
           )}
-          <Badge className="absolute top-2 right-2 font-cairo bg-secondary text-secondary-foreground">{category}</Badge>
+          <Badge className="absolute top-2 right-2 font-cairo bg-secondary text-secondary-foreground">{Array.isArray(category) ? category[0] : category}</Badge>
         </div>
         <div className="p-4">
           <h3 className="font-cairo font-semibold text-foreground line-clamp-2 mb-2">{name}</h3>
