@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, Upload, CheckCircle } from 'lucide-react';
+import { Copy, Upload, CheckCircle, Loader2, X, FileText } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
@@ -26,11 +26,25 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Inline error states
+  const [nameError, setNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [wilayaError, setWilayaError] = useState('');
+  const [paymentError, setPaymentError] = useState('');
 
   useEffect(() => {
     if (items.length === 0) navigate('/cart');
   }, [items, navigate]);
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+    };
+  }, [receiptPreview]);
 
   const { data: wilayas } = useQuery({
     queryKey: ['wilayas'],
@@ -76,15 +90,63 @@ export default function CheckoutPage() {
     toast({ title: 'تم تطبيق الخصم', description: `خصم ${formatPrice(discountVal)}` });
   };
 
-  const handleSubmit = async () => {
-    if (!name.trim() || !phone.trim() || !wilayaId || !paymentMethod) {
-      toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة', variant: 'destructive' });
+  const removeCoupon = () => {
+    setDiscount(0);
+    setCouponApplied(false);
+    setCouponCode('');
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setReceiptFile(null);
+      setReceiptPreview(null);
       return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'خطأ', description: 'حجم الملف يجب أن لا يتجاوز 5MB', variant: 'destructive' });
+      e.target.value = '';
+      return;
+    }
+    setReceiptFile(file);
+    if (file.type.startsWith('image/')) {
+      setReceiptPreview(URL.createObjectURL(file));
+    } else {
+      setReceiptPreview(null);
+    }
+  };
+
+  const validateForm = (): boolean => {
+    let valid = true;
+    if (name.trim().length < 3) {
+      setNameError('الاسم يجب أن يكون 3 أحرف على الأقل');
+      valid = false;
+    } else {
+      setNameError('');
     }
     if (!/^0[567]\d{8}$/.test(phone)) {
-      toast({ title: 'خطأ', description: 'رقم الهاتف غير صالح', variant: 'destructive' });
-      return;
+      setPhoneError('رقم الهاتف غير صحيح');
+      valid = false;
+    } else {
+      setPhoneError('');
     }
+    if (!wilayaId) {
+      setWilayaError('يرجى اختيار الولاية');
+      valid = false;
+    } else {
+      setWilayaError('');
+    }
+    if (!paymentMethod) {
+      setPaymentError('يرجى اختيار طريقة الدفع');
+      valid = false;
+    } else {
+      setPaymentError('');
+    }
+    return valid;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
 
     setSubmitting(true);
     try {
@@ -114,7 +176,6 @@ export default function CheckoutPage() {
       }).select().single();
       if (error) throw error;
 
-      // Insert order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.id,
@@ -134,7 +195,7 @@ export default function CheckoutPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: 'تم النسخ' });
+    toast({ title: 'تم النسخ ✅' });
   };
 
   const baridimobEnabled = settings?.baridimob_enabled === 'true';
@@ -151,15 +212,17 @@ export default function CheckoutPage() {
             <h2 className="font-cairo font-bold text-xl">معلومات العميل</h2>
             <div>
               <Label className="font-cairo">الاسم الكامل *</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="أدخل اسمك الكامل" className="font-cairo mt-1" />
+              <Input value={name} onChange={e => { setName(e.target.value); setNameError(''); }} placeholder="أدخل اسمك الكامل" className="font-cairo mt-1" />
+              {nameError && <p className="text-destructive text-xs font-cairo mt-1">{nameError}</p>}
             </div>
             <div>
               <Label className="font-cairo">رقم الهاتف *</Label>
-              <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="05XXXXXXXX" className="font-roboto mt-1" dir="ltr" />
+              <Input value={phone} onChange={e => { setPhone(e.target.value); setPhoneError(''); }} placeholder="05XXXXXXXX" className="font-roboto mt-1" dir="ltr" />
+              {phoneError && <p className="text-destructive text-xs font-cairo mt-1">{phoneError}</p>}
             </div>
             <div>
               <Label className="font-cairo">الولاية *</Label>
-              <Select value={wilayaId} onValueChange={setWilayaId}>
+              <Select value={wilayaId} onValueChange={v => { setWilayaId(v); setWilayaError(''); }}>
                 <SelectTrigger className="font-cairo mt-1"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
                 <SelectContent>
                   {wilayas?.map(w => (
@@ -169,6 +232,7 @@ export default function CheckoutPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {wilayaError && <p className="text-destructive text-xs font-cairo mt-1">{wilayaError}</p>}
             </div>
             <div>
               <Label className="font-cairo">العنوان التفصيلي</Label>
@@ -190,10 +254,11 @@ export default function CheckoutPage() {
           {/* Payment */}
           <div className="bg-card border rounded-lg p-6 space-y-4">
             <h2 className="font-cairo font-bold text-xl">طريقة الدفع</h2>
+            {paymentError && <p className="text-destructive text-xs font-cairo">{paymentError}</p>}
             <div className="space-y-3">
               {baridimobEnabled && (
                 <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'baridimob' ? 'border-primary bg-accent' : ''}`}>
-                  <input type="radio" name="payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
+                  <input type="radio" name="payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => { setPaymentMethod(e.target.value); setPaymentError(''); }} className="mt-1" />
                   <div className="flex-1">
                     <p className="font-cairo font-semibold">بريدي موب</p>
                     {paymentMethod === 'baridimob' && settings && (
@@ -207,7 +272,19 @@ export default function CheckoutPage() {
                         <p className="font-cairo">المبلغ: <span className="font-roboto font-bold">{formatPrice(total)}</span></p>
                         <div className="mt-2">
                           <Label className="font-cairo text-xs">أرفق إيصال الدفع</Label>
-                          <Input type="file" accept="image/*,.pdf" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          <Input type="file" accept=".jpg,.png,.pdf" onChange={handleFileChange} className="mt-1" />
+                          {receiptFile && (
+                            <div className="mt-2">
+                              {receiptPreview ? (
+                                <img src={receiptPreview} alt="معاينة الإيصال" className="w-32 h-32 object-cover rounded border" />
+                              ) : (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <FileText className="w-4 h-4" />
+                                  <span>{receiptFile.name}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -216,7 +293,7 @@ export default function CheckoutPage() {
               )}
               {flexyEnabled && (
                 <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'flexy' ? 'border-primary bg-accent' : ''}`}>
-                  <input type="radio" name="payment" value="flexy" checked={paymentMethod === 'flexy'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
+                  <input type="radio" name="payment" value="flexy" checked={paymentMethod === 'flexy'} onChange={e => { setPaymentMethod(e.target.value); setPaymentError(''); }} className="mt-1" />
                   <div className="flex-1">
                     <p className="font-cairo font-semibold">فليكسي (تعبئة)</p>
                     {paymentMethod === 'flexy' && settings && (
@@ -227,9 +304,28 @@ export default function CheckoutPage() {
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(settings.flexy_number)}><Copy className="w-3 h-3" /></Button>
                         </div>
                         <p className="font-cairo">المبلغ المتبقي عند التسليم: <span className="font-roboto font-bold">{formatPrice(total - Number(settings.flexy_deposit_amount || 500))}</span></p>
+
+                        {/* Flexy step-by-step instructions */}
+                        <div className="bg-muted/50 rounded p-3 mt-3 space-y-1">
+                          <p className="font-cairo font-semibold text-xs">خطوات إرسال فليكسي:</p>
+                          <ol className="list-decimal list-inside space-y-1 text-xs font-cairo text-muted-foreground">
+                            <li>اتصل بـ *222#</li>
+                            <li>اختر "تعبئة لرقم آخر"</li>
+                            <li>أدخل الرقم: <span className="font-roboto font-bold text-foreground">{settings.flexy_number}</span></li>
+                            <li>أدخل المبلغ: <span className="font-roboto font-bold text-foreground">{settings.flexy_deposit_amount || 500}</span> دج</li>
+                            <li>أكد العملية</li>
+                            <li>التقط لقطة شاشة للتأكيد وأرفقها أدناه</li>
+                          </ol>
+                        </div>
+
                         <div className="mt-2">
                           <Label className="font-cairo text-xs">أرفق لقطة شاشة للتعبئة</Label>
-                          <Input type="file" accept="image/*" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          <Input type="file" accept=".jpg,.png" onChange={handleFileChange} className="mt-1" />
+                          {receiptFile && receiptPreview && (
+                            <div className="mt-2">
+                              <img src={receiptPreview} alt="معاينة لقطة الشاشة" className="w-32 h-32 object-cover rounded border" />
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -256,14 +352,19 @@ export default function CheckoutPage() {
               <span className="font-roboto font-bold">{formatPrice(subtotal)}</span>
             </div>
             {discount > 0 && (
-              <div className="flex justify-between font-cairo text-sm text-success">
-                <span>الخصم</span>
+              <div className="flex justify-between items-center font-cairo text-sm text-primary">
+                <span className="flex items-center gap-1">
+                  الخصم
+                  <button onClick={removeCoupon} className="text-destructive hover:text-destructive/80 transition-colors" title="إزالة الخصم">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </span>
                 <span className="font-roboto font-bold">-{formatPrice(discount)}</span>
               </div>
             )}
             <div className="flex justify-between font-cairo text-sm">
               <span>التوصيل</span>
-              <span className="font-roboto font-bold">{shippingCost > 0 ? formatPrice(shippingCost) : '—'}</span>
+              <span className="font-roboto font-bold">{shippingCost > 0 ? formatPrice(shippingCost) : 'اختر الولاية'}</span>
             </div>
             <hr className="my-3" />
             <div className="flex justify-between font-cairo font-bold text-lg">
@@ -271,7 +372,7 @@ export default function CheckoutPage() {
               <span className="font-roboto text-primary">{formatPrice(total)}</span>
             </div>
             <Button onClick={handleSubmit} disabled={submitting} className="w-full font-cairo font-semibold mt-4">
-              {submitting ? 'جاري الإرسال...' : 'تأكيد الطلب'}
+              {submitting ? <><Loader2 className="w-4 h-4 ml-2 animate-spin" /> جاري الإرسال...</> : 'تأكيد الطلب'}
             </Button>
           </div>
         </div>
