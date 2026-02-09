@@ -238,6 +238,7 @@ export default function AdminOrdersPage() {
                   <SelectTrigger className="font-cairo mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="الكل" className="font-cairo">الكل</SelectItem>
+                    <SelectItem value="cod" className="font-cairo">الدفع عند التسليم</SelectItem>
                     <SelectItem value="baridimob" className="font-cairo">بريدي موب</SelectItem>
                     <SelectItem value="flexy" className="font-cairo">فليكسي</SelectItem>
                   </SelectContent>
