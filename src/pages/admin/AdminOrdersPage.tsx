@@ -111,7 +111,7 @@ export default function AdminOrdersPage() {
         </Select>
       </div>
 
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {isLoading ? <TableSkeleton rows={5} cols={8} /> : <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
