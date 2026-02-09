@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/lib/format';
+import { calculateShippingForOrder, getShippingBreakdown } from '@/lib/shipping';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, Upload, CheckCircle, LogIn } from 'lucide-react';
+import { Copy, Upload, CheckCircle, LogIn, Truck, Banknote } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
@@ -52,8 +53,30 @@ export default function CheckoutPage() {
     },
   });
 
+  // Fetch per-product shipping prices
+  const { data: productShippingMap } = useQuery({
+    queryKey: ['product-shipping', items.map(i => i.id)],
+    queryFn: async () => {
+      if (items.length === 0) return new Map<string, number>();
+      const { data } = await supabase
+        .from('products')
+        .select('id, shipping_price')
+        .in('id', items.map(i => i.id));
+      const map = new Map<string, number>();
+      data?.forEach(p => map.set(p.id, Number(p.shipping_price) || 0));
+      return map;
+    },
+    enabled: items.length > 0,
+  });
+
   const selectedWilaya = wilayas?.find(w => w.id === wilayaId);
-  const shippingCost = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
+  const wilayaBaseRate = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
+  const shippingCost = productShippingMap
+    ? calculateShippingForOrder(items, productShippingMap, wilayaBaseRate)
+    : 0;
+  const shippingBreakdown = productShippingMap
+    ? getShippingBreakdown(items, productShippingMap, wilayaBaseRate)
+    : [];
   const total = subtotal - discount + shippingCost;
 
   const applyCoupon = async () => {
@@ -73,7 +96,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Check if coupon is limited to specific products
     const { data: couponProds } = await supabase
       .from('coupon_products')
       .select('product_id')
@@ -102,6 +124,12 @@ export default function CheckoutPage() {
     }
     if (!/^0[567]\d{8}$/.test(phone)) {
       toast({ title: 'خطأ', description: 'رقم الهاتف غير صالح', variant: 'destructive' });
+      return;
+    }
+
+    // Receipt required for baridimob/flexy
+    if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) {
+      toast({ title: 'خطأ', description: 'يرجى إرفاق إيصال الدفع', variant: 'destructive' });
       return;
     }
 
@@ -134,7 +162,6 @@ export default function CheckoutPage() {
       }).select().single();
       if (error) throw error;
 
-      // Insert order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.id,
@@ -218,6 +245,22 @@ export default function CheckoutPage() {
           <div className="bg-card border rounded-lg p-6 space-y-4">
             <h2 className="font-cairo font-bold text-xl">طريقة الدفع</h2>
             <div className="space-y-3">
+              {/* Cash on Delivery - always available */}
+              <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'cod' ? 'border-primary bg-accent' : ''}`}>
+                <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
+                <div className="flex-1">
+                  <p className="font-cairo font-semibold flex items-center gap-2">
+                    <Banknote className="w-4 h-4" />
+                    الدفع عند التسليم
+                  </p>
+                  {paymentMethod === 'cod' && (
+                    <p className="mt-2 text-sm font-cairo text-muted-foreground">
+                      ستدفع المبلغ الكامل ({formatPrice(total)}) عند استلام الطلب.
+                    </p>
+                  )}
+                </div>
+              </label>
+
               {baridimobEnabled && (
                 <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'baridimob' ? 'border-primary bg-accent' : ''}`}>
                   <input type="radio" name="payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
@@ -233,7 +276,7 @@ export default function CheckoutPage() {
                         <p className="font-cairo">الاسم: {settings.ccp_name}</p>
                         <p className="font-cairo">المبلغ: <span className="font-roboto font-bold">{formatPrice(total)}</span></p>
                         <div className="mt-2">
-                          <Label className="font-cairo text-xs">أرفق إيصال الدفع</Label>
+                          <Label className="font-cairo text-xs">أرفق إيصال الدفع *</Label>
                           <Input type="file" accept="image/*,.pdf" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
                         </div>
                       </div>
@@ -255,7 +298,7 @@ export default function CheckoutPage() {
                         </div>
                         <p className="font-cairo">المبلغ المتبقي عند التسليم: <span className="font-roboto font-bold">{formatPrice(total - Number(settings.flexy_deposit_amount || 500))}</span></p>
                         <div className="mt-2">
-                          <Label className="font-cairo text-xs">أرفق لقطة شاشة للتعبئة</Label>
+                          <Label className="font-cairo text-xs">أرفق لقطة شاشة للتعبئة *</Label>
                           <Input type="file" accept="image/*" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
                         </div>
                       </div>
@@ -288,9 +331,25 @@ export default function CheckoutPage() {
                 <span className="font-roboto font-bold">-{formatPrice(discount)}</span>
               </div>
             )}
-            <div className="flex justify-between font-cairo text-sm">
-              <span>التوصيل</span>
-              <span className="font-roboto font-bold">{shippingCost > 0 ? formatPrice(shippingCost) : '—'}</span>
+            {/* Shipping breakdown */}
+            <div className="space-y-1">
+              <div className="flex justify-between font-cairo text-sm">
+                <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> التوصيل</span>
+                <span className="font-roboto font-bold">{shippingCost > 0 ? formatPrice(shippingCost) : '—'}</span>
+              </div>
+              {shippingBreakdown.length > 1 && shippingCost > 0 && (
+                <div className="pr-5 space-y-0.5">
+                  {shippingBreakdown.map(s => (
+                    <div key={s.itemId} className="flex justify-between text-xs text-muted-foreground font-cairo">
+                      <span>{s.name} ×{s.quantity}</span>
+                      <span className="font-roboto">{formatPrice(s.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {shippingCost > 0 && (
+                <p className="text-[11px] text-muted-foreground font-cairo pr-1">* سعر التوصيل يُحسب لكل منتج حسب الكمية</p>
+              )}
             </div>
             <hr className="my-3" />
             <div className="flex justify-between font-cairo font-bold text-lg">
