@@ -1,39 +1,51 @@
 
 
-## Checkout Page Enhancements
+## Admin Coupons and Settings Pages
 
-The checkout page at `/checkout` already exists with most core functionality. This plan covers the gaps between the current implementation and your requirements.
+Both pages already exist with basic functionality. This plan covers the gaps to match your requirements.
 
-### Changes (all in `src/pages/CheckoutPage.tsx`)
+### Page 1: Admin Coupons (`src/pages/admin/AdminCouponsPage.tsx`)
 
-**1. Inline Form Validation**
-- Add error state variables for each field (nameError, phoneError, wilayaError, paymentError)
-- Show red error text below each field when validation fails
-- Validate name minimum 3 characters with message "الاسم يجب أن يكون 3 أحرف على الأقل"
-- Validate phone with regex, show "رقم الهاتف غير صحيح" inline
-- Clear errors on field change
+**Current gaps:**
+- Delete uses browser `confirm()` instead of shadcn AlertDialog
+- No "expired" badge for past-date coupons
+- Discount type uses Select dropdown instead of radio buttons
+- No percentage max-100 validation
+- No date picker component (uses plain HTML date input)
 
-**2. Remove Coupon Button**
-- Add an "x" button next to the discount line in the order summary
-- Clicking it resets discount to 0, couponApplied to false, and clears couponCode
+**Changes:**
+- Replace `confirm()` delete with AlertDialog confirmation dialog ("هل أنت متأكد من حذف هذا الكوبون؟")
+- Add RadioGroup for discount type (نسبة مئوية / مبلغ ثابت) instead of Select
+- Add validation: if percentage, cap value at 100 and show error
+- Replace HTML date input with shadcn Popover + Calendar date picker
+- Add expired badge: if `expiry_date` is in the past, show gray "منتهي" badge alongside the active/inactive badge
+- Add Loader2 spinner on save button
 
-**3. File Upload Improvements**
-- Validate file size (max 5MB) on selection, show error toast if exceeded
-- Restrict accepted file types to `.jpg,.png,.pdf` for baridimob and `.jpg,.png` for flexy
-- Show a file preview after upload: image thumbnail for images, filename for PDFs
+### Page 2: Admin Settings (`src/pages/admin/AdminSettingsPage.tsx`)
 
-**4. Flexy Step-by-Step Instructions**
-- Add numbered Arabic instructions below the flexy details explaining how to send a Flexy recharge
+**Current gaps:**
+- No store logo image upload
+- Uses `update` instead of `upsert` (would fail if a key doesn't exist yet)
+- Toast message doesn't include checkmark
+- No loading spinner on save
 
-**5. Minor UI Polish**
-- Change shipping display from "—" to "اختر الولاية" when no wilaya selected
-- Update copy toast to "تم النسخ ✅"
-- Add a Loader2 spinner icon to the submit button during submission
+**Changes:**
+- Add logo upload section: file input, preview thumbnail, upload to `store` storage bucket, save URL as `store_logo_url` setting
+- Switch from `update` to `upsert` (on conflict by `key`) so new settings are created automatically
+- Update toast to "تم حفظ الإعدادات بنجاح ✅"
+- Add Loader2 spinner on save button
 
 ### Technical Details
 
-- Only `src/pages/CheckoutPage.tsx` is modified
-- No changes to CartContext, App.tsx, or any other pages
-- Import `Loader2` and `X` from lucide-react for spinner and remove button icons
-- All validation is client-side with inline Arabic error messages
-- File preview uses `URL.createObjectURL` for image files
+**Files modified (2 only):**
+- `src/pages/admin/AdminCouponsPage.tsx` -- full rewrite
+- `src/pages/admin/AdminSettingsPage.tsx` -- full rewrite
+
+**No other files touched.** Routes and layout already configured in App.tsx. The `store` storage bucket already exists and is public. Settings table already has the `store_logo_url` key.
+
+**Coupons page imports added:** AlertDialog components, RadioGroup, Calendar, Popover, Loader2, `format` from date-fns
+
+**Settings page upsert approach:** Use `supabase.from('settings').upsert({ key, value }, { onConflict: 'key' })` to handle both existing and new settings keys
+
+**Logo upload flow:** Upload image to `store` bucket with path `logo-{timestamp}.{ext}`, get public URL, store in `store_logo_url` setting, show preview thumbnail
+
