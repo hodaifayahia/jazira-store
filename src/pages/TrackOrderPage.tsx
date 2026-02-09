@@ -20,14 +20,14 @@ export default function TrackOrderPage() {
     if (!orderNumber.trim()) return;
     setLoading(true);
     setSearched(true);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('orders')
       .select('*, wilayas(name)')
       .eq('order_number', orderNumber.trim().toUpperCase())
-      .single();
+      .maybeSingle();
     setOrder(data);
     setLoading(false);
-    if (error || !data) {
+    if (!data) {
       toast({ title: 'غير موجود', description: 'لم يتم العثور على الطلب', variant: 'destructive' });
     }
   };
@@ -49,7 +49,7 @@ export default function TrackOrderPage() {
         />
         <Button onClick={handleSearch} disabled={loading} className="font-cairo shrink-0 gap-1">
           <Search className="w-4 h-4" />
-          تتبع
+          تتبع الطلب
         </Button>
       </div>
 
@@ -95,6 +95,10 @@ export default function TrackOrderPage() {
               <span className="text-muted-foreground">الولاية</span>
               <span>{order.wilayas?.name}</span>
             </div>
+            <div className="flex justify-between font-cairo text-sm">
+              <span className="text-muted-foreground">طريقة الدفع</span>
+              <span>{order.payment_method === 'baridimob' ? 'بريدي موب' : 'فليكسي'}</span>
+            </div>
             <div className="flex justify-between font-cairo text-sm font-bold">
               <span>الإجمالي</span>
               <span className="font-roboto text-primary">{formatPrice(Number(order.total_amount))}</span>
@@ -105,7 +109,7 @@ export default function TrackOrderPage() {
 
       {searched && !order && !loading && (
         <div className="text-center py-12">
-          <p className="font-cairo text-muted-foreground text-lg">لم يتم العثور على الطلب</p>
+          <p className="font-cairo text-muted-foreground text-lg">لم يتم العثور على الطلب، يرجى التحقق من رقم الطلب</p>
         </div>
       )}
     </div>
