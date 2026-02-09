@@ -91,7 +91,7 @@ export default function AdminProductsPage() {
 
   const openEdit = (p: any) => {
     setEditing(p);
-    setForm({ name: p.name, description: p.description || '', price: String(p.price), category: p.category, stock: String(p.stock), is_active: p.is_active });
+    setForm({ name: p.name, description: p.description || '', price: String(p.price), category: Array.isArray(p.category) ? p.category[0] : p.category, stock: String(p.stock), is_active: p.is_active });
     setImageFiles([]);
     setDialogOpen(true);
   };
