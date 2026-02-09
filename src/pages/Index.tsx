@@ -149,58 +149,71 @@ export default function IndexPage() {
 
       {/* ─── Hero Carousel ─── */}
       <section className="relative isolate overflow-hidden min-h-[520px] md:min-h-[600px]">
+        {/* Animated floating elements */}
+        <div className="absolute inset-0 z-[1] pointer-events-none overflow-hidden">
+          <div className="absolute top-20 left-10 w-32 h-32 rounded-full bg-primary/10 blur-2xl animate-pulse" />
+          <div className="absolute bottom-32 right-20 w-48 h-48 rounded-full bg-secondary/10 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/3 w-24 h-24 rounded-full bg-primary/5 blur-xl animate-pulse" style={{ animationDelay: '2s' }} />
+        </div>
+
         <div className="absolute inset-0" ref={emblaRef}>
           <div className="flex h-full" style={{ direction: 'ltr' }}>
             {bannerImages.map((img, i) => (
               <div key={i} className="flex-[0_0_100%] min-w-0 relative min-h-[520px] md:min-h-[600px]">
-                <img src={img} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+                <img src={img} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
               </div>
             ))}
           </div>
         </div>
-        <div className="absolute inset-0 bg-gradient-to-l from-foreground/90 via-foreground/70 to-foreground/30 z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-l from-foreground/95 via-foreground/75 to-foreground/20 z-[2]" />
 
         <div className="container relative z-10 flex items-center min-h-[520px] md:min-h-[600px] py-24 md:py-32">
-          <div className="max-w-xl space-y-6">
-            <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/10 backdrop-blur-sm rounded-full px-4 py-1.5">
+          {/* Glassmorphism card */}
+          <div className="max-w-xl space-y-6 bg-foreground/10 backdrop-blur-md rounded-3xl p-8 md:p-10 border border-background/10">
+            <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/20 backdrop-blur-sm rounded-full px-4 py-1.5 animate-fade-in">
               🇩🇿 أفضل المنتجات في الجزائر
             </span>
-            <h1 className="font-cairo font-extrabold text-4xl sm:text-5xl lg:text-6xl text-background leading-[1.15] tracking-tight">
+            <h1 className="font-cairo font-extrabold text-4xl sm:text-5xl lg:text-6xl text-background leading-[1.15] tracking-tight animate-fade-in" style={{ animationDelay: '0.1s' }}>
               مرحباً بك في{' '}
-              <span className="text-primary">DZ Store</span>
+              <span className="text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]">DZ Store</span>
             </h1>
-            <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md">
+            <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md animate-fade-in" style={{ animationDelay: '0.2s' }}>
               أفضل المنتجات المنزلية، الزينة والإكسسوارات بأسعار مناسبة مع التوصيل لجميع الولايات.
             </p>
 
-            {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
-              <div className="relative flex-1">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            {/* Enhanced Search Bar */}
+            <form onSubmit={handleSearch} className="flex gap-2 max-w-md animate-fade-in" style={{ animationDelay: '0.3s' }}>
+              <div className="relative flex-1 group">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
                 <Input
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="ابحث عن منتج..."
-                  className="pr-10 font-cairo bg-background/95 backdrop-blur-sm border-background/20 rounded-xl h-12"
+                  className="pr-11 font-cairo bg-background/95 backdrop-blur-sm border-background/20 rounded-2xl h-14 text-base shadow-lg shadow-primary/10 focus:shadow-primary/20 focus:ring-primary/30 transition-shadow"
                 />
               </div>
-              <Button type="submit" size="lg" className="font-cairo font-bold rounded-xl h-12 px-6">
+              <Button type="submit" size="lg" className="font-cairo font-bold rounded-2xl h-14 px-8 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all">
                 بحث
               </Button>
             </form>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
               <Link to="/products">
-                <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
+                <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all">
                   تسوّق الآن
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
               <Link to="/track">
-                <Button size="lg" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/25 hover:shadow-secondary/40 transition-shadow">
+                <Button size="lg" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/25 hover:shadow-secondary/40 hover:scale-[1.02] transition-all">
                   تتبع طلبك
                 </Button>
               </Link>
+              {allProducts && allProducts.length > 0 && (
+                <span className="font-cairo text-sm text-background/60 bg-background/10 backdrop-blur-sm rounded-full px-3 py-1.5">
+                  +{allProducts.length} منتج
+                </span>
+              )}
             </div>
           </div>
         </div>
