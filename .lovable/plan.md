@@ -1,39 +1,56 @@
 
 
-## Checkout Page Enhancements
+## Plan: Admin Products Search/Filter + Enhanced Categories Page
 
-The checkout page at `/checkout` already exists with most core functionality. This plan covers the gaps between the current implementation and your requirements.
+### 1. Admin Products Table -- Search and Filter
 
-### Changes (all in `src/pages/CheckoutPage.tsx`)
+**What changes:**
+- Add a search bar above the products table to filter by product name.
+- Add a category dropdown filter to show only products of a specific category.
+- Add a status filter (All / Active / Inactive).
+- Filtering happens client-side on the already-fetched products list.
 
-**1. Inline Form Validation**
-- Add error state variables for each field (nameError, phoneError, wilayaError, paymentError)
-- Show red error text below each field when validation fails
-- Validate name minimum 3 characters with message "الاسم يجب أن يكون 3 أحرف على الأقل"
-- Validate phone with regex, show "رقم الهاتف غير صحيح" inline
-- Clear errors on field change
+**Where:** `src/pages/admin/AdminProductsPage.tsx`
 
-**2. Remove Coupon Button**
-- Add an "x" button next to the discount line in the order summary
-- Clicking it resets discount to 0, couponApplied to false, and clears couponCode
+---
 
-**3. File Upload Improvements**
-- Validate file size (max 5MB) on selection, show error toast if exceeded
-- Restrict accepted file types to `.jpg,.png,.pdf` for baridimob and `.jpg,.png` for flexy
-- Show a file preview after upload: image thumbnail for images, filename for PDFs
+### 2. Enhanced Categories Page
 
-**4. Flexy Step-by-Step Instructions**
-- Add numbered Arabic instructions below the flexy details explaining how to send a Flexy recharge
+**What changes:**
 
-**5. Minor UI Polish**
-- Change shipping display from "—" to "اختر الولاية" when no wilaya selected
-- Update copy toast to "تم النسخ ✅"
-- Add a Loader2 spinner icon to the submit button during submission
+**A. More icon options**
+- Expand the `AVAILABLE_ICONS` array with many more Lucide icons (e.g., Laptop, Phone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette, Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, etc.).
+
+**B. Custom photo upload for categories**
+- Add an "upload photo" option alongside icon selection. Each category can use either a Lucide icon OR an uploaded image.
+- Category data structure changes from `{ name, icon }` to `{ name, icon, image?: string }`.
+- When an image is uploaded, it goes to the existing `store` storage bucket (e.g., `categories/filename.ext`).
+- The category display (in admin and storefront) will show the uploaded image if present, otherwise the icon.
+
+**C. Edit functionality (already exists)**
+- The edit feature with inline editing is already implemented. No changes needed here -- it already supports renaming and changing the icon.
+- The edit flow will be extended to also allow changing/uploading a category image.
+
+**Where:** `src/pages/admin/AdminCategoriesPage.tsx`, `src/hooks/useCategories.ts`
+
+---
 
 ### Technical Details
 
-- Only `src/pages/CheckoutPage.tsx` is modified
-- No changes to CartContext, App.tsx, or any other pages
-- Import `Loader2` and `X` from lucide-react for spinner and remove button icons
-- All validation is client-side with inline Arabic error messages
-- File preview uses `URL.createObjectURL` for image files
+**AdminProductsPage.tsx changes:**
+- Add state variables: `searchQuery`, `filterCategory`, `filterStatus`.
+- Add a filter bar with an `Input` for search, a `Select` for category, and a `Select` for status.
+- Apply filters to the `products` array before rendering the table rows.
+
+**AdminCategoriesPage.tsx changes:**
+- Expand `AVAILABLE_ICONS` with ~20+ more icons.
+- Add image upload input in both the "add" and "edit" forms.
+- Upload images to the `store` bucket under a `categories/` prefix.
+- Show image preview when a category has a custom photo.
+- Update the Category type to include an optional `image` field.
+
+**useCategories.ts changes:**
+- Update the `Category` interface to add `image?: string`.
+
+**Storefront impact:**
+- Any component rendering category icons (Navbar, ProductsPage, Index) will need a small update to render the category image if present, falling back to the icon.
