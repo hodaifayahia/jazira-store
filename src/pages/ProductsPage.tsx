@@ -31,7 +31,7 @@ export default function ProductsPage() {
     queryKey: ['products', category, sort],
     queryFn: async () => {
       let query = supabase.from('products').select('*').eq('is_active', true);
-      if (category !== 'الكل') query = query.eq('category', category);
+      if (category !== 'الكل') query = query.contains('category', [category]);
       if (sort === 'newest') query = query.order('created_at', { ascending: false });
       else if (sort === 'cheapest') query = query.order('price', { ascending: true });
       else if (sort === 'expensive') query = query.order('price', { ascending: false });
