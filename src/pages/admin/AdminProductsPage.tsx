@@ -346,14 +346,10 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             <Label className="font-cairo">الوصف</Label>
             <Textarea value={description} onChange={e => setDescription(e.target.value)} className="font-cairo mt-1.5 min-h-[100px]" placeholder="أضف وصفاً تفصيلياً للمنتج..." />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="font-cairo">السعر (دج) <span className="text-destructive">*</span></Label>
               <Input type="number" value={price} onChange={e => setPrice(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
-            </div>
-            <div>
-              <Label className="font-cairo">سعر التوصيل (دج)</Label>
-              <Input type="number" value={shippingPrice} onChange={e => setShippingPrice(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
             </div>
             <div>
               <Label className="font-cairo">المخزون</Label>
