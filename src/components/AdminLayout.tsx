@@ -36,6 +36,7 @@ function playNotificationSound() {
 const NAV_ITEMS = [
   { href: '/admin', label: 'لوحة القيادة', icon: LayoutDashboard },
   { href: '/admin/products', label: 'المنتجات', icon: Package },
+  { href: '/admin/variations', label: 'المتغيرات', icon: Palette },
   { href: '/admin/categories', label: 'الفئات', icon: Layers },
   { href: '/admin/orders', label: 'الطلبات', icon: ShoppingCart },
   { href: '/admin/leads', label: 'العملاء المحتملون', icon: Users },
