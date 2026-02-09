@@ -542,41 +542,12 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         main_image_index: mainImageIndex,
       };
 
-      let productId = product?.id;
-
       if (product) {
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('products').insert(payload).select().single();
+        const { error } = await supabase.from('products').insert(payload);
         if (error) throw error;
-        productId = data.id;
-      }
-
-      // Save variations
-      if (productId) {
-        // Delete existing variations not in our list
-        const existingIds = variations.filter(v => v.id).map(v => v.id!);
-        if (product?.id) {
-          await supabase.from('product_variations').delete().eq('product_id', productId).not('id', 'in', `(${existingIds.join(',')})`);
-        }
-
-        for (const v of variations) {
-          if (!v.variation_type.trim() || !v.variation_value.trim()) continue;
-          const varPayload = {
-            product_id: productId,
-            variation_type: v.variation_type.trim(),
-            variation_value: v.variation_value.trim(),
-            price_adjustment: Number(v.price_adjustment) || 0,
-            stock: Number(v.stock) || 0,
-            is_active: v.is_active,
-          };
-          if (v.id) {
-            await supabase.from('product_variations').update(varPayload).eq('id', v.id);
-          } else {
-            await supabase.from('product_variations').insert(varPayload);
-          }
-        }
       }
     },
     onSuccess: () => {
