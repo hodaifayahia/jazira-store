@@ -48,7 +48,7 @@ export default function AdminProductsPage() {
         name: form.name,
         description: form.description,
         price: Number(form.price),
-        category: form.category,
+        category: [form.category],
         stock: Number(form.stock),
         is_active: form.is_active,
         images: imageUrls,
