@@ -544,6 +544,8 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [selectedVariationIds, setSelectedVariationIds] = useState<Set<string>>(new Set());
   const [variationPriceAdj, setVariationPriceAdj] = useState<Record<string, string>>({});
   const [variationStock, setVariationStock] = useState<Record<string, string>>({});
+  const [variationImages, setVariationImages] = useState<Record<string, string>>({});
+  const [uploadingVariationImage, setUploadingVariationImage] = useState<string | null>(null);
 
   // Initialize selected variations from existing product_variations
   useState(() => {
