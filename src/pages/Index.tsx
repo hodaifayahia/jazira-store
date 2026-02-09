@@ -1,16 +1,18 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Home, Sparkles, Watch, ArrowLeft } from 'lucide-react';
+import { Home, Sparkles, Watch, ArrowLeft, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
+import { useCategories } from '@/hooks/useCategories';
 import heroBanner from '@/assets/hero-banner.jpg';
 
-const categories = [
-  { name: 'أدوات منزلية', icon: Home, color: 'bg-primary/10 text-primary' },
-  { name: 'منتجات زينة', icon: Sparkles, color: 'bg-secondary/10 text-secondary' },
-  { name: 'إكسسوارات', icon: Watch, color: 'bg-accent text-accent-foreground' },
+const ICON_MAP: Record<string, LucideIcon> = { Home, Sparkles, Watch };
+const COLOR_CLASSES = [
+  'bg-primary/10 text-primary',
+  'bg-secondary/10 text-secondary',
+  'bg-accent text-accent-foreground',
 ];
 
 export default function IndexPage() {
