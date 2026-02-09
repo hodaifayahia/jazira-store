@@ -1,77 +1,60 @@
 
 
-## Plan: Separate Variations Management Page with Photo Association
+## Plan: Wilaya Order Statistics + Phone Validation
 
-### Overview
+### 1. Wilaya Order Statistics (`AdminWilayasPage.tsx`)
 
-Move variation management out of the product form into its own dedicated admin page. Variations will be managed globally (e.g., define "اللون: أحمر", "المقاس: XL" once), then assigned to products. Each variation can have an associated photo.
+When clicking a wilaya row, show a dialog/expandable section with order statistics for that wilaya:
 
----
+- Total orders count
+- Orders grouped by status (e.g., "جديد": 5, "مؤكد": 3, "ملغي": 1)
+- Total revenue from that wilaya
 
-### 1. Create New Admin Page: `src/pages/admin/AdminVariationsPage.tsx`
+**Implementation:**
+- Add a `selectedWilaya` state and a stats dialog
+- When a wilaya row is clicked, query `orders` table filtered by `wilaya_id`
+- Display stats in a dialog with:
+  - Total order count
+  - Status breakdown (badges with counts)
+  - Total revenue (sum of `total_amount`)
 
-A full CRUD page for managing variations globally:
-- List all variations grouped by `variation_type` (color, size, etc.)
-- Add/edit/delete variations with fields:
-  - **variation_type** (text input or select from existing types)
-  - **variation_value** (e.g., "أحمر", "XL")
-  - **price_adjustment** (numeric)
-  - **stock** (numeric)
-  - **image_url** (upload photo -- especially for colors)
-  - **is_active** toggle
-- Photo upload: use the existing `products` storage bucket to upload variation images
-- Each variation still belongs to a `product_id`, so the page will show a product selector or group by product
+### 2. Phone Number Validation (Checkout + anywhere phone is entered)
 
-**Alternative approach (better UX):** Since variations are per-product (they have `product_id` FK), the page will:
-- Show all products in a list/select
-- When a product is selected, show its variations
-- Allow adding/editing/deleting variations for that product
-- Each variation can have an uploaded image
+**In `CheckoutPage.tsx`:**
+- The phone validation regex already exists at line 125: `/^0[567]\d{8}$/` -- this correctly validates 10-digit numbers starting with 05, 06, or 07
+- Add real-time visual feedback: show error message below the phone input when it doesn't match the pattern (not just on submit)
+- Update placeholder to be clearer: "05/06/07XXXXXXXX"
 
-### 2. Add Sidebar Item in `src/components/AdminLayout.tsx`
+### 3. Required Field Validation (Checkout)
 
-Add a new entry to `NAV_ITEMS` array (line 36-45):
-```
-{ href: '/admin/variations', label: 'المتغيرات', icon: Palette }
-```
-Place it after "المنتجات" for logical grouping. Use the `Palette` icon from lucide-react.
+Add inline error states for:
+- **Name**: show error if empty when user tries to submit or blurs the field
+- **Wilaya**: show error if not selected
+- Add red border + error text for each required field
 
-### 3. Add Route in `src/App.tsx`
+### Technical Details
 
-Add route at line ~65:
-```
-<Route path="/admin/variations" element={<AdminLayout><AdminVariationsPage /></AdminLayout>} />
-```
+**Files to modify:**
 
-### 4. Simplify Product Form in `src/pages/admin/AdminProductsPage.tsx`
+| File | Changes |
+|------|---------|
+| `src/pages/admin/AdminWilayasPage.tsx` | Add click handler on wilaya rows, stats dialog with order query |
+| `src/pages/CheckoutPage.tsx` | Add inline validation errors for name, phone (05/06/07 + 10 digits), and wilaya |
 
-Remove the entire "المتغيرات" section (lines 779-853) from the `ProductForm` component. Replace with a read-only summary showing how many variations exist for this product, with a link to the variations page. Also remove the variation-related state and save logic from the form.
+**AdminWilayasPage changes:**
+- Add `statsWilaya` state to track which wilaya's stats are being viewed
+- Add a `useQuery` that fetches orders for the selected wilaya (`orders` table, filtered by `wilaya_id`)
+- Show a dialog with:
+  - Wilaya name as title
+  - Total orders count
+  - Status breakdown in a simple table or badge list
+  - Total revenue
 
-### 5. Fix Variation Selection on `src/pages/SingleProductPage.tsx`
-
-**Current issue:** The variation buttons work but don't show the associated image when selected.
-
-Changes:
-- When a variation with `image_url` is selected, update the main gallery to show that image (prepend or switch to it)
-- Ensure clicking a color/variation button properly toggles selection state
-- Show a small color swatch or image preview next to each variation button if `image_url` exists
-
-### 6. Update `product_variations` Table -- Add `image_url` Support
-
-The `image_url` column already exists in the `product_variations` table from the previous migration, so no database changes needed. Just need to use it in the UI.
-
----
-
-### Files to Create/Modify
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/pages/admin/AdminVariationsPage.tsx` | **Create** | New page for global variation management with photo upload |
-| `src/components/AdminLayout.tsx` | Modify | Add "المتغيرات" to sidebar nav (line 39, add new item with Palette icon) |
-| `src/App.tsx` | Modify | Add route for `/admin/variations` |
-| `src/pages/admin/AdminProductsPage.tsx` | Modify | Remove variation CRUD from product form, replace with link |
-| `src/pages/SingleProductPage.tsx` | Modify | Fix variation selection + show variation image in gallery |
-
-### No database changes needed
-The `product_variations` table already has `image_url` column.
+**CheckoutPage validation changes:**
+- Add `errors` state object tracking touched/invalid fields
+- On blur of name input: set error if empty
+- On blur/change of phone input: validate against `/^0[567]\d{8}$/`
+- On wilaya select: clear wilaya error
+- Show red border (`border-destructive`) and error text below each invalid field
+- The submit handler already validates these -- just adding real-time feedback
 
