@@ -157,7 +157,7 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {isLoading ? <TableSkeleton rows={5} cols={7} /> : <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
