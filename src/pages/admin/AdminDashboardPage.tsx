@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, ArrowUpRight, ArrowDownRight, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, AlertTriangle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { formatPrice, formatDate } from '@/lib/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -76,14 +77,12 @@ export default function AdminDashboardPage() {
   const lowStockProducts = products?.filter(p => (p.stock ?? 0) <= 5 && p.is_active) || [];
   const newLeads = leads?.filter(l => l.status === 'جديد') || [];
 
-  // Order status distribution for pie chart
   const statusCounts = (orders || []).reduce((acc, o) => {
     acc[o.status || 'جديد'] = (acc[o.status || 'جديد'] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
   const pieData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
 
-  // Weekly orders chart (last 7 days)
   const weeklyData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
     d.setDate(d.getDate() - (6 - i));
@@ -97,7 +96,6 @@ export default function AdminDashboardPage() {
     };
   });
 
-  // Top products by order frequency
   const { data: orderItems } = useQuery({
     queryKey: ['admin-order-items-stats'],
     queryFn: async () => {
@@ -115,13 +113,29 @@ export default function AdminDashboardPage() {
     }, {} as Record<string, { name: string; qty: number }>)
   ).sort((a, b) => b.qty - a.qty).slice(0, 5);
 
-  // Top wilayas
   const wilayaCounts = (orders || []).reduce((acc, o) => {
     const name = (o as any).wilayas?.name || 'غير محدد';
     acc[name] = (acc[name] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
   const topWilayas = Object.entries(wilayaCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  // Risky wilayas with high cancellation rate
+  const riskyWilayas = useMemo(() => {
+    if (!orders) return [];
+    const stats: Record<string, { total: number; cancelled: number }> = {};
+    orders.forEach(o => {
+      const name = (o as any).wilayas?.name;
+      if (!name) return;
+      if (!stats[name]) stats[name] = { total: 0, cancelled: 0 };
+      stats[name].total++;
+      if (o.status === 'ملغي') stats[name].cancelled++;
+    });
+    return Object.entries(stats)
+      .filter(([, s]) => s.total >= 3 && s.cancelled / s.total > 0.3)
+      .map(([name, s]) => ({ name, rate: Math.round((s.cancelled / s.total) * 100), cancelled: s.cancelled, total: s.total }))
+      .sort((a, b) => b.rate - a.rate);
+  }, [orders]);
 
   return (
     <div className="space-y-6">
@@ -201,7 +215,6 @@ export default function AdminDashboardPage() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Weekly Orders Bar Chart */}
         <div className="bg-card border rounded-xl p-5">
           <h3 className="font-cairo font-semibold text-base mb-4">طلبات آخر 7 أيام</h3>
           <div className="h-56">
@@ -219,7 +232,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Order Status Pie */}
         <div className="bg-card border rounded-xl p-5">
           <h3 className="font-cairo font-semibold text-base mb-4">توزيع حالات الطلبات</h3>
           {pieData.length > 0 ? (
@@ -250,9 +262,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Row: Top Products & Latest Orders */}
+      {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Products */}
         <div className="bg-card border rounded-xl">
           <div className="p-4 border-b">
             <h3 className="font-cairo font-semibold text-base">المنتجات الأكثر مبيعاً</h3>
@@ -272,7 +283,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Low Stock Alert */}
         <div className="bg-card border rounded-xl">
           <div className="p-4 border-b">
             <h3 className="font-cairo font-semibold text-base text-destructive">⚠ تنبيه المخزون المنخفض</h3>
@@ -289,6 +299,33 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Risky Wilayas Card */}
+      {riskyWilayas.length > 0 && (
+        <div className="bg-card border border-destructive/30 rounded-xl">
+          <div className="p-4 border-b border-destructive/20">
+            <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <span className="text-destructive">ولايات بنسبة إلغاء مرتفعة</span>
+            </h3>
+            <p className="font-cairo text-xs text-muted-foreground mt-1">ولايات تجاوزت نسبة الإلغاء فيها 30% (حد أدنى 3 طلبات)</p>
+          </div>
+          <div className="p-4 space-y-3">
+            {riskyWilayas.map(w => (
+              <div key={w.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+                  <span className="font-cairo text-sm font-medium">{w.name}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-cairo text-xs text-muted-foreground">{w.cancelled}/{w.total} ملغي</span>
+                  <span className="font-roboto text-sm font-bold text-destructive">{w.rate}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Latest Orders */}
       <div className="bg-card border rounded-xl">
