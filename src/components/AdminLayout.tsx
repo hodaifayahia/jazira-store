@@ -1,7 +1,7 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
