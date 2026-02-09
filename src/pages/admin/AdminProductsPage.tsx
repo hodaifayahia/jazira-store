@@ -16,9 +16,11 @@ import { useCategories } from '@/hooks/useCategories';
 export default function AdminProductsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { data: categoriesData } = useCategories();
+  const categoryNames = categoriesData?.map(c => c.name) || [];
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', description: '', price: '', category: CATEGORIES[0], stock: '0', is_active: true });
+  const [form, setForm] = useState({ name: '', description: '', price: '', category: '' as string, stock: '0', is_active: true });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
 
   const { data: products, isLoading } = useQuery({
