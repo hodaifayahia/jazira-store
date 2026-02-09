@@ -1,14 +1,23 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Home, Sparkles, Watch, ArrowLeft, ShoppingBag, Gift, Star, Heart, Shirt, type LucideIcon } from 'lucide-react';
+import { Home, Sparkles, Watch, ArrowLeft, ShoppingBag, Gift, Star, Heart, Shirt,
+  Laptop, Smartphone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette,
+  Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
+  Wrench, Gamepad2, Crown, Flower2, Bike, Briefcase, Stethoscope,
+  type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
 import { useCategories } from '@/hooks/useCategories';
 import heroBanner from '@/assets/hero-banner.jpg';
 
-const ICON_MAP: Record<string, LucideIcon> = { Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt };
+const ICON_MAP: Record<string, LucideIcon> = {
+  Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt,
+  Laptop, Smartphone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette,
+  Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
+  Wrench, Gamepad2, Crown, Flower2, Bike, Briefcase, Stethoscope,
+};
 const COLOR_CLASSES = [
   'bg-primary/10 text-primary',
   'bg-secondary/10 text-secondary',
