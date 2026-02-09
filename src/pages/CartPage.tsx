@@ -3,6 +3,7 @@ import { Trash2, Minus, Plus, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/lib/format';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal } = useCart();
