@@ -1,12 +1,24 @@
 import { Link } from 'react-router-dom';
+import { useStoreLogo } from '@/hooks/useStoreLogo';
 
 export default function Footer() {
+  const { data: logoUrl } = useStoreLogo();
+
   return (
     <footer className="bg-foreground text-background mt-auto">
       <div className="container py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="font-cairo font-bold text-lg mb-3">DZ Store</h3>
+            <div className="flex items-center gap-2 mb-3">
+              {logoUrl ? (
+                <img src={logoUrl} alt="DZ Store" className="w-8 h-8 rounded object-contain bg-background/10 p-0.5" />
+              ) : (
+                <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground font-cairo font-bold text-sm">DZ</span>
+                </div>
+              )}
+              <h3 className="font-cairo font-bold text-lg">DZ Store</h3>
+            </div>
             <p className="text-background/70 font-cairo text-sm">
               متجرك الإلكتروني الأول في الجزائر للأدوات المنزلية، منتجات الزينة والإكسسوارات.
             </p>

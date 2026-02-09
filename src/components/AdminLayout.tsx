@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useStoreLogo } from '@/hooks/useStoreLogo';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'لوحة القيادة', icon: LayoutDashboard },
@@ -21,6 +22,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { data: logoUrl } = useStoreLogo();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -49,7 +51,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-card border-l transform transition-transform md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
         <div className="flex items-center justify-between p-4 border-b">
-          <Link to="/admin" className="font-cairo font-bold text-lg">DZ Store Admin</Link>
+          <Link to="/admin" className="flex items-center gap-2">
+            {logoUrl ? (
+              <img src={logoUrl} alt="DZ Store" className="w-8 h-8 rounded object-contain" />
+            ) : (
+              <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-cairo font-bold text-xs">DZ</span>
+              </div>
+            )}
+            <span className="font-cairo font-bold text-lg">لوحة التحكم</span>
+          </Link>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </Button>
