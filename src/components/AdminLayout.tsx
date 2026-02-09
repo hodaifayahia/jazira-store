@@ -1,13 +1,14 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'لوحة القيادة', icon: LayoutDashboard },
   { href: '/admin/products', label: 'المنتجات', icon: Package },
+  { href: '/admin/categories', label: 'الفئات', icon: Layers },
   { href: '/admin/orders', label: 'الطلبات', icon: ShoppingCart },
   { href: '/admin/wilayas', label: 'الولايات', icon: MapPin },
   { href: '/admin/coupons', label: 'كوبونات', icon: Tag },
