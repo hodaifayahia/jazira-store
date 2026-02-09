@@ -193,7 +193,6 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         name: name.trim(),
         description: description.trim(),
         price: Number(price),
-        shipping_price: Number(shippingPrice) || 0,
         category: [category],
         stock: Number(stock),
         is_active: isActive,
