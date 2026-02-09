@@ -1,56 +1,45 @@
 
 
-## Plan: Admin Products Search/Filter + Enhanced Categories Page
+## Plan: Low Stock Alert + RTL Switch/Checkbox Fix
 
-### 1. Admin Products Table -- Search and Filter
+### 1. Low Stock Alert on Dashboard
 
-**What changes:**
-- Add a search bar above the products table to filter by product name.
-- Add a category dropdown filter to show only products of a specific category.
-- Add a status filter (All / Active / Inactive).
-- Filtering happens client-side on the already-fetched products list.
+The dashboard already has a low stock section at the bottom. This task will add a prominent alert banner at the top of the dashboard when there are products with stock of 5 or fewer units.
 
-**Where:** `src/pages/admin/AdminProductsPage.tsx`
-
----
-
-### 2. Enhanced Categories Page
-
-**What changes:**
-
-**A. More icon options**
-- Expand the `AVAILABLE_ICONS` array with many more Lucide icons (e.g., Laptop, Phone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette, Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, etc.).
-
-**B. Custom photo upload for categories**
-- Add an "upload photo" option alongside icon selection. Each category can use either a Lucide icon OR an uploaded image.
-- Category data structure changes from `{ name, icon }` to `{ name, icon, image?: string }`.
-- When an image is uploaded, it goes to the existing `store` storage bucket (e.g., `categories/filename.ext`).
-- The category display (in admin and storefront) will show the uploaded image if present, otherwise the icon.
-
-**C. Edit functionality (already exists)**
-- The edit feature with inline editing is already implemented. No changes needed here -- it already supports renaming and changing the icon.
-- The edit flow will be extended to also allow changing/uploading a category image.
-
-**Where:** `src/pages/admin/AdminCategoriesPage.tsx`, `src/hooks/useCategories.ts`
+**Changes in `src/pages/admin/AdminDashboardPage.tsx`:**
+- Import `Alert`, `AlertTitle`, `AlertDescription` from `@/components/ui/alert`.
+- Add a visible alert banner at the very top of the dashboard (before the stats grid) when `lowStockProducts.length > 0`.
+- The alert will show the count and list the product names with their remaining stock.
+- Uses the `destructive` variant for visual urgency.
 
 ---
 
-### Technical Details
+### 2. RTL Fix for Switch Component
 
-**AdminProductsPage.tsx changes:**
-- Add state variables: `searchQuery`, `filterCategory`, `filterStatus`.
-- Add a filter bar with an `Input` for search, a `Select` for category, and a `Select` for status.
-- Apply filters to the `products` array before rendering the table rows.
+The Switch component's thumb uses `translate-x-5` (moves right when checked) and `translate-x-0` (rests at left when unchecked). In RTL, this is reversed -- the thumb should move LEFT when checked.
 
-**AdminCategoriesPage.tsx changes:**
-- Expand `AVAILABLE_ICONS` with ~20+ more icons.
-- Add image upload input in both the "add" and "edit" forms.
-- Upload images to the `store` bucket under a `categories/` prefix.
-- Show image preview when a category has a custom photo.
-- Update the Category type to include an optional `image` field.
+**Changes in `src/components/ui/switch.tsx`:**
+- Replace `data-[state=checked]:translate-x-5` with `data-[state=checked]:ltr:translate-x-5 data-[state=checked]:rtl:-translate-x-5`
+- This ensures the thumb slides in the correct direction based on text direction.
 
-**useCategories.ts changes:**
-- Update the `Category` interface to add `image?: string`.
+This fix applies globally to all Switch usages across the site (Wilayas page, Products page, etc.).
 
-**Storefront impact:**
-- Any component rendering category icons (Navbar, ProductsPage, Index) will need a small update to render the category image if present, falling back to the icon.
+---
+
+### 3. RTL Fix for Checkbox Component
+
+The Checkbox component itself is mostly fine (it's a simple square with a checkmark), but the check icon positioning can be slightly off in RTL. Review and ensure the indicator renders correctly.
+
+After inspecting the Checkbox code, the checkbox itself (a square with a centered checkmark) does not have directional translation issues like the Switch. No changes needed for the Checkbox component specifically.
+
+---
+
+### Technical Summary
+
+| File | Change |
+|------|--------|
+| `src/components/ui/switch.tsx` | Fix thumb translation direction for RTL using `ltr:` and `rtl:` Tailwind variants |
+| `src/pages/admin/AdminDashboardPage.tsx` | Add prominent low-stock alert banner at top of dashboard |
+
+### Note on Tailwind RTL support
+Tailwind CSS v3+ supports `ltr:` and `rtl:` variants out of the box when `dir="rtl"` is set on the HTML element (which this project already has).
