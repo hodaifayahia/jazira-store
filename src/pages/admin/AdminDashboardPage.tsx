@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, ArrowUpRight, ArrowDownRight, AlertTriangle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { formatPrice, formatDate } from '@/lib/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
