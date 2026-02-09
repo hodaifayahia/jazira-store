@@ -163,7 +163,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const clearNotifications = () => setNotifications([]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Skeleton className="w-32 h-8" /></div>;
-  if (!user) return null;
+  if (!user || !isAdmin) return null;
 
   return (
     <div className="min-h-screen flex bg-muted">

@@ -98,6 +98,18 @@ export default function Footer() {
           <p className="text-background/40 font-cairo text-xs">
             © {new Date().getFullYear()} {storeName}. جميع الحقوق محفوظة.
           </p>
+          {facebookUrl && (
+            <a
+              href={facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-background/50 hover:text-primary transition-colors"
+              aria-label="Facebook"
+            >
+              <Facebook className="w-5 h-5" />
+              <span className="font-cairo text-xs">تابعنا على فيسبوك</span>
+            </a>
+          )}
         </div>
       </div>
     </footer>
