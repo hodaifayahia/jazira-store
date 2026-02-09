@@ -29,10 +29,11 @@ export default function AdminWilayasPage() {
   const [form, setForm] = useState({ name: '', shipping_price: '', is_active: true });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const { data: wilayas } = useQuery({
+  const { data: wilayas, isLoading } = useQuery({
     queryKey: ['admin-wilayas'],
     queryFn: async () => {
-      const { data } = await supabase.from('wilayas').select('*').order('name');
+      const { data, error } = await supabase.from('wilayas').select('*').order('name');
+      if (error) throw error;
       return data || [];
     },
   });
