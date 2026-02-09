@@ -78,13 +78,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Main */}
       <div className="flex-1 md:mr-64">
-        <header className="sticky top-0 z-40 bg-card border-b h-14 flex items-center px-4 gap-3">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu className="w-5 h-5" />
-          </Button>
-          <h1 className="font-cairo font-bold text-lg">
-            {NAV_ITEMS.find(i => i.href === location.pathname)?.label || 'لوحة التحكم'}
-          </h1>
+        <header className="sticky top-0 z-40 bg-card border-b h-14 flex items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
+              <Menu className="w-5 h-5" />
+            </Button>
+            <h1 className="font-cairo font-bold text-lg">
+              {NAV_ITEMS.find(i => i.href === location.pathname)?.label || 'لوحة التحكم'}
+            </h1>
+          </div>
+          <span className="font-cairo text-xs text-muted-foreground hidden sm:block">{user?.email}</span>
         </header>
         <main className="p-4 md:p-6">{children}</main>
       </div>
