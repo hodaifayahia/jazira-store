@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Category {
   name: string;
   icon: string;
+  image?: string;
 }
 
 export function useCategories() {

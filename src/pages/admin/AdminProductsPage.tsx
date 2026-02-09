@@ -129,7 +129,12 @@ export default function AdminProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {products.map(p => {
+              {products.filter(p => {
+                const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchCategory = filterCategory === 'الكل' || (Array.isArray(p.category) ? p.category.includes(filterCategory) : p.category === filterCategory);
+                const matchStatus = filterStatus === 'all' || (filterStatus === 'active' ? p.is_active : !p.is_active);
+                return matchSearch && matchCategory && matchStatus;
+              }).map(p => {
                 const mainIdx = p.main_image_index ?? 0;
                 const mainImage = p.images?.[mainIdx] || p.images?.[0];
                 return (
