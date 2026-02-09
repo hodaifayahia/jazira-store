@@ -544,6 +544,8 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [selectedVariationIds, setSelectedVariationIds] = useState<Set<string>>(new Set());
   const [variationPriceAdj, setVariationPriceAdj] = useState<Record<string, string>>({});
   const [variationStock, setVariationStock] = useState<Record<string, string>>({});
+  const [variationImages, setVariationImages] = useState<Record<string, string>>({});
+  const [uploadingVariationImage, setUploadingVariationImage] = useState<string | null>(null);
 
   // Initialize selected variations from existing product_variations
   useState(() => {
@@ -551,18 +553,20 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
       const selected = new Set<string>();
       const priceAdj: Record<string, string> = {};
       const stockMap: Record<string, string> = {};
+      const imgMap: Record<string, string> = {};
       productVariations.forEach(pv => {
-        // Match by type+value to variation_options
         const opt = variationOptions.find(o => o.variation_type === pv.variation_type && o.variation_value === pv.variation_value);
         if (opt) {
           selected.add(opt.id);
           priceAdj[opt.id] = String(pv.price_adjustment || 0);
           stockMap[opt.id] = String(pv.stock || 0);
+          if (pv.image_url) imgMap[opt.id] = pv.image_url;
         }
       });
       setSelectedVariationIds(selected);
       setVariationPriceAdj(priceAdj);
       setVariationStock(stockMap);
+      setVariationImages(imgMap);
     }
   });
 
@@ -572,18 +576,21 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
       const selected = new Set<string>();
       const priceAdj: Record<string, string> = {};
       const stockMap: Record<string, string> = {};
+      const imgMap: Record<string, string> = {};
       productVariations.forEach(pv => {
         const opt = variationOptions.find(o => o.variation_type === pv.variation_type && o.variation_value === pv.variation_value);
         if (opt) {
           selected.add(opt.id);
           priceAdj[opt.id] = String(pv.price_adjustment || 0);
           stockMap[opt.id] = String(pv.stock || 0);
+          if (pv.image_url) imgMap[opt.id] = pv.image_url;
         }
       });
       if (selected.size > 0) {
         setSelectedVariationIds(selected);
         setVariationPriceAdj(priceAdj);
         setVariationStock(stockMap);
+        setVariationImages(imgMap);
       }
     }
   }, [productVariations, variationOptions]);
@@ -609,6 +616,27 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  const handleVariationImageUpload = async (optionId: string, file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'حجم الصورة كبير جداً (الحد الأقصى 5MB)', variant: 'destructive' });
+      return;
+    }
+    setUploadingVariationImage(optionId);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `variations/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('products').upload(path, file);
+      if (error) throw error;
+      const { data } = supabase.storage.from('products').getPublicUrl(path);
+      setVariationImages(prev => ({ ...prev, [optionId]: data.publicUrl }));
+      toast({ title: 'تم رفع صورة المتغير ✅' });
+    } catch {
+      toast({ title: 'فشل رفع الصورة', variant: 'destructive' });
+    } finally {
+      setUploadingVariationImage(null);
+    }
   };
 
   const saveMutation = useMutation({
@@ -653,7 +681,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             price_adjustment: Number(variationPriceAdj[o.id] || 0),
             stock: Number(variationStock[o.id] || 0),
             is_active: true,
-            image_url: null,
+            image_url: variationImages[o.id] || null,
           }));
           const { error } = await supabase.from('product_variations').insert(inserts);
           if (error) throw error;
@@ -898,6 +926,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                         <thead className="bg-muted/50">
                           <tr>
                             <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المتغير</th>
+                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">الصورة</th>
                             <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">فرق السعر (دج)</th>
                             <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المخزون</th>
                             <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-10"></th>
@@ -912,6 +941,43 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                                     <div className="w-6 h-6 rounded-full border border-muted-foreground/30 shrink-0" style={{ backgroundColor: o.color_code }} />
                                   )}
                                   <span className="font-cairo font-medium">{o.variation_value}</span>
+                                </div>
+                              </td>
+                              <td className="p-2.5">
+                                <div className="flex items-center gap-2">
+                                  {variationImages[o.id] ? (
+                                    <div className="relative group/img">
+                                      <img src={variationImages[o.id]} alt="" className="w-10 h-10 rounded-lg object-cover border" />
+                                      <button
+                                        type="button"
+                                        onClick={() => setVariationImages(prev => { const n = { ...prev }; delete n[o.id]; return n; })}
+                                        className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <label className="cursor-pointer">
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={e => {
+                                          const file = e.target.files?.[0];
+                                          if (file) handleVariationImageUpload(o.id, file);
+                                          e.target.value = '';
+                                        }}
+                                        disabled={uploadingVariationImage === o.id}
+                                      />
+                                      <div className="w-10 h-10 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors">
+                                        {uploadingVariationImage === o.id ? (
+                                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                        ) : (
+                                          <Upload className="w-3.5 h-3.5 text-muted-foreground/50" />
+                                        )}
+                                      </div>
+                                    </label>
+                                  )}
                                 </div>
                               </td>
                               <td className="p-2.5">
