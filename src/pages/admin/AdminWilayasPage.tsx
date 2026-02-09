@@ -136,7 +136,10 @@ export default function AdminWilayasPage() {
               </tr>
             ))}
             {(!wilayas || wilayas.length === 0) && (
-              <tr><td colSpan={4} className="p-8 text-center font-cairo text-muted-foreground">لا توجد ولايات</td></tr>
+              <tr><td colSpan={4} className="p-8 text-center font-cairo text-muted-foreground">
+                <MapPin className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+                لا توجد ولايات بعد
+              </td></tr>
             )}
           </tbody>
         </table>
