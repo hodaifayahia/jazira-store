@@ -130,6 +130,7 @@ export default function CheckoutPage() {
         payment_receipt_url: receiptUrl || null,
         coupon_code: couponApplied ? couponCode : null,
         discount_amount: discount,
+        user_id: user?.id || null,
       }).select().single();
       if (error) throw error;
 
