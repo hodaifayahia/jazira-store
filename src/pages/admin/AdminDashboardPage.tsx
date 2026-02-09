@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ShoppingCart, DollarSign, TrendingUp, Package, CalendarDays } from 'lucide-react';
+import { ShoppingCart, DollarSign, Package, CalendarDays } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
+import { DashboardSkeleton } from '@/components/LoadingSkeleton';
+import { useToast } from '@/hooks/use-toast';
 
 function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) {
   return (
@@ -20,20 +22,23 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
 }
 
 export default function AdminDashboardPage() {
-  const { data: orders } = useQuery({
+  const { toast } = useToast();
+
+  const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders-all'],
     queryFn: async () => {
-      const { data } = await supabase.from('orders').select('*, wilayas(name)').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('orders').select('*, wilayas(name)').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
+    meta: { onError: () => toast({ title: 'حدث خطأ، يرجى المحاولة مرة أخرى', variant: 'destructive' }) },
   });
 
   const { data: topProducts } = useQuery({
     queryKey: ['admin-top-products'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('order_items')
-        .select('product_id, quantity, products(name)');
+      const { data, error } = await supabase.from('order_items').select('product_id, quantity, products(name)');
+      if (error) throw error;
       if (!data) return [];
       const map: Record<string, { name: string; total: number }> = {};
       data.forEach((item: any) => {
@@ -48,9 +53,8 @@ export default function AdminDashboardPage() {
   const { data: topWilayas } = useQuery({
     queryKey: ['admin-top-wilayas'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('orders')
-        .select('wilaya_id, wilayas(name)');
+      const { data, error } = await supabase.from('orders').select('wilaya_id, wilayas(name)');
+      if (error) throw error;
       if (!data) return [];
       const map: Record<string, { name: string; count: number }> = {};
       data.forEach((o: any) => {
@@ -63,13 +67,13 @@ export default function AdminDashboardPage() {
     },
   });
 
+  if (isLoading) return <DashboardSkeleton />;
+
   const now = new Date();
   const today = orders?.filter(o => new Date(o.created_at!).toDateString() === now.toDateString()) || [];
-
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
   const thisWeek = orders?.filter(o => new Date(o.created_at!) >= weekAgo) || [];
-
   const thisMonth = orders?.filter(o => {
     const d = new Date(o.created_at!);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -121,14 +125,17 @@ export default function AdminDashboardPage() {
                 </tr>
               ))}
               {(!orders || orders.length === 0) && (
-                <tr><td colSpan={5} className="p-8 text-center font-cairo text-muted-foreground">لا توجد طلبات بعد</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center font-cairo text-muted-foreground">
+                  <ShoppingCart className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+                  لا توجد طلبات بعد
+                </td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Bottom grid: Top Products + Top Wilayas */}
+      {/* Bottom grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-card border rounded-lg">
           <div className="p-4 border-b">

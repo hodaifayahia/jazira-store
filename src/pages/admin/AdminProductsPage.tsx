@@ -10,8 +10,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon, Package } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
+import { TableSkeleton } from '@/components/LoadingSkeleton';
 
 const CATEGORIES = ['أدوات منزلية', 'منتجات زينة', 'إكسسوارات'];
 const PAGE_SIZE = 10;
@@ -29,10 +30,11 @@ export default function AdminProductsPage() {
   const [page, setPage] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const { data: products } = useQuery({
+  const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
   });
@@ -155,7 +157,7 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {isLoading ? <TableSkeleton rows={5} cols={7} /> : <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -197,11 +199,14 @@ export default function AdminProductsPage() {
               </tr>
             ))}
             {paginated.length === 0 && (
-              <tr><td colSpan={7} className="p-8 text-center font-cairo text-muted-foreground">لا توجد منتجات</td></tr>
+              <tr><td colSpan={7} className="p-8 text-center font-cairo text-muted-foreground">
+                <Package className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+                لا توجد منتجات بعد
+              </td></tr>
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Pagination */}
       {totalPages > 1 && (

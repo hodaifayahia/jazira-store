@@ -11,8 +11,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Loader2, CalendarIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, CalendarIcon, Tag } from 'lucide-react';
 import { formatDate } from '@/lib/format';
+import { TableSkeleton } from '@/components/LoadingSkeleton';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -25,10 +26,11 @@ export default function AdminCouponsPage() {
   const [validationError, setValidationError] = useState('');
   const [form, setForm] = useState({ code: '', discount_type: 'percentage', discount_value: '', expiry_date: '', is_active: true });
 
-  const { data: coupons } = useQuery({
+  const { data: coupons, isLoading } = useQuery({
     queryKey: ['admin-coupons'],
     queryFn: async () => {
-      const { data } = await supabase.from('coupons').select('*').order('created_at' as any, { ascending: false });
+      const { data, error } = await supabase.from('coupons').select('*').order('created_at' as any, { ascending: false });
+      if (error) throw error;
       return data || [];
     },
   });
@@ -82,7 +84,7 @@ export default function AdminCouponsPage() {
         <h2 className="font-cairo font-bold text-xl">كوبونات الخصم</h2>
         <Button onClick={() => { setEditing(null); setForm({ code: '', discount_type: 'percentage', discount_value: '', expiry_date: '', is_active: true }); setValidationError(''); setDialogOpen(true); }} className="font-cairo gap-1"><Plus className="w-4 h-4" /> إضافة كوبون</Button>
       </div>
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {isLoading ? <TableSkeleton rows={3} cols={6} /> : <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -113,9 +115,15 @@ export default function AdminCouponsPage() {
                 </td>
               </tr>
             ))}
+            {coupons && coupons.length === 0 && (
+              <tr><td colSpan={6} className="p-8 text-center font-cairo text-muted-foreground">
+                <Tag className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+                لا توجد كوبونات بعد
+              </td></tr>
+            )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>

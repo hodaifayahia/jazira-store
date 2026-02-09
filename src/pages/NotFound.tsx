@@ -1,21 +1,20 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { SearchX } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
-  }, [location.pathname]);
+  usePageTitle("الصفحة غير موجودة - DZ Store");
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
-        <a href="/" className="text-primary underline hover:text-primary/90">
-          Return to Home
-        </a>
+      <div className="text-center space-y-4">
+        <SearchX className="w-16 h-16 mx-auto text-muted-foreground" />
+        <h1 className="font-cairo font-bold text-5xl text-foreground">404</h1>
+        <p className="font-cairo text-xl text-muted-foreground">الصفحة غير موجودة</p>
+        <Link to="/">
+          <Button className="font-cairo font-semibold">العودة إلى الرئيسية</Button>
+        </Link>
       </div>
     </div>
   );

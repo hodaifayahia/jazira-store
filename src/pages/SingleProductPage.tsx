@@ -1,8 +1,9 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingCart, Minus, Plus, ChevronRight, ArrowRight } from 'lucide-react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
@@ -27,6 +28,8 @@ export default function SingleProductPage() {
     },
     enabled: !!id,
   });
+
+  usePageTitle(product ? `${product.name} - DZ Store` : 'DZ Store');
 
   if (isLoading) {
     return (
@@ -99,7 +102,7 @@ export default function SingleProductPage() {
             <div className="flex gap-2 overflow-x-auto">
               {images.map((img, i) => (
                 <button key={i} onClick={() => setSelectedImage(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 shrink-0 ${i === selectedImage ? 'border-primary' : 'border-transparent'}`}>
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                 </button>
               ))}
             </div>

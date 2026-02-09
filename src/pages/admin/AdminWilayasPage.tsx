@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, MapPin } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
+import { TableSkeleton } from '@/components/LoadingSkeleton';
 
 const DEFAULT_WILAYAS = [
   { name: 'الجزائر', shipping_price: 400, is_active: true },
@@ -28,10 +29,11 @@ export default function AdminWilayasPage() {
   const [form, setForm] = useState({ name: '', shipping_price: '', is_active: true });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const { data: wilayas } = useQuery({
+  const { data: wilayas, isLoading } = useQuery({
     queryKey: ['admin-wilayas'],
     queryFn: async () => {
-      const { data } = await supabase.from('wilayas').select('*').order('name');
+      const { data, error } = await supabase.from('wilayas').select('*').order('name');
+      if (error) throw error;
       return data || [];
     },
   });
@@ -104,7 +106,7 @@ export default function AdminWilayasPage() {
         <Button onClick={openCreate} className="font-cairo gap-1"><Plus className="w-4 h-4" /> إضافة ولاية</Button>
       </div>
 
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {isLoading ? <TableSkeleton rows={5} cols={4} /> : <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -134,11 +136,14 @@ export default function AdminWilayasPage() {
               </tr>
             ))}
             {(!wilayas || wilayas.length === 0) && (
-              <tr><td colSpan={4} className="p-8 text-center font-cairo text-muted-foreground">لا توجد ولايات</td></tr>
+              <tr><td colSpan={4} className="p-8 text-center font-cairo text-muted-foreground">
+                <MapPin className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+                لا توجد ولايات بعد
+              </td></tr>
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={v => { if (!v) { setDialogOpen(false); setEditing(null); } else setDialogOpen(true); }}>

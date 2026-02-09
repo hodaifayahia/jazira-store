@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
-import { Search, ExternalLink, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, Loader2, ShoppingCart } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
+import { TableSkeleton } from '@/components/LoadingSkeleton';
 
 const STATUSES = ['جديد', 'قيد المعالجة', 'تم الشحن', 'تم التسليم', 'ملغي'];
 const PAGE_SIZE = 10;
@@ -33,10 +34,11 @@ export default function AdminOrdersPage() {
   const [newStatus, setNewStatus] = useState('');
   const [page, setPage] = useState(0);
 
-  const { data: orders } = useQuery({
+  const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      const { data } = await supabase.from('orders').select('*, wilayas(name)').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('orders').select('*, wilayas(name)').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
   });
@@ -45,7 +47,8 @@ export default function AdminOrdersPage() {
     queryKey: ['order-items', selectedOrder?.id],
     queryFn: async () => {
       if (!selectedOrder) return [];
-      const { data } = await supabase.from('order_items').select('*, products(name)').eq('order_id', selectedOrder.id);
+      const { data, error } = await supabase.from('order_items').select('*, products(name)').eq('order_id', selectedOrder.id);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!selectedOrder,
@@ -108,7 +111,7 @@ export default function AdminOrdersPage() {
         </Select>
       </div>
 
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {isLoading ? <TableSkeleton rows={5} cols={8} /> : <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -138,11 +141,14 @@ export default function AdminOrdersPage() {
               </tr>
             ))}
             {paginated.length === 0 && (
-              <tr><td colSpan={8} className="p-8 text-center font-cairo text-muted-foreground">لا توجد طلبات</td></tr>
+              <tr><td colSpan={8} className="p-8 text-center font-cairo text-muted-foreground">
+                <ShoppingCart className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+                لا توجد طلبات بعد
+              </td></tr>
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Pagination */}
       {totalPages > 1 && (

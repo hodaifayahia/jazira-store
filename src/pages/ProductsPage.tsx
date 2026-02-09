@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductCard from '@/components/ProductCard';
@@ -16,6 +17,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function ProductsPage() {
+  usePageTitle('تصفح منتجاتنا - DZ Store');
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'الكل';
   const [search, setSearch] = useState('');

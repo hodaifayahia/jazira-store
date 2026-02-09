@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/lib/format';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Copy, Upload, CheckCircle, Loader2, X, FileText } from 'lucide-react';
 
 export default function CheckoutPage() {
+  usePageTitle('إتمام الطلب - DZ Store');
   const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -49,7 +51,8 @@ export default function CheckoutPage() {
   const { data: wilayas } = useQuery({
     queryKey: ['wilayas'],
     queryFn: async () => {
-      const { data } = await supabase.from('wilayas').select('*').eq('is_active', true).order('name');
+      const { data, error } = await supabase.from('wilayas').select('*').eq('is_active', true).order('name');
+      if (error) throw error;
       return data || [];
     },
   });
@@ -57,7 +60,8 @@ export default function CheckoutPage() {
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
-      const { data } = await supabase.from('settings').select('*');
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach(s => { map[s.key] = s.value || ''; });
       return map;

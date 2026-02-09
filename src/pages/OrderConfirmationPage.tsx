@@ -2,23 +2,26 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, Copy } from 'lucide-react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OrderConfirmationPage() {
+  usePageTitle('تأكيد الطلب - DZ Store');
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const { toast } = useToast();
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', orderNumber],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .select('*, wilayas(name)')
         .eq('order_number', orderNumber!)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!orderNumber,
@@ -27,10 +30,11 @@ export default function OrderConfirmationPage() {
   const { data: orderItems } = useQuery({
     queryKey: ['order-items', order?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('order_items')
         .select('*, products(name)')
         .eq('order_id', order!.id);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!order?.id,

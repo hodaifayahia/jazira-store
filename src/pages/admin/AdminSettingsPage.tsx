@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Loader2, Upload, X } from 'lucide-react';
+import { SettingsSkeleton } from '@/components/LoadingSkeleton';
 
 export default function AdminSettingsPage() {
   const qc = useQueryClient();
@@ -17,7 +18,8 @@ export default function AdminSettingsPage() {
   const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-settings'],
     queryFn: async () => {
-      const { data } = await supabase.from('settings').select('*');
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach(s => { map[s.key] = s.value || ''; });
       return map;
@@ -67,7 +69,7 @@ export default function AdminSettingsPage() {
     }
   };
 
-  if (isLoading) return null;
+  if (isLoading) return <SettingsSkeleton />;
 
   const logoUrl = mergedSettings.store_logo_url;
 
