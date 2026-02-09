@@ -2,14 +2,18 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Zap, Star, Send, Loader2 } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Banknote, Truck, CheckCircle, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice, formatDate } from '@/lib/format';
+import { calculateShippingForOrder } from '@/lib/shipping';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function StarRating({ value, onChange, readonly = false }: { value: number; onChange?: (v: number) => void; readonly?: boolean }) {
@@ -35,17 +39,25 @@ export default function SingleProductPage() {
   const { addItem } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [showStickyBar, setShowStickyBar] = useState(false);
-  const actionAreaRef = useRef<HTMLDivElement>(null);
 
   // Review form state
   const [reviewName, setReviewName] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
+
+  // Inline order form state
+  const [orderName, setOrderName] = useState('');
+  const [orderPhone, setOrderPhone] = useState('');
+  const [orderWilayaId, setOrderWilayaId] = useState('');
+  const [orderAddress, setOrderAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [submittingOrder, setSubmittingOrder] = useState(false);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -71,16 +83,23 @@ export default function SingleProductPage() {
     enabled: !!id,
   });
 
-  // Sticky bar observer
-  useEffect(() => {
-    if (!actionAreaRef.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setShowStickyBar(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    observer.observe(actionAreaRef.current);
-    return () => observer.disconnect();
-  }, [product]);
+  const { data: wilayas } = useQuery({
+    queryKey: ['wilayas'],
+    queryFn: async () => {
+      const { data } = await supabase.from('wilayas').select('*').eq('is_active', true).order('name');
+      return data || [];
+    },
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('*');
+      const map: Record<string, string> = {};
+      data?.forEach(s => { map[s.key] = s.value || ''; });
+      return map;
+    },
+  });
 
   const submitReview = useMutation({
     mutationFn: async () => {
@@ -145,18 +164,84 @@ export default function SingleProductPage() {
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
 
-  const handleDirectOrder = () => {
-    for (let i = 0; i < qty; i++) {
-      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
-    }
-    navigate('/checkout');
-  };
-
   const goToPrevImage = () => setSelectedImage(i => (i === 0 ? images.length - 1 : i - 1));
   const goToNextImage = () => setSelectedImage(i => (i === images.length - 1 ? 0 : i + 1));
 
+  // Inline order calculations
+  const selectedWilaya = wilayas?.find(w => w.id === orderWilayaId);
+  const wilayaBaseRate = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
+  const productShippingRate = Number(product.shipping_price) || 0;
+  const shippingRate = productShippingRate > 0 ? productShippingRate : wilayaBaseRate;
+  const shippingCost = shippingRate * qty;
+  const itemSubtotal = Number(product.price) * qty;
+  const orderTotal = itemSubtotal + shippingCost;
+
+  const baridimobEnabled = settings?.baridimob_enabled === 'true';
+  const flexyEnabled = settings?.flexy_enabled === 'true';
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: 'تم النسخ' });
+  };
+
+  const handleDirectOrder = async () => {
+    if (!orderName.trim() || !orderPhone.trim() || !orderWilayaId || !paymentMethod) {
+      toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة', variant: 'destructive' });
+      return;
+    }
+    if (!/^0[567]\d{8}$/.test(orderPhone)) {
+      toast({ title: 'خطأ', description: 'رقم الهاتف غير صالح (مثال: 05XXXXXXXX)', variant: 'destructive' });
+      return;
+    }
+    if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) {
+      toast({ title: 'خطأ', description: 'يرجى إرفاق إيصال الدفع', variant: 'destructive' });
+      return;
+    }
+
+    setSubmittingOrder(true);
+    try {
+      let receiptUrl = '';
+      if (receiptFile) {
+        const ext = receiptFile.name.split('.').pop();
+        const filePath = `${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('receipts').upload(filePath, receiptFile);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(filePath);
+        receiptUrl = urlData.publicUrl;
+      }
+
+      const { data: order, error } = await supabase.from('orders').insert({
+        order_number: '',
+        customer_name: orderName,
+        customer_phone: orderPhone,
+        wilaya_id: orderWilayaId,
+        address: orderAddress || null,
+        subtotal: itemSubtotal,
+        shipping_cost: shippingCost,
+        total_amount: orderTotal,
+        payment_method: paymentMethod,
+        payment_receipt_url: receiptUrl || null,
+        user_id: user?.id || null,
+      }).select().single();
+      if (error) throw error;
+
+      await supabase.from('order_items').insert({
+        order_id: order.id,
+        product_id: product.id,
+        quantity: qty,
+        unit_price: Number(product.price),
+      });
+
+      navigate(`/order-confirmation/${order.order_number}`);
+    } catch (err) {
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء إرسال الطلب', variant: 'destructive' });
+    } finally {
+      setSubmittingOrder(false);
+    }
+  };
+
   return (
-    <div className="container py-8 pb-28">
+    <div className="container py-8">
       {/* Back link */}
       <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowRight className="w-4 h-4" />
@@ -239,7 +324,7 @@ export default function SingleProductPage() {
           </div>
         </div>
 
-        {/* Info */}
+        {/* Info + Order Form */}
         <div className="space-y-4">
           <div className="bg-card border rounded-2xl p-6 space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -271,8 +356,9 @@ export default function SingleProductPage() {
             )}
           </div>
 
+          {/* Quantity + Add to Cart */}
           {!outOfStock && (
-            <div ref={actionAreaRef} className="bg-card border rounded-2xl p-6 space-y-3">
+            <div className="bg-card border rounded-2xl p-6 space-y-3">
               <div className="flex items-center gap-4">
                 <div className="flex items-center border rounded-xl">
                   <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))} className="rounded-xl"><Minus className="w-4 h-4" /></Button>
@@ -284,13 +370,131 @@ export default function SingleProductPage() {
                   إضافة إلى السلة
                 </Button>
               </div>
-              <Button
-                onClick={handleDirectOrder}
-                className="w-full font-cairo font-semibold gap-2 rounded-xl"
-              >
-                <Zap className="w-4 h-4" />
-                طلب مباشرة
-              </Button>
+            </div>
+          )}
+
+          {/* ─── Inline Order Form ─── */}
+          {!outOfStock && (
+            <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 space-y-4">
+              <h2 className="font-cairo font-bold text-xl flex items-center gap-2">
+                <Truck className="w-5 h-5 text-primary" />
+                اطلب الآن مباشرة
+              </h2>
+              <p className="font-cairo text-sm text-muted-foreground">أكمل بياناتك وسنوصلك طلبك بأسرع وقت</p>
+
+              <div className="space-y-3">
+                <div>
+                  <Label className="font-cairo text-sm">الاسم الكامل *</Label>
+                  <Input value={orderName} onChange={e => setOrderName(e.target.value)} placeholder="أدخل اسمك الكامل" className="font-cairo mt-1" />
+                </div>
+                <div>
+                  <Label className="font-cairo text-sm">رقم الهاتف *</Label>
+                  <Input value={orderPhone} onChange={e => setOrderPhone(e.target.value)} placeholder="05XXXXXXXX" className="font-roboto mt-1" dir="ltr" />
+                </div>
+                <div>
+                  <Label className="font-cairo text-sm">الولاية *</Label>
+                  <Select value={orderWilayaId} onValueChange={setOrderWilayaId}>
+                    <SelectTrigger className="font-cairo mt-1"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                    <SelectContent>
+                      {wilayas?.map(w => (
+                        <SelectItem key={w.id} value={w.id} className="font-cairo">
+                          {w.name} — {formatPrice(Number(w.shipping_price))}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="font-cairo text-sm">العنوان التفصيلي</Label>
+                  <Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} placeholder="اختياري" className="font-cairo mt-1" />
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <Label className="font-cairo text-sm font-bold">طريقة الدفع *</Label>
+                  <div className="space-y-2 mt-2">
+                    {/* COD */}
+                    <label className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'cod' ? 'border-primary bg-accent' : ''}`}>
+                      <input type="radio" name="inline-payment" value="cod" checked={paymentMethod === 'cod'} onChange={e => setPaymentMethod(e.target.value)} />
+                      <Banknote className="w-4 h-4 shrink-0" />
+                      <span className="font-cairo">الدفع عند التسليم</span>
+                    </label>
+
+                    {baridimobEnabled && (
+                      <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'baridimob' ? 'border-primary bg-accent' : ''}`}>
+                        <input type="radio" name="inline-payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => setPaymentMethod(e.target.value)} className="mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-cairo font-semibold">بريدي موب</span>
+                          {paymentMethod === 'baridimob' && settings && (
+                            <div className="mt-2 space-y-1.5 text-xs">
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                                <span className="font-cairo">الحساب:</span>
+                                <span className="font-roboto font-bold">{settings.ccp_number}</span>
+                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.ccp_number)}><Copy className="w-3 h-3" /></Button>
+                              </div>
+                              <p className="font-cairo">الاسم: {settings.ccp_name}</p>
+                              <div className="mt-1.5">
+                                <Label className="font-cairo text-[11px]">أرفق الإيصال *</Label>
+                                <Input type="file" accept="image/*,.pdf" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-0.5 h-8 text-xs" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    )}
+
+                    {flexyEnabled && (
+                      <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'flexy' ? 'border-primary bg-accent' : ''}`}>
+                        <input type="radio" name="inline-payment" value="flexy" checked={paymentMethod === 'flexy'} onChange={e => setPaymentMethod(e.target.value)} className="mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-cairo font-semibold">فليكسي</span>
+                          {paymentMethod === 'flexy' && settings && (
+                            <div className="mt-2 space-y-1.5 text-xs">
+                              <p className="font-cairo">أرسل تعبئة <span className="font-roboto font-bold">{formatPrice(Number(settings.flexy_deposit_amount || 500))}</span> إلى:</p>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                                <span className="font-roboto font-bold">{settings.flexy_number}</span>
+                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.flexy_number)}><Copy className="w-3 h-3" /></Button>
+                              </div>
+                              <div className="mt-1.5">
+                                <Label className="font-cairo text-[11px]">أرفق لقطة الشاشة *</Label>
+                                <Input type="file" accept="image/*" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-0.5 h-8 text-xs" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* Order Summary */}
+                {orderWilayaId && (
+                  <div className="bg-muted/50 rounded-xl p-3 space-y-1.5 text-sm font-cairo">
+                    <div className="flex justify-between">
+                      <span>المنتج (×{qty})</span>
+                      <span className="font-roboto font-bold">{formatPrice(itemSubtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>التوصيل</span>
+                      <span className="font-roboto font-bold">{formatPrice(shippingCost)}</span>
+                    </div>
+                    <hr className="my-1 border-border" />
+                    <div className="flex justify-between font-bold text-base">
+                      <span>الإجمالي</span>
+                      <span className="font-roboto text-primary">{formatPrice(orderTotal)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleDirectOrder}
+                  disabled={submittingOrder}
+                  className="w-full font-cairo font-bold text-base gap-2 rounded-xl h-12"
+                >
+                  {submittingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                  {submittingOrder ? 'جاري الإرسال...' : 'تأكيد الطلب'}
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -389,35 +593,6 @@ export default function SingleProductPage() {
           </div>
         )}
       </section>
-
-      {/* ─── Sticky Bottom Bar ─── */}
-      {!outOfStock && showStickyBar && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-          <div className="container flex items-center gap-3 py-3">
-            <div className="flex-1 min-w-0 hidden sm:block">
-              <p className="font-cairo font-semibold text-sm truncate">{product.name}</p>
-              <p className="font-roboto font-bold text-primary text-sm">{formatPrice(Number(product.price))}</p>
-            </div>
-            <div className="flex items-center border rounded-xl shrink-0">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setQty(q => Math.max(1, q - 1))}>
-                <Minus className="w-3.5 h-3.5" />
-              </Button>
-              <span className="w-8 text-center font-roboto font-bold text-sm">{qty}</span>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))}>
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-            <Button onClick={handleAdd} variant="outline" className="font-cairo text-sm gap-1.5 rounded-xl h-10 shrink-0">
-              <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">سلة</span>
-            </Button>
-            <Button onClick={handleDirectOrder} className="font-cairo font-semibold text-sm gap-1.5 rounded-xl h-10 flex-1 sm:flex-none sm:px-6">
-              <Zap className="w-4 h-4" />
-              اطلب الآن
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
