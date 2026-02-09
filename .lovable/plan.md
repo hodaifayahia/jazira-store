@@ -1,58 +1,36 @@
 
 
-## Fix: RLS Policies Blocking All Access
+## Fix: Admin Pages Not Displaying Data
 
-### Root Cause
+### What's Actually Happening
 
-Every RLS policy on `products`, `coupons`, `settings`, `wilayas`, `orders`, and `order_items` is created as **RESTRICTIVE** (using `AS RESTRICTIVE`). PostgreSQL requires at least one **PERMISSIVE** policy to grant initial access. Restrictive policies can only further narrow that access. Since there are no permissive policies, all queries return empty results for everyone -- including admins.
+After investigating, the RLS policies are now correctly set to PERMISSIVE and the backend is connected. The real issues are:
 
-### Solution
+1. **Coupons page bug**: The query orders by `created_at` column which does NOT exist on the `coupons` table. This causes a silent database error, making the page appear broken.
 
-Drop all existing RESTRICTIVE policies on these tables and recreate them as PERMISSIVE (the default). No code changes are needed -- the frontend code is correct and already wired to the backend. Only the database policies need fixing.
+2. **Products and orders tables are empty**: These tables have zero rows, so the pages correctly show "no data" messages. This is expected behavior -- you need to add products via the admin panel.
 
-### Database Migration
+3. **Settings and categories work**: The `settings` table has 10 rows and categories are stored there.
 
-A single migration will:
-
-1. Drop all existing restrictive policies on these 6 tables:
-   - `products`, `coupons`, `settings`, `wilayas`, `orders`, `order_items`
-
-2. Recreate them as PERMISSIVE with the same logic:
-
-| Table | Policy | Command | Rule |
-|-------|--------|---------|------|
-| products | Public can read | SELECT | `true` |
-| products | Admin can manage | ALL | `has_role(auth.uid(), 'admin')` |
-| coupons | Public can read | SELECT | `true` |
-| coupons | Admin can manage | ALL | `has_role(auth.uid(), 'admin')` |
-| settings | Public can read | SELECT | `true` |
-| settings | Admin can manage | ALL | `has_role(auth.uid(), 'admin')` |
-| wilayas | Public can read | SELECT | `true` |
-| wilayas | Admin can manage | ALL | `has_role(auth.uid(), 'admin')` |
-| orders | Public can read | SELECT | `true` |
-| orders | Anyone can insert | INSERT | `true` (with check) |
-| orders | Admin can update | UPDATE | `has_role(auth.uid(), 'admin')` |
-| orders | Admin can delete | DELETE | `has_role(auth.uid(), 'admin')` |
-| order_items | Public can read | SELECT | `true` |
-| order_items | Anyone can insert | INSERT | `true` (with check) |
-| order_items | Admin can manage | ALL | `has_role(auth.uid(), 'admin')` |
-| user_roles | User reads own | SELECT | `auth.uid() = user_id` |
-
-Also add a unique constraint on `settings.key` (needed for the upsert `ON CONFLICT` used in the settings page).
-
-### Files Changed
+### Fix Required
 
 | File | Change |
 |------|--------|
-| Database migration only | Drop restrictive policies, recreate as permissive, add unique constraint on `settings.key` |
+| `src/pages/admin/AdminCouponsPage.tsx` | Remove `.order('created_at' as any, ...)` since the coupons table has no `created_at` column. Order by `code` instead. |
 
-No frontend code changes needed.
+### What Will Work After the Fix
 
-### What This Fixes
+- **Coupons page**: Will load correctly and allow adding/editing/deleting coupons
+- **Products page**: Already works -- shows "no products yet" because the table is empty. You can add products using the "add product" button.
+- **Categories page**: Already works -- reads/writes from settings table
+- **Settings page**: Already works -- all payment and store settings load and save
+- **Dashboard**: Already works -- shows stats (all zeros because no orders yet)
 
-- Admin products page will load and display products
-- Admin coupons page will load and allow CRUD
-- Admin categories page will load and save (reads/writes `settings` table)
-- Admin settings page will load and save all payment/store settings
-- Public storefront will also be able to read products, settings, and wilayas
+### Next Steps After Fix
+
+Once the coupons query is fixed, you can start adding data through the admin panel:
+1. Add categories (if not already done)
+2. Add products with images
+3. Test the storefront to verify products appear
+4. Create test coupons
 
