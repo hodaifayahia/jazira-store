@@ -17,7 +17,8 @@ export default function AdminSettingsPage() {
   const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-settings'],
     queryFn: async () => {
-      const { data } = await supabase.from('settings').select('*');
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach(s => { map[s.key] = s.value || ''; });
       return map;
