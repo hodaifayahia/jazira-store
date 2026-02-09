@@ -97,7 +97,7 @@ export default function ProductsPage() {
               id={p.id}
               name={p.name}
               price={Number(p.price)}
-              image={p.images?.[0] || ''}
+              image={p.images?.[p.main_image_index ?? 0] || p.images?.[0] || ''}
               category={p.category || []}
               stock={p.stock ?? 0}
             />
