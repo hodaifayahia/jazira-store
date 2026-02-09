@@ -441,6 +441,21 @@ export default function AdminOrdersPage() {
                     </div>
                   ))}
                   <hr className="my-2" />
+                  <div className="flex justify-between font-cairo text-sm">
+                    <span>المجموع الفرعي</span>
+                    <span className="font-roboto">{formatPrice(Number(selectedOrder.subtotal))}</span>
+                  </div>
+                  <div className="flex justify-between font-cairo text-sm">
+                    <span>التوصيل</span>
+                    <span className="font-roboto">{formatPrice(Number(selectedOrder.shipping_cost))}</span>
+                  </div>
+                  {Number(selectedOrder.discount_amount) > 0 && (
+                    <div className="flex justify-between font-cairo text-sm text-primary">
+                      <span>الخصم {selectedOrder.coupon_code && `(${selectedOrder.coupon_code})`}</span>
+                      <span className="font-roboto">-{formatPrice(Number(selectedOrder.discount_amount))}</span>
+                    </div>
+                  )}
+                  <hr className="my-2" />
                   <div className="flex justify-between font-cairo font-bold">
                     <span>الإجمالي</span>
                     <span className="font-roboto text-primary">{formatPrice(Number(selectedOrder.total_amount))}</span>
