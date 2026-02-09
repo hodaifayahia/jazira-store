@@ -226,16 +226,18 @@ export default function CheckoutPage() {
             <h2 className="font-cairo font-bold text-xl">معلومات العميل</h2>
             <div>
               <Label className="font-cairo">الاسم الكامل *</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="أدخل اسمك الكامل" className="font-cairo mt-1" />
+              <Input value={name} onChange={e => setName(e.target.value)} onBlur={handleBlurName} placeholder="أدخل اسمك الكامل" className={`font-cairo mt-1 ${errors.name ? 'border-destructive' : ''}`} />
+              {errors.name && <p className="text-destructive text-xs font-cairo mt-1">{errors.name}</p>}
             </div>
             <div>
               <Label className="font-cairo">رقم الهاتف *</Label>
-              <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="05XXXXXXXX" className="font-roboto mt-1" dir="ltr" />
+              <Input value={phone} onChange={e => handlePhoneChange(e.target.value)} placeholder="05/06/07XXXXXXXX" className={`font-roboto mt-1 ${errors.phone ? 'border-destructive' : ''}`} dir="ltr" />
+              {errors.phone && <p className="text-destructive text-xs font-cairo mt-1">{errors.phone}</p>}
             </div>
             <div>
               <Label className="font-cairo">الولاية *</Label>
-              <Select value={wilayaId} onValueChange={setWilayaId}>
-                <SelectTrigger className="font-cairo mt-1"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+              <Select value={wilayaId} onValueChange={handleWilayaChange}>
+                <SelectTrigger className={`font-cairo mt-1 ${errors.wilaya ? 'border-destructive' : ''}`}><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
                 <SelectContent>
                   {wilayas?.map(w => (
                     <SelectItem key={w.id} value={w.id} className="font-cairo">
