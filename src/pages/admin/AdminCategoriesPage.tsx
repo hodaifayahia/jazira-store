@@ -8,7 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useCategories } from '@/hooks/useCategories';
-import { Plus, Trash2, Pencil, Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt, Layers, Check, X } from 'lucide-react';
+import {
+  Plus, Trash2, Pencil, Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt, Layers, Check, X,
+  Upload, ImageIcon, Loader2,
+  Laptop, Smartphone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette,
+  Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
+  Wrench, Gamepad2, Crown, Flower2, Bike, Briefcase, Stethoscope
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const AVAILABLE_ICONS: { value: string; label: string; Icon: LucideIcon }[] = [
@@ -20,9 +26,38 @@ const AVAILABLE_ICONS: { value: string; label: string; Icon: LucideIcon }[] = [
   { value: 'Star', label: 'نجمة', Icon: Star },
   { value: 'Heart', label: 'قلب', Icon: Heart },
   { value: 'Shirt', label: 'ملابس', Icon: Shirt },
+  { value: 'Laptop', label: 'حاسوب', Icon: Laptop },
+  { value: 'Smartphone', label: 'هاتف', Icon: Smartphone },
+  { value: 'Car', label: 'سيارة', Icon: Car },
+  { value: 'Utensils', label: 'مطبخ', Icon: Utensils },
+  { value: 'Baby', label: 'أطفال', Icon: Baby },
+  { value: 'Headphones', label: 'سماعات', Icon: Headphones },
+  { value: 'Camera', label: 'كاميرا', Icon: Camera },
+  { value: 'Sofa', label: 'أثاث', Icon: Sofa },
+  { value: 'Dumbbell', label: 'رياضة', Icon: Dumbbell },
+  { value: 'Palette', label: 'فن', Icon: Palette },
+  { value: 'Book', label: 'كتاب', Icon: Book },
+  { value: 'Gem', label: 'مجوهرات', Icon: Gem },
+  { value: 'Zap', label: 'كهرباء', Icon: Zap },
+  { value: 'Flame', label: 'نار', Icon: Flame },
+  { value: 'Leaf', label: 'طبيعة', Icon: Leaf },
+  { value: 'Music', label: 'موسيقى', Icon: Music },
+  { value: 'Plane', label: 'سفر', Icon: Plane },
+  { value: 'Pizza', label: 'طعام', Icon: Pizza },
+  { value: 'Coffee', label: 'قهوة', Icon: Coffee },
+  { value: 'Glasses', label: 'نظارات', Icon: Glasses },
+  { value: 'Footprints', label: 'أحذية', Icon: Footprints },
+  { value: 'Dog', label: 'حيوانات', Icon: Dog },
+  { value: 'Wrench', label: 'أدوات', Icon: Wrench },
+  { value: 'Gamepad2', label: 'ألعاب', Icon: Gamepad2 },
+  { value: 'Crown', label: 'فاخر', Icon: Crown },
+  { value: 'Flower2', label: 'زهور', Icon: Flower2 },
+  { value: 'Bike', label: 'دراجة', Icon: Bike },
+  { value: 'Briefcase', label: 'عمل', Icon: Briefcase },
+  { value: 'Stethoscope', label: 'صحة', Icon: Stethoscope },
 ];
 
-type Category = { name: string; icon: string };
+type Category = { name: string; icon: string; image?: string };
 
 export default function AdminCategoriesPage() {
   const qc = useQueryClient();
@@ -31,14 +66,17 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('Home');
+  const [newImage, setNewImage] = useState<string | undefined>();
+  const [uploading, setUploading] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('Home');
+  const [editImage, setEditImage] = useState<string | undefined>();
+  const [editUploading, setEditUploading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<number | null>(null);
 
   const currentCategories = categories ?? categoriesData ?? [];
 
-  // Sync from server when data arrives
   useEffect(() => {
     if (categoriesData && !categories) {
       // don't override local changes
@@ -65,6 +103,48 @@ export default function AdminCategoriesPage() {
     },
   });
 
+  const uploadImage = async (file: File): Promise<string> => {
+    if (file.size > 5 * 1024 * 1024) throw new Error('حجم الصورة كبير جداً (الحد الأقصى 5MB)');
+    const ext = file.name.split('.').pop();
+    const path = `categories/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('store').upload(path, file);
+    if (error) throw error;
+    const { data } = supabase.storage.from('store').getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const handleNewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setNewImage(url);
+      toast({ title: 'تم رفع الصورة ✅' });
+    } catch (err: any) {
+      toast({ title: err.message || 'فشل رفع الصورة', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setEditImage(url);
+      toast({ title: 'تم رفع الصورة ✅' });
+    } catch (err: any) {
+      toast({ title: err.message || 'فشل رفع الصورة', variant: 'destructive' });
+    } finally {
+      setEditUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const addCategory = () => {
     const trimmed = newName.trim();
     if (!trimmed) return;
@@ -72,11 +152,12 @@ export default function AdminCategoriesPage() {
       toast({ title: 'هذه الفئة موجودة بالفعل', variant: 'destructive' });
       return;
     }
-    const updated = [...currentCategories, { name: trimmed, icon: newIcon }];
+    const updated = [...currentCategories, { name: trimmed, icon: newIcon, image: newImage }];
     setCategories(updated);
     saveMutation.mutate(updated);
     setNewName('');
     setNewIcon('Home');
+    setNewImage(undefined);
   };
 
   const removeCategory = (index: number) => {
@@ -90,25 +171,26 @@ export default function AdminCategoriesPage() {
     setEditIndex(index);
     setEditName(currentCategories[index].name);
     setEditIcon(currentCategories[index].icon);
+    setEditImage(currentCategories[index].image);
   };
 
   const cancelEdit = () => {
     setEditIndex(null);
     setEditName('');
     setEditIcon('Home');
+    setEditImage(undefined);
   };
 
   const saveEdit = () => {
     if (editIndex === null) return;
     const trimmed = editName.trim();
     if (!trimmed) return;
-    // Check duplicate (excluding current)
     if (currentCategories.some((c, i) => c.name === trimmed && i !== editIndex)) {
       toast({ title: 'هذه الفئة موجودة بالفعل', variant: 'destructive' });
       return;
     }
     const updated = currentCategories.map((c, i) =>
-      i === editIndex ? { name: trimmed, icon: editIcon } : c
+      i === editIndex ? { name: trimmed, icon: editIcon, image: editImage } : c
     );
     setCategories(updated);
     saveMutation.mutate(updated);
@@ -143,41 +225,63 @@ export default function AdminCategoriesPage() {
           </div>
           إضافة فئة جديدة
         </h3>
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <Label className="font-cairo text-xs text-muted-foreground">اسم الفئة</Label>
-            <Input
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              placeholder="مثال: ملابس، أحذية، إلكترونيات..."
-              className="font-cairo mt-1.5 h-11"
-              onKeyDown={e => e.key === 'Enter' && addCategory()}
-            />
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <Label className="font-cairo text-xs text-muted-foreground">اسم الفئة</Label>
+              <Input
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                placeholder="مثال: ملابس، أحذية، إلكترونيات..."
+                className="font-cairo mt-1.5 h-11"
+                onKeyDown={e => e.key === 'Enter' && addCategory()}
+              />
+            </div>
+            <div className="w-40">
+              <Label className="font-cairo text-xs text-muted-foreground">الأيقونة</Label>
+              <Select value={newIcon} onValueChange={setNewIcon}>
+                <SelectTrigger className="mt-1.5 h-11">
+                  <div className="flex items-center gap-2">
+                    <SelectedIcon className="w-4 h-4 text-primary" />
+                    <span className="font-cairo text-sm">{AVAILABLE_ICONS.find(i => i.value === newIcon)?.label}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {AVAILABLE_ICONS.map(ic => (
+                    <SelectItem key={ic.value} value={ic.value}>
+                      <div className="flex items-center gap-2">
+                        <ic.Icon className="w-4 h-4" />
+                        <span className="font-cairo">{ic.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={addCategory} disabled={saveMutation.isPending || !newName.trim()} className="font-cairo gap-1.5 h-11 px-6">
+              <Plus className="w-4 h-4" /> إضافة
+            </Button>
           </div>
-          <div className="w-40">
-            <Label className="font-cairo text-xs text-muted-foreground">الأيقونة</Label>
-            <Select value={newIcon} onValueChange={setNewIcon}>
-              <SelectTrigger className="mt-1.5 h-11">
-                <div className="flex items-center gap-2">
-                  <SelectedIcon className="w-4 h-4 text-primary" />
-                  <span className="font-cairo text-sm">{AVAILABLE_ICONS.find(i => i.value === newIcon)?.label}</span>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {AVAILABLE_ICONS.map(ic => (
-                  <SelectItem key={ic.value} value={ic.value}>
-                    <div className="flex items-center gap-2">
-                      <ic.Icon className="w-4 h-4" />
-                      <span className="font-cairo">{ic.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Image upload for new category */}
+          <div className="flex items-center gap-3">
+            <Label className="font-cairo text-xs text-muted-foreground shrink-0">صورة الفئة (اختياري)</Label>
+            {newImage ? (
+              <div className="flex items-center gap-2">
+                <img src={newImage} alt="صورة الفئة" className="w-10 h-10 rounded-lg object-cover border" />
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNewImage(undefined)}>
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <label className="cursor-pointer">
+                <input type="file" accept="image/*" className="hidden" onChange={handleNewImageUpload} disabled={uploading} />
+                <Button variant="outline" size="sm" className="font-cairo gap-1.5 pointer-events-none" disabled={uploading}>
+                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  {uploading ? 'جاري الرفع...' : 'رفع صورة'}
+                </Button>
+              </label>
+            )}
           </div>
-          <Button onClick={addCategory} disabled={saveMutation.isPending || !newName.trim()} className="font-cairo gap-1.5 h-11 px-6">
-            <Plus className="w-4 h-4" /> إضافة
-          </Button>
         </div>
       </div>
 
@@ -195,46 +299,69 @@ export default function AdminCategoriesPage() {
               if (isEditing) {
                 const EditIcon = AVAILABLE_ICONS.find(i => i.value === editIcon)?.Icon || Home;
                 return (
-                  <div key={index} className="flex items-center gap-3 px-5 py-3 bg-primary/5 border-r-2 border-primary">
-                    <span className="font-roboto text-xs text-muted-foreground w-5 text-center">{index + 1}</span>
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <EditIcon className="w-4 h-4 text-primary" />
-                    </div>
-                    <Input
-                      value={editName}
-                      onChange={e => setEditName(e.target.value)}
-                      className="font-cairo h-9 flex-1"
-                      autoFocus
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') saveEdit();
-                        if (e.key === 'Escape') cancelEdit();
-                      }}
-                    />
-                    <Select value={editIcon} onValueChange={setEditIcon}>
-                      <SelectTrigger className="w-32 h-9">
-                        <div className="flex items-center gap-2">
-                          <EditIcon className="w-3.5 h-3.5 text-primary" />
-                          <span className="font-cairo text-xs">{AVAILABLE_ICONS.find(i => i.value === editIcon)?.label}</span>
+                  <div key={index} className="px-5 py-3 bg-primary/5 border-r-2 border-primary space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className="font-roboto text-xs text-muted-foreground w-5 text-center">{index + 1}</span>
+                      {editImage ? (
+                        <div className="relative w-9 h-9 shrink-0">
+                          <img src={editImage} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                          <button className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center" onClick={() => setEditImage(undefined)}>
+                            <X className="w-2.5 h-2.5" />
+                          </button>
                         </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AVAILABLE_ICONS.map(ic => (
-                          <SelectItem key={ic.value} value={ic.value}>
-                            <div className="flex items-center gap-2">
-                              <ic.Icon className="w-4 h-4" />
-                              <span className="font-cairo">{ic.label}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={saveEdit}>
-                        <Check className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted" onClick={cancelEdit}>
-                        <X className="w-4 h-4" />
-                      </Button>
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <EditIcon className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
+                      <Input
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        className="font-cairo h-9 flex-1"
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') saveEdit();
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                      />
+                      <Select value={editIcon} onValueChange={setEditIcon}>
+                        <SelectTrigger className="w-32 h-9">
+                          <div className="flex items-center gap-2">
+                            <EditIcon className="w-3.5 h-3.5 text-primary" />
+                            <span className="font-cairo text-xs">{AVAILABLE_ICONS.find(i => i.value === editIcon)?.label}</span>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {AVAILABLE_ICONS.map(ic => (
+                            <SelectItem key={ic.value} value={ic.value}>
+                              <div className="flex items-center gap-2">
+                                <ic.Icon className="w-4 h-4" />
+                                <span className="font-cairo">{ic.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={saveEdit}>
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted" onClick={cancelEdit}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {/* Image upload in edit mode */}
+                    <div className="flex items-center gap-2 mr-8">
+                      {!editImage && (
+                        <label className="cursor-pointer">
+                          <input type="file" accept="image/*" className="hidden" onChange={handleEditImageUpload} disabled={editUploading} />
+                          <Button variant="outline" size="sm" className="font-cairo gap-1 text-xs pointer-events-none h-7" disabled={editUploading}>
+                            {editUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                            {editUploading ? 'جاري الرفع...' : 'رفع صورة'}
+                          </Button>
+                        </label>
+                      )}
                     </div>
                   </div>
                 );
@@ -244,9 +371,13 @@ export default function AdminCategoriesPage() {
                 <div key={index} className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors group">
                   <div className="flex items-center gap-3">
                     <span className="font-roboto text-xs text-muted-foreground w-5 text-center">{index + 1}</span>
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <CatIcon className="w-4 h-4 text-primary" />
-                    </div>
+                    {cat.image ? (
+                      <img src={cat.image} alt={cat.name} className="w-9 h-9 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <CatIcon className="w-4 h-4 text-primary" />
+                      </div>
+                    )}
                     <span className="font-cairo font-medium text-foreground">{cat.name}</span>
                     <span className="font-cairo text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                       {AVAILABLE_ICONS.find(i => i.value === cat.icon)?.label || cat.icon}
