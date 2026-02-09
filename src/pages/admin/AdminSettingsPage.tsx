@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Loader2, Upload, X } from 'lucide-react';
+import { SettingsSkeleton } from '@/components/LoadingSkeleton';
 
 export default function AdminSettingsPage() {
   const qc = useQueryClient();
