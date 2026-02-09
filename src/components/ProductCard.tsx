@@ -18,7 +18,7 @@ interface ProductCardProps {
   shippingPrice: number;
 }
 
-export default function ProductCard({ id, name, price, image, category, stock }: ProductCardProps) {
+export default function ProductCard({ id, name, price, image, category, stock, shippingPrice }: ProductCardProps) {
   const { addItem, setCheckoutIntent } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
