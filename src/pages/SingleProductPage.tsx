@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Banknote, Truck, CheckCircle, Upload } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -58,6 +58,7 @@ export default function SingleProductPage() {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -185,18 +186,15 @@ export default function SingleProductPage() {
   };
 
   const handleDirectOrder = async () => {
-    if (!orderName.trim() || !orderPhone.trim() || !orderWilayaId || !paymentMethod) {
-      toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة', variant: 'destructive' });
-      return;
-    }
-    if (!/^0[567]\d{8}$/.test(orderPhone)) {
-      toast({ title: 'خطأ', description: 'رقم الهاتف غير صالح (مثال: 05XXXXXXXX)', variant: 'destructive' });
-      return;
-    }
-    if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) {
-      toast({ title: 'خطأ', description: 'يرجى إرفاق إيصال الدفع', variant: 'destructive' });
-      return;
-    }
+    const newErrors: Record<string, string> = {};
+    if (!orderName.trim()) newErrors.orderName = 'يرجى إدخال الاسم الكامل';
+    if (!orderPhone.trim()) newErrors.orderPhone = 'يرجى إدخال رقم الهاتف';
+    else if (!/^0[567]\d{8}$/.test(orderPhone)) newErrors.orderPhone = 'رقم الهاتف غير صالح (مثال: 05XXXXXXXX)';
+    if (!orderWilayaId) newErrors.orderWilayaId = 'يرجى اختيار الولاية';
+    if (!paymentMethod) newErrors.paymentMethod = 'يرجى اختيار طريقة الدفع';
+    if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) newErrors.receiptFile = 'يرجى إرفاق إيصال الدفع';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     setSubmittingOrder(true);
     try {
@@ -375,26 +373,56 @@ export default function SingleProductPage() {
 
           {/* ─── Inline Order Form ─── */}
           {!outOfStock && (
-            <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 space-y-4">
+            <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 space-y-5">
               <h2 className="font-cairo font-bold text-xl flex items-center gap-2">
                 <Truck className="w-5 h-5 text-primary" />
                 اطلب الآن مباشرة
               </h2>
               <p className="font-cairo text-sm text-muted-foreground">أكمل بياناتك وسنوصلك طلبك بأسرع وقت</p>
 
+              {/* Step 1: User Info */}
               <div className="space-y-3">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold font-roboto shrink-0">1</div>
+                  <User className="w-4 h-4 text-primary" />
+                  <span className="font-cairo font-semibold text-sm">المعلومات الشخصية</span>
+                </div>
                 <div>
                   <Label className="font-cairo text-sm">الاسم الكامل *</Label>
-                  <Input value={orderName} onChange={e => setOrderName(e.target.value)} placeholder="أدخل اسمك الكامل" className="font-cairo mt-1" />
+                  <Input
+                    value={orderName}
+                    onChange={e => { setOrderName(e.target.value); setErrors(prev => ({ ...prev, orderName: '' })); }}
+                    placeholder="أدخل اسمك الكامل"
+                    className={`font-cairo mt-1 ${errors.orderName ? 'border-destructive' : ''}`}
+                  />
+                  {errors.orderName && <p className="text-destructive text-xs font-cairo mt-1">{errors.orderName}</p>}
                 </div>
                 <div>
                   <Label className="font-cairo text-sm">رقم الهاتف *</Label>
-                  <Input value={orderPhone} onChange={e => setOrderPhone(e.target.value)} placeholder="05XXXXXXXX" className="font-roboto mt-1" dir="ltr" />
+                  <Input
+                    value={orderPhone}
+                    onChange={e => { setOrderPhone(e.target.value); setErrors(prev => ({ ...prev, orderPhone: '' })); }}
+                    placeholder="05XXXXXXXX"
+                    className={`font-roboto mt-1 ${errors.orderPhone ? 'border-destructive' : ''}`}
+                    dir="ltr"
+                  />
+                  {errors.orderPhone && <p className="text-destructive text-xs font-cairo mt-1">{errors.orderPhone}</p>}
+                </div>
+              </div>
+
+              <hr className="border-border" />
+
+              {/* Step 2: Delivery */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold font-roboto shrink-0">2</div>
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span className="font-cairo font-semibold text-sm">التوصيل</span>
                 </div>
                 <div>
                   <Label className="font-cairo text-sm">الولاية *</Label>
-                  <Select value={orderWilayaId} onValueChange={setOrderWilayaId}>
-                    <SelectTrigger className="font-cairo mt-1"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                  <Select value={orderWilayaId} onValueChange={v => { setOrderWilayaId(v); setErrors(prev => ({ ...prev, orderWilayaId: '' })); }}>
+                    <SelectTrigger className={`font-cairo mt-1 ${errors.orderWilayaId ? 'border-destructive' : ''}`}><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
                     <SelectContent>
                       {wilayas?.map(w => (
                         <SelectItem key={w.id} value={w.id} className="font-cairo">
@@ -403,98 +431,101 @@ export default function SingleProductPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.orderWilayaId && <p className="text-destructive text-xs font-cairo mt-1">{errors.orderWilayaId}</p>}
                 </div>
                 <div>
                   <Label className="font-cairo text-sm">العنوان التفصيلي</Label>
                   <Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} placeholder="اختياري" className="font-cairo mt-1" />
                 </div>
+              </div>
 
-                {/* Payment Method */}
-                <div>
-                  <Label className="font-cairo text-sm font-bold">طريقة الدفع *</Label>
-                  <div className="space-y-2 mt-2">
-                    {/* COD */}
-                    <label className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'cod' ? 'border-primary bg-accent' : ''}`}>
-                      <input type="radio" name="inline-payment" value="cod" checked={paymentMethod === 'cod'} onChange={e => setPaymentMethod(e.target.value)} />
-                      <Banknote className="w-4 h-4 shrink-0" />
-                      <span className="font-cairo">الدفع عند التسليم</span>
+              <hr className="border-border" />
+
+              {/* Step 3: Payment */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold font-roboto shrink-0">3</div>
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  <span className="font-cairo font-semibold text-sm">طريقة الدفع</span>
+                </div>
+                <div className="space-y-2">
+                  {baridimobEnabled && (
+                    <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'baridimob' ? 'border-primary bg-accent' : ''}`}>
+                      <input type="radio" name="inline-payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => { setPaymentMethod(e.target.value); setErrors(prev => ({ ...prev, paymentMethod: '', receiptFile: '' })); }} className="mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-cairo font-semibold">بريدي موب</span>
+                        {paymentMethod === 'baridimob' && settings && (
+                          <div className="mt-2 space-y-1.5 text-xs">
+                            <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                              <span className="font-cairo">الحساب:</span>
+                              <span className="font-roboto font-bold">{settings.ccp_number}</span>
+                              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.ccp_number)}><Copy className="w-3 h-3" /></Button>
+                            </div>
+                            <p className="font-cairo">الاسم: {settings.ccp_name}</p>
+                            <div className="mt-1.5">
+                              <Label className="font-cairo text-[11px]">أرفق الإيصال *</Label>
+                              <Input type="file" accept="image/*,.pdf" onChange={e => { setReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              {errors.receiptFile && <p className="text-destructive text-xs font-cairo mt-1">{errors.receiptFile}</p>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </label>
+                  )}
 
-                    {baridimobEnabled && (
-                      <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'baridimob' ? 'border-primary bg-accent' : ''}`}>
-                        <input type="radio" name="inline-payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => setPaymentMethod(e.target.value)} className="mt-0.5" />
-                        <div className="flex-1">
-                          <span className="font-cairo font-semibold">بريدي موب</span>
-                          {paymentMethod === 'baridimob' && settings && (
-                            <div className="mt-2 space-y-1.5 text-xs">
-                              <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
-                                <span className="font-cairo">الحساب:</span>
-                                <span className="font-roboto font-bold">{settings.ccp_number}</span>
-                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.ccp_number)}><Copy className="w-3 h-3" /></Button>
-                              </div>
-                              <p className="font-cairo">الاسم: {settings.ccp_name}</p>
-                              <div className="mt-1.5">
-                                <Label className="font-cairo text-[11px]">أرفق الإيصال *</Label>
-                                <Input type="file" accept="image/*,.pdf" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-0.5 h-8 text-xs" />
-                              </div>
+                  {flexyEnabled && (
+                    <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'flexy' ? 'border-primary bg-accent' : ''}`}>
+                      <input type="radio" name="inline-payment" value="flexy" checked={paymentMethod === 'flexy'} onChange={e => { setPaymentMethod(e.target.value); setErrors(prev => ({ ...prev, paymentMethod: '', receiptFile: '' })); }} className="mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-cairo font-semibold">فليكسي</span>
+                        {paymentMethod === 'flexy' && settings && (
+                          <div className="mt-2 space-y-1.5 text-xs">
+                            <p className="font-cairo">أرسل تعبئة <span className="font-roboto font-bold">{formatPrice(Number(settings.flexy_deposit_amount || 500))}</span> إلى:</p>
+                            <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                              <span className="font-roboto font-bold">{settings.flexy_number}</span>
+                              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.flexy_number)}><Copy className="w-3 h-3" /></Button>
                             </div>
-                          )}
-                        </div>
-                      </label>
-                    )}
+                            <div className="mt-1.5">
+                              <Label className="font-cairo text-[11px]">أرفق لقطة الشاشة *</Label>
+                              <Input type="file" accept="image/*" onChange={e => { setReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              {errors.receiptFile && <p className="text-destructive text-xs font-cairo mt-1">{errors.receiptFile}</p>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  )}
+                </div>
+                {errors.paymentMethod && <p className="text-destructive text-xs font-cairo mt-1">{errors.paymentMethod}</p>}
+              </div>
 
-                    {flexyEnabled && (
-                      <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'flexy' ? 'border-primary bg-accent' : ''}`}>
-                        <input type="radio" name="inline-payment" value="flexy" checked={paymentMethod === 'flexy'} onChange={e => setPaymentMethod(e.target.value)} className="mt-0.5" />
-                        <div className="flex-1">
-                          <span className="font-cairo font-semibold">فليكسي</span>
-                          {paymentMethod === 'flexy' && settings && (
-                            <div className="mt-2 space-y-1.5 text-xs">
-                              <p className="font-cairo">أرسل تعبئة <span className="font-roboto font-bold">{formatPrice(Number(settings.flexy_deposit_amount || 500))}</span> إلى:</p>
-                              <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
-                                <span className="font-roboto font-bold">{settings.flexy_number}</span>
-                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.flexy_number)}><Copy className="w-3 h-3" /></Button>
-                              </div>
-                              <div className="mt-1.5">
-                                <Label className="font-cairo text-[11px]">أرفق لقطة الشاشة *</Label>
-                                <Input type="file" accept="image/*" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-0.5 h-8 text-xs" />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </label>
-                    )}
+              {/* Order Summary */}
+              {orderWilayaId && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5 text-sm font-cairo">
+                  <div className="flex justify-between">
+                    <span>المنتج (×{qty})</span>
+                    <span className="font-roboto font-bold">{formatPrice(itemSubtotal)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>التوصيل</span>
+                    <span className="font-roboto font-bold">{formatPrice(shippingCost)}</span>
+                  </div>
+                  <hr className="my-1 border-primary/20" />
+                  <div className="flex justify-between font-bold text-base">
+                    <span>الإجمالي</span>
+                    <span className="font-roboto text-primary">{formatPrice(orderTotal)}</span>
                   </div>
                 </div>
+              )}
 
-                {/* Order Summary */}
-                {orderWilayaId && (
-                  <div className="bg-muted/50 rounded-xl p-3 space-y-1.5 text-sm font-cairo">
-                    <div className="flex justify-between">
-                      <span>المنتج (×{qty})</span>
-                      <span className="font-roboto font-bold">{formatPrice(itemSubtotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>التوصيل</span>
-                      <span className="font-roboto font-bold">{formatPrice(shippingCost)}</span>
-                    </div>
-                    <hr className="my-1 border-border" />
-                    <div className="flex justify-between font-bold text-base">
-                      <span>الإجمالي</span>
-                      <span className="font-roboto text-primary">{formatPrice(orderTotal)}</span>
-                    </div>
-                  </div>
-                )}
-
-                <Button
-                  onClick={handleDirectOrder}
-                  disabled={submittingOrder}
-                  className="w-full font-cairo font-bold text-base gap-2 rounded-xl h-12"
-                >
-                  {submittingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                  {submittingOrder ? 'جاري الإرسال...' : 'تأكيد الطلب'}
-                </Button>
-              </div>
+              <Button
+                onClick={handleDirectOrder}
+                disabled={submittingOrder}
+                className="w-full font-cairo font-bold text-base gap-2 rounded-xl h-12 bg-gradient-to-l from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground"
+              >
+                {submittingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {submittingOrder ? 'جاري الإرسال...' : 'تأكيد الطلب'}
+              </Button>
             </div>
           )}
         </div>
