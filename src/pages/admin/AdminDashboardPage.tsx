@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, ArrowUpRight, ArrowDownRight, AlertTriangle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { formatPrice, formatDate } from '@/lib/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -124,6 +125,17 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Low Stock Alert Banner */}
+      {lowStockProducts.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>تنبيه: مخزون منخفض ({lowStockProducts.length} منتج)</AlertTitle>
+          <AlertDescription>
+            {lowStockProducts.map(p => `${p.name} (${p.stock} متبقي)`).join(' • ')}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={ShoppingCart} label="طلبات اليوم" value={String(today.length)} color="bg-primary/10 text-primary" subtext={`${thisMonth.length} هذا الشهر`} />
