@@ -164,6 +164,13 @@ export default function CheckoutPage() {
     <div className="container py-8 max-w-4xl">
       <h1 className="font-cairo font-bold text-3xl mb-8">إتمام الطلب</h1>
 
+      {!user && (
+        <Link to="/auth" className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 hover:bg-primary/10 transition-colors">
+          <LogIn className="w-5 h-5 text-primary" />
+          <span className="font-cairo text-sm text-foreground">سجّل دخولك لتتبع طلباتك بسهولة من حسابك</span>
+        </Link>
+      )}
+
       <div className="grid md:grid-cols-5 gap-8">
         <div className="md:col-span-3 space-y-6">
           {/* Customer Info */}
