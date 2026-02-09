@@ -13,16 +13,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon, Package } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { TableSkeleton } from '@/components/LoadingSkeleton';
+import { useCategories } from '@/hooks/useCategories';
 
-const CATEGORIES = ['أدوات منزلية', 'منتجات زينة', 'إكسسوارات'];
 const PAGE_SIZE = 10;
 
 export default function AdminProductsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { data: categoriesSettings } = useCategories();
+  const categoryNames = categoriesSettings?.map(c => c.name) || [];
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', description: '', price: '', category: CATEGORIES[0], stock: '0', is_active: true });
+  const [form, setForm] = useState({ name: '', description: '', price: '', category: '', stock: '0', is_active: true });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -109,7 +111,7 @@ export default function AdminProductsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', description: '', price: '', category: CATEGORIES[0], stock: '0', is_active: true });
+    setForm({ name: '', description: '', price: '', category: categoryNames[0] || '', stock: '0', is_active: true });
     setImageFiles([]);
     setImagePreviews([]);
     setExistingImages([]);
@@ -246,7 +248,7 @@ export default function AdminProductsPage() {
               <Label className="font-cairo">التصنيف</Label>
               <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
                 <SelectTrigger className="font-cairo mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}</SelectContent>
+                <SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
