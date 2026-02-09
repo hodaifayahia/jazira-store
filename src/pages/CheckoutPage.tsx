@@ -18,8 +18,6 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
