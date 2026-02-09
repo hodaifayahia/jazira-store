@@ -7,13 +7,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Upload, X, ImageIcon } from 'lucide-react';
+import { Save, Upload, X, ImageIcon, Bot, Plus, Send, Webhook } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export default function AdminSettingsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const heroInputRef = useRef<HTMLInputElement>(null);
+  const [newChatId, setNewChatId] = useState('');
+  const [testingSend, setTestingSend] = useState(false);
+  const [settingWebhook, setSettingWebhook] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-settings'],
@@ -101,6 +106,81 @@ export default function AdminSettingsPage() {
     qc.invalidateQueries({ queryKey: ['admin-settings'] });
     qc.invalidateQueries({ queryKey: ['store-logo'] });
     toast({ title: 'تم حذف الصورة' });
+  };
+
+  // Telegram helpers
+  const chatIds = (mergedSettings.telegram_chat_id || '').split(',').map(id => id.trim()).filter(Boolean);
+
+  const addChatId = () => {
+    const id = newChatId.trim();
+    if (!id) return;
+    if (chatIds.includes(id)) { setNewChatId(''); return; }
+    const updated = [...chatIds, id].join(',');
+    setField('telegram_chat_id', updated);
+    setNewChatId('');
+  };
+
+  const removeChatId = (id: string) => {
+    const updated = chatIds.filter(c => c !== id).join(',');
+    setField('telegram_chat_id', updated);
+  };
+
+  const handleTestNotification = async () => {
+    setTestingSend(true);
+    try {
+      // Save first if there are pending changes
+      if (Object.keys(form).length > 0) {
+        const entries = Object.entries(form).map(([key, value]) => ({ key, value }));
+        for (const entry of entries) {
+          const { data } = await supabase.from('settings').update({ value: entry.value }).eq('key', entry.key).select();
+          if (!data || data.length === 0) {
+            await supabase.from('settings').insert({ key: entry.key, value: entry.value });
+          }
+        }
+        qc.invalidateQueries({ queryKey: ['admin-settings'] });
+        setForm({});
+      }
+
+      const res = await supabase.functions.invoke('telegram-notify', { body: { type: 'test' } });
+      if (res.data?.ok) {
+        toast({ title: 'تم إرسال الرسالة التجريبية ✅' });
+      } else {
+        toast({ title: 'فشل الإرسال', description: res.data?.reason || 'خطأ غير معروف', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ في الإرسال', variant: 'destructive' });
+    } finally {
+      setTestingSend(false);
+    }
+  };
+
+  const handleSetWebhook = async () => {
+    setSettingWebhook(true);
+    try {
+      // Save first if there are pending changes
+      if (Object.keys(form).length > 0) {
+        const entries = Object.entries(form).map(([key, value]) => ({ key, value }));
+        for (const entry of entries) {
+          const { data } = await supabase.from('settings').update({ value: entry.value }).eq('key', entry.key).select();
+          if (!data || data.length === 0) {
+            await supabase.from('settings').insert({ key: entry.key, value: entry.value });
+          }
+        }
+        qc.invalidateQueries({ queryKey: ['admin-settings'] });
+        setForm({});
+      }
+
+      const res = await supabase.functions.invoke('telegram-set-webhook', { body: {} });
+      if (res.data?.ok) {
+        toast({ title: 'تم ربط الويب هوك بنجاح ✅' });
+      } else {
+        toast({ title: 'فشل ربط الويب هوك', description: res.data?.description || 'خطأ', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ في ربط الويب هوك', variant: 'destructive' });
+    } finally {
+      setSettingWebhook(false);
+    }
   };
 
   if (isLoading) return null;
@@ -224,6 +304,85 @@ export default function AdminSettingsPage() {
         <h2 className="font-cairo font-bold text-xl">إعدادات المتجر</h2>
         <div><Label className="font-cairo">اسم المتجر</Label><Input value={mergedSettings.store_name || ''} onChange={e => setField('store_name', e.target.value)} className="font-cairo mt-1" /></div>
         <div><Label className="font-cairo">رابط صفحة فيسبوك</Label><Input value={mergedSettings.facebook_url || ''} onChange={e => setField('facebook_url', e.target.value)} className="font-roboto mt-1" dir="ltr" /></div>
+      </div>
+
+      {/* Telegram Bot Settings */}
+      <div className="bg-card border rounded-lg p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Bot className="w-5 h-5 text-primary" />
+          <h2 className="font-cairo font-bold text-xl">بوت تلغرام</h2>
+        </div>
+        <p className="font-cairo text-sm text-muted-foreground">إدارة المتجر عبر تلغرام واستقبال إشعارات الطلبات الجديدة</p>
+
+        {/* Master toggle */}
+        <div className="flex items-center gap-2">
+          <Switch checked={mergedSettings.telegram_enabled === 'true'} onCheckedChange={v => setField('telegram_enabled', String(v))} />
+          <Label className="font-cairo">تفعيل بوت تلغرام</Label>
+        </div>
+
+        {/* Bot Token */}
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="font-cairo text-sm text-muted-foreground p-0 h-auto">
+              🔑 إعدادات التوكن (اضغط للعرض)
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <Label className="font-cairo text-sm">Bot Token (من @BotFather)</Label>
+            <Input
+              type="password"
+              value={mergedSettings.telegram_bot_token || ''}
+              onChange={e => setField('telegram_bot_token', e.target.value)}
+              className="font-roboto mt-1"
+              dir="ltr"
+              placeholder="123456:ABC-DEF..."
+            />
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Admin Chat IDs */}
+        <div className="space-y-2">
+          <Label className="font-cairo">معرّفات المسؤولين (Chat IDs)</Label>
+          <div className="flex flex-wrap gap-2">
+            {chatIds.map(id => (
+              <Badge key={id} variant="secondary" className="font-roboto gap-1 px-3 py-1">
+                {id}
+                <button onClick={() => removeChatId(id)} className="hover:text-destructive">
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={newChatId}
+              onChange={e => setNewChatId(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addChatId()}
+              placeholder="أضف Chat ID"
+              className="font-roboto"
+              dir="ltr"
+            />
+            <Button variant="outline" size="icon" onClick={addChatId}><Plus className="w-4 h-4" /></Button>
+          </div>
+        </div>
+
+        {/* Notify on new orders toggle */}
+        <div className="flex items-center gap-2">
+          <Switch checked={mergedSettings.telegram_notify_orders !== 'false'} onCheckedChange={v => setField('telegram_notify_orders', String(v))} />
+          <Label className="font-cairo">إشعار عند طلب جديد</Label>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Button variant="outline" onClick={handleTestNotification} disabled={testingSend} className="font-cairo gap-2">
+            <Send className="w-4 h-4" />
+            {testingSend ? 'جاري الإرسال...' : 'إرسال رسالة تجريبية'}
+          </Button>
+          <Button variant="outline" onClick={handleSetWebhook} disabled={settingWebhook} className="font-cairo gap-2">
+            <Webhook className="w-4 h-4" />
+            {settingWebhook ? 'جاري الربط...' : 'ربط الويب هوك'}
+          </Button>
+        </div>
       </div>
 
       <Button onClick={handleSave} disabled={updateSetting.isPending || Object.keys(form).length === 0} className="font-cairo font-semibold gap-2">

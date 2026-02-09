@@ -69,6 +69,10 @@ Deno.serve(async (req) => {
       } else if (data.startsWith("product_toggle:")) {
         const productId = data.split(":")[1];
         await handleProductToggle(supabase, botToken, chatId, productId);
+      } else if (data.startsWith("product_edit_price:")) {
+        const productId = data.split(":")[1];
+        await supabase.from("telegram_bot_state").upsert({ chat_id: chatId, state: { action: "edit_price", product_id: productId }, updated_at: new Date().toISOString() });
+        await sendMessage(botToken, chatId, "✏️ أرسل السعر الجديد (رقم فقط):");
       }
       return new Response("OK");
     }
