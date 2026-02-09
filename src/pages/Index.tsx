@@ -78,6 +78,7 @@ export default function IndexPage() {
           mainImageIndex={p.main_image_index ?? 0}
           category={p.category || []}
           stock={p.stock ?? 0}
+          shippingPrice={Number(p.shipping_price) || 0}
         />
       ))}
     </div>
