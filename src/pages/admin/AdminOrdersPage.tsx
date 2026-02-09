@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
-import { Search, ExternalLink, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, Loader2, ShoppingCart } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
+import { TableSkeleton } from '@/components/LoadingSkeleton';
 
 const STATUSES = ['جديد', 'قيد المعالجة', 'تم الشحن', 'تم التسليم', 'ملغي'];
 const PAGE_SIZE = 10;
