@@ -26,10 +26,11 @@ export default function AdminCouponsPage() {
   const [validationError, setValidationError] = useState('');
   const [form, setForm] = useState({ code: '', discount_type: 'percentage', discount_value: '', expiry_date: '', is_active: true });
 
-  const { data: coupons } = useQuery({
+  const { data: coupons, isLoading } = useQuery({
     queryKey: ['admin-coupons'],
     queryFn: async () => {
-      const { data } = await supabase.from('coupons').select('*').order('created_at' as any, { ascending: false });
+      const { data, error } = await supabase.from('coupons').select('*').order('created_at' as any, { ascending: false });
+      if (error) throw error;
       return data || [];
     },
   });
