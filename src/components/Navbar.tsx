@@ -1,20 +1,26 @@
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Search, Home, Package, MapPin } from 'lucide-react';
+import { ShoppingCart, Menu, X, Home, Package, MapPin } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useStoreLogo } from '@/hooks/useStoreLogo';
 
 export default function Navbar() {
   const { totalItems } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: logoUrl } = useStoreLogo();
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b">
       <div className="container flex items-center justify-between h-16">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-cairo font-bold text-lg">DZ</span>
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt="DZ Store" className="w-10 h-10 rounded-lg object-contain" />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-cairo font-bold text-lg">DZ</span>
+            </div>
+          )}
           <span className="font-cairo font-bold text-xl text-foreground">DZ Store</span>
         </Link>
 
