@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
-import { Phone, Mail, MapPin, ChevronLeft } from 'lucide-react';
+import { Phone, Mail, MapPin, ChevronLeft, Facebook } from 'lucide-react';
 
 export default function Footer() {
   const { data: logoUrl } = useStoreLogo();
