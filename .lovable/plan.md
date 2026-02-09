@@ -1,131 +1,76 @@
 
 
-## Plan: Telegram Admin Bot Integration
+## Plan: WooCommerce-Style Variations System
 
-### Important Notes
-
-- This project uses a **key-value `settings` table** (not `store_settings`). All Telegram settings will be stored as key-value pairs: `telegram_bot_token`, `telegram_chat_id`, `telegram_enabled`, `telegram_notify_orders`.
-- A **Telegram Bot Token** secret will be requested during implementation (via the secrets tool) for edge function access.
+Apply WooCommerce's proven variation patterns to both admin and customer-facing sides.
 
 ---
 
-### Part 1: Database Changes
+### What WooCommerce Does (and what we'll apply)
 
-**1a. Create `telegram_bot_state` table** (migration)
+WooCommerce uses a two-level system:
+1. **Global Attributes** (e.g., "Color" with values Red, Blue, Green) -- managed centrally
+2. **Product Variations** -- each product picks from global attributes, and each combination gets its own price, stock, and image
 
-```sql
-CREATE TABLE public.telegram_bot_state (
-  chat_id text PRIMARY KEY,
-  state jsonb NOT NULL DEFAULT '{}',
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE telegram_bot_state ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Service role only" ON telegram_bot_state
-  FOR ALL USING (false);
-```
-
-No changes to the `settings` table schema needed -- the existing key-value structure handles new keys automatically.
+Key UX patterns:
+- **Color swatches**: Round circles showing actual colors (not text buttons)
+- **Size buttons**: Clean bordered buttons for non-color attributes
+- **Selected state**: Bold ring/border around selected swatch
+- **Out-of-stock variations**: Crossed out or grayed with strikethrough
+- **Image switching**: Clicking a color swatch changes the product gallery image
+- **Price update**: Price updates dynamically when a variation is selected
 
 ---
 
-### Part 2: Edge Functions
+### Changes
 
-**2a. `telegram-notify`** (`supabase/functions/telegram-notify/index.ts`)
+#### 1. Customer-Facing Product Page (`SingleProductPage.tsx`)
 
-- Receives `{ type: "new_order", order_id }` or `{ type: "test" }`
-- Reads `telegram_enabled`, `telegram_notify_orders`, `telegram_bot_token`, `telegram_chat_id` from `settings` table
-- Fetches order + order_items + product names (service role)
-- Sends formatted message to each comma-separated chat ID via Telegram `sendMessage` API
-- CORS headers included
+**Current state:** Variations show as text buttons with optional small image thumbnails. Color swatches are NOT shown even though `color_code` exists in the `variation_options` table.
 
-**2b. `telegram-bot`** (`supabase/functions/telegram-bot/index.ts`)
+**WooCommerce-style changes:**
+- Fetch `variation_options` data alongside `product_variations` to get `color_code` for each variation
+- For **color-type variations**: Render as round color circles (w-8 h-8 rounded-full) with the actual color from `color_code`. Selected state shows a ring around the circle. Tooltip/label shows the color name on hover.
+- For **non-color variations** (size, material, etc.): Render as clean bordered rectangular buttons (like WooCommerce size selectors)
+- Out-of-stock variations: Show with reduced opacity and a diagonal line through the swatch
+- When selecting a color, if it has an `image_url` on `product_variations`, switch the gallery to that image (already partially implemented)
 
-Webhook handler for Telegram updates. Commands:
+#### 2. Admin Variations Page (`AdminVariationsPage.tsx`)
 
-| Command | Action |
-|---------|--------|
-| `/start` | Welcome message with available commands |
-| `/orders` | Paginated recent orders (5/page) with inline keyboard |
-| `/products` | Paginated product list with price and status |
-| `/categories` | List all categories |
-| `/stats` | Revenue summary, order counts, product/customer counts |
-| `/help` | Command reference |
+**Current state:** Works well as an abstract template manager. Minor improvements:
+- Show color swatch circles inline in the list (larger, more prominent) -- already done
+- No structural changes needed, this page is already WooCommerce-like (global attributes)
 
-Interactive callbacks (inline keyboard):
-- `order_detail:{id}` -- Full order details
-- `order_status:{id}:{status}` -- Update order status
-- `orders_page:{n}` -- Paginate orders
-- `product_detail:{id}` -- Product details
-- `product_toggle:{id}` -- Activate/deactivate product
-- `products_page:{n}` -- Paginate products
+#### 3. Admin Product Form (`AdminProductsPage.tsx` -- ProductForm)
 
-Authorization: validates sender `chat_id` against stored admin chat IDs.
+**Current state:** Variation picker uses checkboxes with small color dots. Price/stock per variation is shown in a sub-panel.
 
-Stateful flows via `telegram_bot_state` table (e.g., editing product price -- bot asks for price, stores state, interprets next message as the new value).
-
-**2c. `telegram-set-webhook`** (`supabase/functions/telegram-set-webhook/index.ts`)
-
-- Reads bot token from `settings` table
-- Calls Telegram API `setWebhook` pointing to the `telegram-bot` function URL
-- Returns result
-
-**Config** -- add to `supabase/config.toml`:
-```toml
-[functions.telegram-notify]
-verify_jwt = false
-
-[functions.telegram-bot]
-verify_jwt = false
-
-[functions.telegram-set-webhook]
-verify_jwt = false
-```
+**WooCommerce-style changes:**
+- For color-type variations: Show actual color circles instead of small dots in checkbox buttons
+- Add an image upload per selected variation (WooCommerce lets you set a gallery image per variation). Store in `product_variations.image_url`
+- Better layout: Show selected variations in a table-like layout (Value | Color Preview | Price Adjustment | Stock | Image) instead of inline inputs
 
 ---
 
-### Part 3: Admin Settings UI
+### Technical Details
 
-**Update `src/pages/admin/AdminSettingsPage.tsx`**
+**Files to modify:**
 
-Add a new "بوت تلغرام" section with:
+| File | Changes |
+|------|---------|
+| `src/pages/SingleProductPage.tsx` | Fetch `variation_options` to get `color_code`, render color swatches as circles, size as bordered buttons, handle out-of-stock with strikethrough |
+| `src/pages/admin/AdminProductsPage.tsx` | Improve variation picker with larger color circles, add image upload per variation, table layout for selected variations |
 
-1. **Master toggle** -- `telegram_enabled` switch
-2. **Bot Token** -- Password input (type="password"), collapsible
-3. **Admin Chat IDs** -- Dynamic multi-input: each ID shown as a removable chip, with an "Add" input. Stored as comma-separated string in `telegram_chat_id`
-4. **Notify on new orders** -- `telegram_notify_orders` toggle
-5. **Test Notification button** -- Calls `telegram-notify` with `{ type: "test" }`
-6. **Connect Webhook button** -- Calls `telegram-set-webhook`
+**No database changes needed** -- `variation_options.color_code` and `product_variations.image_url` already exist.
 
-All new fields use the existing `setField`/`handleSave` pattern (key-value in `settings` table).
+**SingleProductPage variation rendering logic:**
+- Join `product_variations` with `variation_options` by matching `variation_type` + `variation_value` to get `color_code`
+- Render color types: `<button className="w-9 h-9 rounded-full border-2 ring-2 ring-offset-2" style={{ backgroundColor: colorCode }} />`
+- Render non-color types: `<button className="px-4 py-2 rounded-lg border-2 font-medium">{value}</button>`
+- Selected state: `ring-primary` for colors, `border-primary bg-primary/10` for text buttons
+- Disabled state: `opacity-30 cursor-not-allowed relative` with a diagonal CSS line
 
----
-
-### Part 4: Trigger Notifications on Order Creation
-
-**Update `src/pages/CheckoutPage.tsx`** (or wherever orders are created)
-
-After a successful order insert, fire-and-forget call to the `telegram-notify` edge function with `{ type: "new_order", order_id }`.
-
----
-
-### Files Summary
-
-| File | Action | Description |
-|------|--------|-------------|
-| Migration SQL | Create | `telegram_bot_state` table with RLS |
-| `supabase/functions/telegram-notify/index.ts` | Create | Push order notifications to Telegram |
-| `supabase/functions/telegram-bot/index.ts` | Create | Interactive webhook bot |
-| `supabase/functions/telegram-set-webhook/index.ts` | Create | Register webhook URL |
-| `supabase/config.toml` | Modify | Add 3 new function entries |
-| `src/pages/admin/AdminSettingsPage.tsx` | Modify | Add Telegram settings section |
-| `src/pages/CheckoutPage.tsx` | Modify | Trigger notification on order creation |
-
-### Security
-
-- Bot token stored in `settings` table (admin-only RLS) and as a backend secret
-- `telegram_bot_state` has RLS blocking all client access (service role only)
-- Webhook endpoint validates sender chat_id against admin list
-- Edge functions use `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS
+**ProductForm variation section:**
+- Replace inline inputs with a clean card for each selected variation showing: color preview (if color), value name, price adjustment input, stock input, image upload button
+- Image upload uses the existing `products` storage bucket
 
