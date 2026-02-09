@@ -1,6 +1,9 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import useEmblaCarousel from 'embla-carousel-react';
+import Autoplay from 'embla-carousel-autoplay';
 import { Home, Sparkles, Watch, ArrowLeft, ShoppingBag, Gift, Star, Heart, Shirt,
   Laptop, Smartphone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette,
   Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
@@ -38,15 +41,45 @@ export default function IndexPage() {
     },
   });
 
-  const { data: heroSetting } = useQuery({
-    queryKey: ['hero-banner-setting'],
+  // Fetch hero banners (multiple) and single fallback
+  const { data: heroBanners } = useQuery({
+    queryKey: ['hero-banners'],
     queryFn: async () => {
-      const { data } = await supabase.from('settings').select('value').eq('key', 'hero_banner').maybeSingle();
-      return data?.value || '';
+      const { data } = await supabase.from('settings').select('key, value').in('key', ['hero_banners', 'hero_banner']);
+      const map: Record<string, string> = {};
+      data?.forEach(s => { map[s.key] = s.value || ''; });
+
+      // Try multiple banners first
+      if (map.hero_banners) {
+        try {
+          const parsed = JSON.parse(map.hero_banners) as string[];
+          if (parsed.length > 0) return parsed;
+        } catch { /* fallback */ }
+      }
+      // Fallback to single banner
+      if (map.hero_banner) return [map.hero_banner];
+      return [heroBannerFallback];
     },
   });
 
-  const heroBanner = heroSetting || heroBannerFallback;
+  const bannerImages = heroBanners || [heroBannerFallback];
+
+  // Embla carousel
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, direction: 'rtl' }, [
+    Autoplay({ delay: 5000, stopOnInteraction: false }),
+  ]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    emblaApi.on('select', onSelect);
+    onSelect();
+  }, [emblaApi, onSelect]);
 
   const trustItems = [
     { icon: Truck, label: 'توصيل لجميع الولايات', desc: '58 ولاية' },
@@ -64,19 +97,23 @@ export default function IndexPage() {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ─── Hero ─── */}
-      <section className="relative isolate overflow-hidden min-h-[520px] md:min-h-[600px] flex items-center">
-        {/* Background image */}
-        <img
-          src={heroBanner}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        {/* Gradient overlay – denser on the text side (right in RTL) */}
-        <div className="absolute inset-0 bg-gradient-to-l from-foreground/90 via-foreground/70 to-foreground/30" />
+      {/* ─── Hero Carousel ─── */}
+      <section className="relative isolate overflow-hidden min-h-[520px] md:min-h-[600px]">
+        <div className="absolute inset-0" ref={emblaRef}>
+          <div className="flex h-full" style={{ direction: 'ltr' }}>
+            {bannerImages.map((img, i) => (
+              <div key={i} className="flex-[0_0_100%] min-w-0 relative min-h-[520px] md:min-h-[600px]">
+                <img src={img} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <div className="container relative z-10 py-24 md:py-32">
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-l from-foreground/90 via-foreground/70 to-foreground/30 z-[1]" />
+
+        {/* Content */}
+        <div className="container relative z-10 flex items-center min-h-[520px] md:min-h-[600px] py-24 md:py-32">
           <div className="max-w-xl space-y-6">
             <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/10 backdrop-blur-sm rounded-full px-4 py-1.5">
               🇩🇿 أفضل المنتجات في الجزائر
@@ -103,6 +140,21 @@ export default function IndexPage() {
             </div>
           </div>
         </div>
+
+        {/* Dots */}
+        {bannerImages.length > 1 && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+            {bannerImages.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => emblaApi?.scrollTo(i)}
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                  i === selectedIndex ? 'bg-primary w-8' : 'bg-background/50 hover:bg-background/80'
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ─── Trust Bar ─── */}
@@ -129,7 +181,6 @@ export default function IndexPage() {
         <section className="py-14 md:py-20">
           <div className="container">
             <SectionHeader title="تصفح حسب الفئة" />
-
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {(categoriesData || []).map((cat) => {
                 const Icon = ICON_MAP[cat.icon] || Home;
@@ -165,7 +216,6 @@ export default function IndexPage() {
               </Button>
             </Link>
           </div>
-
           {isLoading ? (
             <ProductGridSkeleton />
           ) : products && products.length > 0 ? (
@@ -198,13 +248,9 @@ export default function IndexPage() {
       <section className="py-16 md:py-24">
         <div className="container">
           <SectionHeader title="لماذا تختارنا؟" subtitle="نسعى لتقديم أفضل تجربة تسوق لكم" center />
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
             {whyUsItems.map((item, i) => (
-              <div
-                key={i}
-                className="relative bg-card border border-border rounded-2xl p-8 text-center hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group"
-              >
+              <div key={i} className="relative bg-card border border-border rounded-2xl p-8 text-center hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-primary/15 group-hover:scale-105 transition-all duration-300">
                   <item.icon className="w-8 h-8 text-primary" />
                 </div>
@@ -219,10 +265,8 @@ export default function IndexPage() {
       {/* ─── CTA Banner ─── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-bl from-primary via-primary to-primary/90" />
-        {/* Decorative circles */}
         <div className="absolute top-0 left-0 w-72 h-72 bg-background/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-background/5 rounded-full translate-x-1/3 translate-y-1/3" />
-
         <div className="container relative z-10 py-16 md:py-20 text-center">
           <h2 className="font-cairo font-extrabold text-3xl md:text-4xl text-primary-foreground mb-4">
             جاهز للتسوق؟
@@ -231,11 +275,7 @@ export default function IndexPage() {
             اكتشف مجموعتنا الواسعة من المنتجات واستفد من عروضنا الحصرية.
           </p>
           <Link to="/products">
-            <Button
-              size="lg"
-              variant="secondary"
-              className="font-cairo font-bold text-base px-10 h-12 rounded-xl gap-2 shadow-lg hover:shadow-xl transition-shadow"
-            >
+            <Button size="lg" variant="secondary" className="font-cairo font-bold text-base px-10 h-12 rounded-xl gap-2 shadow-lg hover:shadow-xl transition-shadow">
               تصفح المنتجات
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -246,14 +286,11 @@ export default function IndexPage() {
   );
 }
 
-/* ─── Reusable section header ─── */
 function SectionHeader({ title, subtitle, center }: { title: string; subtitle?: string; center?: boolean }) {
   return (
     <div className={center ? 'text-center mb-0' : 'mb-0'}>
       <h2 className="font-cairo font-extrabold text-2xl md:text-3xl text-foreground">{title}</h2>
-      {subtitle && (
-        <p className="font-cairo text-muted-foreground mt-1.5 text-sm md:text-base">{subtitle}</p>
-      )}
+      {subtitle && <p className="font-cairo text-muted-foreground mt-1.5 text-sm md:text-base">{subtitle}</p>}
     </div>
   );
 }

@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/lib/format';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, Upload, CheckCircle } from 'lucide-react';
+import { Copy, Upload, CheckCircle, LogIn } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -128,6 +130,7 @@ export default function CheckoutPage() {
         payment_receipt_url: receiptUrl || null,
         coupon_code: couponApplied ? couponCode : null,
         discount_amount: discount,
+        user_id: user?.id || null,
       }).select().single();
       if (error) throw error;
 
@@ -160,6 +163,13 @@ export default function CheckoutPage() {
   return (
     <div className="container py-8 max-w-4xl">
       <h1 className="font-cairo font-bold text-3xl mb-8">إتمام الطلب</h1>
+
+      {!user && (
+        <Link to="/auth" className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 hover:bg-primary/10 transition-colors">
+          <LogIn className="w-5 h-5 text-primary" />
+          <span className="font-cairo text-sm text-foreground">سجّل دخولك لتتبع طلباتك بسهولة من حسابك</span>
+        </Link>
+      )}
 
       <div className="grid md:grid-cols-5 gap-8">
         <div className="md:col-span-3 space-y-6">

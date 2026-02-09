@@ -159,6 +159,7 @@ export type Database = {
           status: string | null
           subtotal: number | null
           total_amount: number | null
+          user_id: string | null
           wilaya_id: string | null
         }
         Insert: {
@@ -176,6 +177,7 @@ export type Database = {
           status?: string | null
           subtotal?: number | null
           total_amount?: number | null
+          user_id?: string | null
           wilaya_id?: string | null
         }
         Update: {
@@ -193,6 +195,7 @@ export type Database = {
           status?: string | null
           subtotal?: number | null
           total_amount?: number | null
+          user_id?: string | null
           wilaya_id?: string | null
         }
         Relationships: [
@@ -246,6 +249,41 @@ export type Database = {
           stock?: number | null
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          product_id: string
+          rating: number
+          reviewer_name: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          product_id: string
+          rating: number
+          reviewer_name: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          rating?: number
+          reviewer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       settings: {
         Row: {

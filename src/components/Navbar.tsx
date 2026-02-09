@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Home, Package, MapPin } from 'lucide-react';
+import { ShoppingCart, Menu, X, Home, Package, MapPin, User, LogIn } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
+import { useAuth } from '@/hooks/useAuth';
 
 const NAV_LINKS = [
   { to: '/', label: 'الرئيسية', icon: Home },
@@ -16,6 +17,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { data: logoUrl } = useStoreLogo();
   const location = useLocation();
+  const { user, loading } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b">
@@ -54,7 +56,23 @@ export default function Navbar() {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* Auth */}
+          {!loading && (
+            <Link
+              to={user ? '/dashboard' : '/auth'}
+              className="p-2.5 rounded-xl hover:bg-muted transition-colors"
+            >
+              {user ? (
+                <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center">
+                  <User className="w-3.5 h-3.5 text-primary" />
+                </div>
+              ) : (
+                <LogIn className="w-5 h-5 text-muted-foreground" />
+              )}
+            </Link>
+          )}
+
           <Link
             to="/cart"
             className="relative p-2.5 rounded-xl hover:bg-muted transition-colors"
@@ -94,6 +112,14 @@ export default function Navbar() {
                 </Link>
               );
             })}
+            <Link
+              to={user ? '/dashboard' : '/auth'}
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-cairo font-medium text-sm text-muted-foreground hover:bg-muted"
+            >
+              <User className="w-4 h-4" />
+              {user ? 'حسابي' : 'تسجيل الدخول'}
+            </Link>
           </nav>
         </div>
       )}
