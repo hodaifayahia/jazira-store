@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Star, X, Upload, ImageIcon, Loader2, Package, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, X, Upload, ImageIcon, Loader2, Package, Search, Copy, Download, FileUp } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { useCategories } from '@/hooks/useCategories';
 
@@ -18,6 +18,7 @@ export default function AdminProductsPage() {
   const { toast } = useToast();
   const { data: categoriesData } = useCategories();
   const categoryNames = categoriesData?.map(c => c.name) || [];
+  const importRef = useRef<HTMLInputElement>(null);
 
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
@@ -44,21 +45,83 @@ export default function AdminProductsPage() {
     },
   });
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase.from('products').update({ is_active }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-products'] });
+      toast({ title: 'تم تحديث الحالة' });
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (p: any) => {
+      const { id, created_at, ...rest } = p;
+      const { error } = await supabase.from('products').insert({ ...rest, name: `${rest.name} (نسخة)` });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-products'] });
+      toast({ title: 'تم نسخ المنتج ✅' });
+    },
+  });
+
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
 
-  const openCreate = () => {
-    setEditingProduct(null);
-    setShowForm(true);
+  const openCreate = () => { setEditingProduct(null); setShowForm(true); };
+  const openEdit = (p: any) => { setEditingProduct(p); setShowForm(true); };
+  const handleFormClose = () => { setShowForm(false); setEditingProduct(null); };
+
+  // --- Export CSV ---
+  const exportCSV = () => {
+    if (!products || products.length === 0) return;
+    const headers = ['name', 'description', 'price', 'category', 'stock', 'is_active'];
+    const rows = products.map(p => [
+      `"${(p.name || '').replace(/"/g, '""')}"`,
+      `"${(p.description || '').replace(/"/g, '""')}"`,
+      p.price,
+      `"${Array.isArray(p.category) ? p.category.join(';') : p.category}"`,
+      p.stock ?? 0,
+      p.is_active ? 'true' : 'false',
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `products-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: `تم تصدير ${products.length} منتج ✅` });
   };
 
-  const openEdit = (p: any) => {
-    setEditingProduct(p);
-    setShowForm(true);
-  };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingProduct(null);
+  // --- Import CSV ---
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { toast({ title: 'الملف فارغ', variant: 'destructive' }); return; }
+    const rows = lines.slice(1); // skip header
+    let imported = 0, errors = 0;
+    for (const row of rows) {
+      try {
+        const cols = row.match(/(".*?"|[^,]+)/g)?.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"')) || [];
+        if (cols.length < 3) { errors++; continue; }
+        const { error } = await supabase.from('products').insert({
+          name: cols[0],
+          description: cols[1] || '',
+          price: Number(cols[2]) || 0,
+          category: cols[3] ? cols[3].split(';') : [],
+          stock: Number(cols[4]) || 0,
+          is_active: cols[5] !== 'false',
+        });
+        if (error) { errors++; } else { imported++; }
+      } catch { errors++; }
+    }
+    qc.invalidateQueries({ queryKey: ['admin-products'] });
+    toast({ title: `تم استيراد ${imported} منتج${errors > 0 ? ` (${errors} أخطاء)` : ''} ✅` });
+    e.target.value = '';
   };
 
   if (showForm) {
@@ -67,42 +130,40 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="font-cairo font-bold text-2xl text-foreground">المنتجات</h2>
           <p className="font-cairo text-sm text-muted-foreground mt-1">{products?.length || 0} منتج</p>
         </div>
-        <Button onClick={openCreate} className="font-cairo gap-1.5">
-          <Plus className="w-4 h-4" /> إضافة منتج
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={exportCSV} className="font-cairo gap-1.5" size="sm">
+            <Download className="w-4 h-4" /> تصدير
+          </Button>
+          <input ref={importRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+          <Button variant="outline" onClick={() => importRef.current?.click()} className="font-cairo gap-1.5" size="sm">
+            <FileUp className="w-4 h-4" /> استيراد
+          </Button>
+          <Button onClick={openCreate} className="font-cairo gap-1.5" size="sm">
+            <Plus className="w-4 h-4" /> إضافة منتج
+          </Button>
+        </div>
       </div>
 
       {/* Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="ابحث باسم المنتج..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pr-10 font-cairo h-10"
-          />
+          <Input placeholder="ابحث باسم المنتج..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pr-10 font-cairo h-10" />
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-full sm:w-44 font-cairo h-10">
-            <SelectValue placeholder="الفئة" />
-          </SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44 font-cairo h-10"><SelectValue placeholder="الفئة" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="الكل" className="font-cairo">كل الفئات</SelectItem>
-            {categoryNames.map(c => (
-              <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>
-            ))}
+            {categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-full sm:w-36 font-cairo h-10">
-            <SelectValue placeholder="الحالة" />
-          </SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36 font-cairo h-10"><SelectValue placeholder="الحالة" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all" className="font-cairo">كل الحالات</SelectItem>
             <SelectItem value="active" className="font-cairo">نشط</SelectItem>
@@ -156,16 +217,23 @@ export default function AdminProductsPage() {
                     <td className="p-3 font-roboto">{p.stock}</td>
                     <td className="p-3 font-roboto text-muted-foreground">{p.images?.length || 0}</td>
                     <td className="p-3">
-                      <span className={`text-xs px-2 py-1 rounded-full font-cairo ${p.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                      <button
+                        onClick={() => toggleStatusMutation.mutate({ id: p.id, is_active: !p.is_active })}
+                        disabled={toggleStatusMutation.isPending}
+                        className={`text-xs px-2.5 py-1 rounded-full font-cairo cursor-pointer transition-all hover:scale-105 active:scale-95 ${p.is_active ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-muted text-muted-foreground hover:bg-muted-foreground/10'}`}
+                      >
                         {p.is_active ? 'نشط' : 'معطّل'}
-                      </span>
+                      </button>
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)} title="تعديل">
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-secondary/10 hover:text-secondary" onClick={() => duplicateMutation.mutate(p)} title="نسخ">
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)} title="حذف">
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
@@ -338,15 +406,11 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                   <div className="aspect-square bg-muted">
                     <img src={url} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
                   </div>
-
-                  {/* Main badge */}
                   {idx === mainImageIndex && (
                     <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs font-cairo px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" /> رئيسية
                     </div>
                   )}
-
-                  {/* Overlay actions */}
                   <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                     {idx !== mainImageIndex && (
                       <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full shadow-lg" onClick={() => setMainImageIndex(idx)} title="تعيين كصورة رئيسية">

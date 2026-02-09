@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Upload, X, ImageIcon } from 'lucide-react';
@@ -12,6 +13,7 @@ export default function AdminSettingsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const heroInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-settings'],
@@ -25,12 +27,12 @@ export default function AdminSettingsPage() {
 
   const [form, setForm] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
+  const [heroUploading, setHeroUploading] = useState(false);
   const mergedSettings = { ...settings, ...form };
 
   const updateSetting = useMutation({
     mutationFn: async (entries: { key: string; value: string }[]) => {
       for (const entry of entries) {
-        // upsert: try update, if no rows affected then insert
         const { data } = await supabase.from('settings').update({ value: entry.value }).eq('key', entry.key).select();
         if (!data || data.length === 0) {
           await supabase.from('settings').insert({ key: entry.key, value: entry.value });
@@ -52,7 +54,11 @@ export default function AdminSettingsPage() {
 
   const setField = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    settingKey: string,
+    setLoadingFn: (v: boolean) => void
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -64,60 +70,57 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    setUploading(true);
+    setLoadingFn(true);
     try {
       const ext = file.name.split('.').pop();
-      const path = `logo-${Date.now()}.${ext}`;
+      const path = `${settingKey}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from('store').upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('store').getPublicUrl(path);
-      const logoUrl = urlData.publicUrl;
+      const url = urlData.publicUrl;
 
-      // Save to settings
-      const { data } = await supabase.from('settings').update({ value: logoUrl }).eq('key', 'store_logo').select();
+      const { data } = await supabase.from('settings').update({ value: url }).eq('key', settingKey).select();
       if (!data || data.length === 0) {
-        await supabase.from('settings').insert({ key: 'store_logo', value: logoUrl });
+        await supabase.from('settings').insert({ key: settingKey, value: url });
       }
       qc.invalidateQueries({ queryKey: ['admin-settings'] });
       qc.invalidateQueries({ queryKey: ['store-logo'] });
-      toast({ title: 'تم رفع الشعار بنجاح ✅' });
+      toast({ title: 'تم رفع الصورة بنجاح ✅' });
     } catch {
-      toast({ title: 'فشل رفع الشعار', variant: 'destructive' });
+      toast({ title: 'فشل رفع الصورة', variant: 'destructive' });
     } finally {
-      setUploading(false);
+      setLoadingFn(false);
     }
   };
 
-  const removeLogo = async () => {
-    const { data } = await supabase.from('settings').update({ value: '' }).eq('key', 'store_logo').select();
+  const removeImage = async (settingKey: string) => {
+    const { data } = await supabase.from('settings').update({ value: '' }).eq('key', settingKey).select();
     if (!data || data.length === 0) {
-      await supabase.from('settings').insert({ key: 'store_logo', value: '' });
+      await supabase.from('settings').insert({ key: settingKey, value: '' });
     }
     qc.invalidateQueries({ queryKey: ['admin-settings'] });
     qc.invalidateQueries({ queryKey: ['store-logo'] });
-    toast({ title: 'تم حذف الشعار' });
+    toast({ title: 'تم حذف الصورة' });
   };
 
   if (isLoading) return null;
 
   const currentLogo = mergedSettings.store_logo;
+  const currentHero = mergedSettings.hero_banner;
 
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Store Logo */}
       <div className="bg-card border rounded-lg p-6 space-y-4">
         <h2 className="font-cairo font-bold text-xl">شعار المتجر</h2>
-        <p className="font-cairo text-sm text-muted-foreground">يظهر في رأس الصفحة، التذييل، والأيقونة المفضلة (Favicon)</p>
+        <p className="font-cairo text-sm text-muted-foreground">يظهر في رأس الصفحة، التذييل، والأيقونة المفضلة</p>
         <div className="flex items-center gap-4">
           {currentLogo ? (
             <div className="relative group">
               <div className="w-20 h-20 rounded-xl border-2 border-dashed border-primary/30 overflow-hidden bg-muted flex items-center justify-center">
                 <img src={currentLogo} alt="شعار المتجر" className="w-full h-full object-contain p-1" />
               </div>
-              <button
-                onClick={removeLogo}
-                className="absolute -top-2 -left-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              >
+              <button onClick={() => removeImage('store_logo')} className="absolute -top-2 -left-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <X className="w-3 h-3" />
               </button>
             </div>
@@ -127,13 +130,67 @@ export default function AdminSettingsPage() {
             </div>
           )}
           <div className="space-y-2">
-            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'store_logo', setUploading)} />
             <Button variant="outline" onClick={() => logoInputRef.current?.click()} disabled={uploading} className="font-cairo gap-2">
               <Upload className="w-4 h-4" />
               {uploading ? 'جاري الرفع...' : currentLogo ? 'تغيير الشعار' : 'رفع شعار'}
             </Button>
             <p className="font-cairo text-xs text-muted-foreground">PNG, JPG أو SVG — الحد الأقصى 2MB</p>
           </div>
+        </div>
+      </div>
+
+      {/* Hero Banner */}
+      <div className="bg-card border rounded-lg p-6 space-y-4">
+        <h2 className="font-cairo font-bold text-xl">صورة الصفحة الرئيسية</h2>
+        <p className="font-cairo text-sm text-muted-foreground">الصورة الخلفية التي تظهر في البانر الرئيسي للصفحة الأولى</p>
+        <div className="flex items-center gap-4">
+          {currentHero ? (
+            <div className="relative group">
+              <div className="w-32 h-20 rounded-xl border-2 border-dashed border-primary/30 overflow-hidden bg-muted">
+                <img src={currentHero} alt="صورة البانر" className="w-full h-full object-cover" />
+              </div>
+              <button onClick={() => removeImage('hero_banner')} className="absolute -top-2 -left-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="w-32 h-20 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center bg-muted/50">
+              <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
+            </div>
+          )}
+          <div className="space-y-2">
+            <input ref={heroInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'hero_banner', setHeroUploading)} />
+            <Button variant="outline" onClick={() => heroInputRef.current?.click()} disabled={heroUploading} className="font-cairo gap-2">
+              <Upload className="w-4 h-4" />
+              {heroUploading ? 'جاري الرفع...' : currentHero ? 'تغيير الصورة' : 'رفع صورة'}
+            </Button>
+            <p className="font-cairo text-xs text-muted-foreground">يُنصح بحجم 1920×800 بيكسل</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Info */}
+      <div className="bg-card border rounded-lg p-6 space-y-4">
+        <h2 className="font-cairo font-bold text-xl">معلومات التذييل</h2>
+        <p className="font-cairo text-sm text-muted-foreground">المعلومات التي تظهر في أسفل كل صفحة</p>
+        <div>
+          <Label className="font-cairo">وصف المتجر</Label>
+          <Textarea value={mergedSettings.footer_description || ''} onChange={e => setField('footer_description', e.target.value)} className="font-cairo mt-1" placeholder="وصف قصير للمتجر..." />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="font-cairo">رقم الهاتف</Label>
+            <Input value={mergedSettings.footer_phone || ''} onChange={e => setField('footer_phone', e.target.value)} className="font-roboto mt-1" dir="ltr" placeholder="0555 000 000" />
+          </div>
+          <div>
+            <Label className="font-cairo">البريد الإلكتروني</Label>
+            <Input value={mergedSettings.footer_email || ''} onChange={e => setField('footer_email', e.target.value)} className="font-roboto mt-1" dir="ltr" placeholder="info@store.com" />
+          </div>
+        </div>
+        <div>
+          <Label className="font-cairo">العنوان</Label>
+          <Input value={mergedSettings.footer_address || ''} onChange={e => setField('footer_address', e.target.value)} className="font-cairo mt-1" placeholder="الجزائر العاصمة، الجزائر" />
         </div>
       </div>
 
