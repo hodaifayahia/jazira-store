@@ -246,6 +246,7 @@ export default function CheckoutPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.wilaya && <p className="text-destructive text-xs font-cairo mt-1">{errors.wilaya}</p>}
             </div>
             <div>
               <Label className="font-cairo">العنوان التفصيلي</Label>
