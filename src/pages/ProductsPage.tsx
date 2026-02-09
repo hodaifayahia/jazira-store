@@ -20,12 +20,14 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState('newest');
+  const { data: categoriesData } = useCategories();
+  const categoryNames = ['الكل', ...(categoriesData?.map(c => c.name) || [])];
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['products', category, sort],
     queryFn: async () => {
       let query = supabase.from('products').select('*').eq('is_active', true);
-      if (category !== 'الكل') query = query.eq('category', category);
+      if (category !== 'الكل') query = query.contains('category', [category]);
       if (sort === 'newest') query = query.order('created_at', { ascending: false });
       else if (sort === 'cheapest') query = query.order('price', { ascending: true });
       else if (sort === 'expensive') query = query.order('price', { ascending: false });
