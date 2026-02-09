@@ -28,7 +28,7 @@ export default function ProductCard({ id, name, price, image, category, stock, s
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({ id, name, price, image, stock });
+    addItem({ id, name, price, image, stock, shippingPrice });
     toast({ title: 'تمت الإضافة', description: `تمت إضافة "${name}" إلى السلة` });
   };
 
