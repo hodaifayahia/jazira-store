@@ -34,7 +34,7 @@ export default function ProductsPage() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const { items, totalPrice } = useCart();
+  const { items, subtotal } = useCart();
 
   const { data: categoriesData } = useCategories();
   const categoryNames = categoriesData?.map(c => c.name) || [];
