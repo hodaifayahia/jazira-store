@@ -1,18 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Lock } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (session?.user) navigate('/admin');
+      setCheckingSession(false);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) navigate('/admin');
+      setCheckingSession(false);
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,11 +33,17 @@ export default function AdminLoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast({ title: 'خطأ', description: 'بيانات الدخول غير صحيحة', variant: 'destructive' });
+      toast({ title: 'خطأ', description: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', variant: 'destructive' });
     } else {
       navigate('/admin');
     }
   };
+
+  if (checkingSession) return (
+    <div className="min-h-screen flex items-center justify-center bg-muted">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted p-4">
@@ -46,7 +65,7 @@ export default function AdminLoginPage() {
             <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="mt-1" dir="ltr" />
           </div>
           <Button type="submit" disabled={loading} className="w-full font-cairo font-semibold">
-            {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
+            {loading ? <><Loader2 className="w-4 h-4 ml-2 animate-spin" /> جاري الدخول...</> : 'تسجيل الدخول'}
           </Button>
         </form>
       </div>
