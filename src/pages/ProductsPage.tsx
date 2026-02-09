@@ -288,7 +288,7 @@ export default function ProductsPage() {
               </div>
               <div className="min-w-0">
                 <p className="font-cairo font-semibold text-sm">{items.length} منتج في السلة</p>
-                <p className="font-roboto font-bold text-primary text-sm">{formatPrice(totalPrice)}</p>
+                <p className="font-roboto font-bold text-primary text-sm">{formatPrice(subtotal)}</p>
               </div>
             </div>
             <Link to="/cart">
