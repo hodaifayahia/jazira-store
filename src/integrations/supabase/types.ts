@@ -410,6 +410,33 @@ export type Database = {
         }
         Relationships: []
       }
+      variation_options: {
+        Row: {
+          color_code: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          variation_type: string
+          variation_value: string
+        }
+        Insert: {
+          color_code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          variation_type: string
+          variation_value: string
+        }
+        Update: {
+          color_code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          variation_type?: string
+          variation_value?: string
+        }
+        Relationships: []
+      }
       wilayas: {
         Row: {
           id: string

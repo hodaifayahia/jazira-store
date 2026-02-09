@@ -515,16 +515,101 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [mainImageIndex, setMainImageIndex] = useState<number>(product?.main_image_index ?? 0);
   const [uploading, setUploading] = useState(false);
 
-  // Variations count for display
-  const { data: variationsCount } = useQuery({
-    queryKey: ['admin-variations-count', product?.id],
+  // Variation options (abstract templates)
+  const { data: variationOptions } = useQuery({
+    queryKey: ['variation-options'],
     queryFn: async () => {
-      if (!product?.id) return 0;
-      const { count } = await supabase.from('product_variations').select('*', { count: 'exact', head: true }).eq('product_id', product.id);
-      return count || 0;
+      const { data } = await supabase
+        .from('variation_options')
+        .select('*')
+        .eq('is_active', true)
+        .order('variation_type')
+        .order('variation_value');
+      return (data || []) as Array<{ id: string; variation_type: string; variation_value: string; color_code: string | null; is_active: boolean }>;
+    },
+  });
+
+  // Existing product_variations for this product
+  const { data: productVariations } = useQuery({
+    queryKey: ['product-variations', product?.id],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      const { data } = await supabase.from('product_variations').select('*').eq('product_id', product.id);
+      return data || [];
     },
     enabled: !!product?.id,
   });
+
+  // Track selected variation option IDs
+  const [selectedVariationIds, setSelectedVariationIds] = useState<Set<string>>(new Set());
+  const [variationPriceAdj, setVariationPriceAdj] = useState<Record<string, string>>({});
+  const [variationStock, setVariationStock] = useState<Record<string, string>>({});
+
+  // Initialize selected variations from existing product_variations
+  useState(() => {
+    if (productVariations && variationOptions) {
+      const selected = new Set<string>();
+      const priceAdj: Record<string, string> = {};
+      const stockMap: Record<string, string> = {};
+      productVariations.forEach(pv => {
+        // Match by type+value to variation_options
+        const opt = variationOptions.find(o => o.variation_type === pv.variation_type && o.variation_value === pv.variation_value);
+        if (opt) {
+          selected.add(opt.id);
+          priceAdj[opt.id] = String(pv.price_adjustment || 0);
+          stockMap[opt.id] = String(pv.stock || 0);
+        }
+      });
+      setSelectedVariationIds(selected);
+      setVariationPriceAdj(priceAdj);
+      setVariationStock(stockMap);
+    }
+  });
+
+  // Re-sync when productVariations load
+  useMemo(() => {
+    if (productVariations && variationOptions && productVariations.length > 0) {
+      const selected = new Set<string>();
+      const priceAdj: Record<string, string> = {};
+      const stockMap: Record<string, string> = {};
+      productVariations.forEach(pv => {
+        const opt = variationOptions.find(o => o.variation_type === pv.variation_type && o.variation_value === pv.variation_value);
+        if (opt) {
+          selected.add(opt.id);
+          priceAdj[opt.id] = String(pv.price_adjustment || 0);
+          stockMap[opt.id] = String(pv.stock || 0);
+        }
+      });
+      if (selected.size > 0) {
+        setSelectedVariationIds(selected);
+        setVariationPriceAdj(priceAdj);
+        setVariationStock(stockMap);
+      }
+    }
+  }, [productVariations, variationOptions]);
+
+  // Group variation options by type
+  const groupedOptions = useMemo(() => {
+    const groups: Record<string, typeof variationOptions> = {};
+    variationOptions?.forEach(o => {
+      if (!groups[o.variation_type]) groups[o.variation_type] = [];
+      groups[o.variation_type]!.push(o);
+    });
+    return groups;
+  }, [variationOptions]);
+
+  const isColorType = (type: string) => {
+    const t = type.toLowerCase();
+    return t.includes('لون') || t.includes('color') || t.includes('colour');
+  };
+
+  const toggleVariation = (id: string) => {
+    setSelectedVariationIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -542,12 +627,37 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         main_image_index: mainImageIndex,
       };
 
+      let productId = product?.id;
+
       if (product) {
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('products').insert(payload);
+        const { data, error } = await supabase.from('products').insert(payload).select().single();
         if (error) throw error;
+        productId = data.id;
+      }
+
+      // Sync product_variations
+      if (productId) {
+        // Delete existing
+        await supabase.from('product_variations').delete().eq('product_id', productId);
+
+        // Insert selected
+        const selectedOpts = variationOptions?.filter(o => selectedVariationIds.has(o.id)) || [];
+        if (selectedOpts.length > 0) {
+          const inserts = selectedOpts.map(o => ({
+            product_id: productId!,
+            variation_type: o.variation_type,
+            variation_value: o.variation_value,
+            price_adjustment: Number(variationPriceAdj[o.id] || 0),
+            stock: Number(variationStock[o.id] || 0),
+            is_active: true,
+            image_url: null,
+          }));
+          const { error } = await supabase.from('product_variations').insert(inserts);
+          if (error) throw error;
+        }
       }
     },
     onSuccess: () => {
@@ -710,26 +820,90 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         </div>
       </div>
 
-      {/* ─── Variations Link ─── */}
-      <div className="bg-card border rounded-xl p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
-              <Tag className="w-4 h-4 text-secondary" />
-            </div>
-            <div>
-              <h3 className="font-cairo font-semibold text-base">المتغيرات (ألوان، مقاسات...)</h3>
-              <p className="font-cairo text-xs text-muted-foreground">
-                {product ? `${variationsCount || 0} متغير مرتبط بهذا المنتج` : 'أضف المنتج أولاً ثم أدر المتغيرات'}
-              </p>
-            </div>
+      {/* ─── Variations Picker ─── */}
+      <div className="bg-card border rounded-xl p-5 space-y-4">
+        <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
+            <Tag className="w-4 h-4 text-secondary" />
           </div>
-          {product && (
-            <Button variant="outline" size="sm" className="font-cairo gap-1.5" onClick={() => { window.location.href = '/admin/variations'; }}>
-              <Pencil className="w-3.5 h-3.5" /> إدارة المتغيرات
+          المتغيرات (ألوان، مقاسات...)
+        </h3>
+        <p className="font-cairo text-xs text-muted-foreground">اختر المتغيرات المتاحة لهذا المنتج. أضف متغيرات جديدة من صفحة المتغيرات.</p>
+
+        {Object.keys(groupedOptions).length === 0 ? (
+          <div className="text-center py-6 border-2 border-dashed rounded-xl">
+            <p className="font-cairo text-sm text-muted-foreground">لا توجد متغيرات. أضفها أولاً من صفحة المتغيرات.</p>
+            <Button variant="outline" size="sm" className="font-cairo mt-2 gap-1" onClick={() => { window.location.href = '/admin/variations'; }}>
+              <Plus className="w-3.5 h-3.5" /> إضافة متغيرات
             </Button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(groupedOptions).map(([type, opts]) => (
+              <div key={type}>
+                <Label className="font-cairo text-sm font-semibold mb-2 block">{type}</Label>
+                <div className="flex flex-wrap gap-2">
+                  {opts!.map(o => {
+                    const selected = selectedVariationIds.has(o.id);
+                    const isColor = isColorType(type);
+
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => toggleVariation(o.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-sm font-cairo ${
+                          selected
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-muted-foreground/20 hover:border-muted-foreground/40'
+                        }`}
+                      >
+                        {isColor && o.color_code && (
+                          <div
+                            className="w-5 h-5 rounded-full border border-muted-foreground/30 shrink-0"
+                            style={{ backgroundColor: o.color_code }}
+                          />
+                        )}
+                        <span>{o.variation_value}</span>
+                        {selected && <span className="text-primary">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Show price/stock fields for selected items of this type */}
+                {opts!.filter(o => selectedVariationIds.has(o.id)).length > 0 && (
+                  <div className="mt-3 space-y-2 bg-muted/30 rounded-lg p-3">
+                    {opts!.filter(o => selectedVariationIds.has(o.id)).map(o => (
+                      <div key={o.id} className="flex items-center gap-3">
+                        {isColorType(type) && o.color_code && (
+                          <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: o.color_code }} />
+                        )}
+                        <span className="font-cairo text-sm w-20 shrink-0">{o.variation_value}</span>
+                        <div className="flex items-center gap-2 flex-1">
+                          <Label className="font-cairo text-xs shrink-0">فرق السعر:</Label>
+                          <Input
+                            type="number"
+                            value={variationPriceAdj[o.id] || '0'}
+                            onChange={e => setVariationPriceAdj(prev => ({ ...prev, [o.id]: e.target.value }))}
+                            className="font-roboto h-8 w-24"
+                          />
+                          <Label className="font-cairo text-xs shrink-0">المخزون:</Label>
+                          <Input
+                            type="number"
+                            value={variationStock[o.id] || '0'}
+                            onChange={e => setVariationStock(prev => ({ ...prev, [o.id]: e.target.value }))}
+                            className="font-roboto h-8 w-20"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Actions */}
