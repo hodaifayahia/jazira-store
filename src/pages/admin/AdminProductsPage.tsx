@@ -11,8 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
-
-const CATEGORIES = ['أدوات منزلية', 'منتجات زينة', 'إكسسوارات'];
+import { useCategories } from '@/hooks/useCategories';
 
 export default function AdminProductsPage() {
   const qc = useQueryClient();
