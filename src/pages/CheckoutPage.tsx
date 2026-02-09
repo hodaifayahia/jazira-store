@@ -17,6 +17,9 @@ export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
