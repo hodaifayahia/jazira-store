@@ -8,7 +8,7 @@ import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
 import { useCategories } from '@/hooks/useCategories';
 import heroBanner from '@/assets/hero-banner.jpg';
 
-const ICON_MAP: Record<string, LucideIcon> = { Home, Sparkles, Watch };
+const ICON_MAP: Record<string, LucideIcon> = { Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt };
 const COLOR_CLASSES = [
   'bg-primary/10 text-primary',
   'bg-secondary/10 text-secondary',
