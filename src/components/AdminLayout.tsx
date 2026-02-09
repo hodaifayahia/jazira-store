@@ -121,16 +121,36 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return () => { supabase.removeChannel(channel); };
   }, [navigate]);
 
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
   useEffect(() => {
+    const checkAdmin = async (userId: string) => {
+      const { data } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+      if (!data) {
+        toast.error('ليس لديك صلاحيات الوصول');
+        navigate('/');
+        return;
+      }
+      setIsAdmin(true);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
-      setLoading(false);
-      if (!session?.user) navigate('/admin/login');
+      if (!session?.user) {
+        setLoading(false);
+        navigate('/admin/login');
+      } else {
+        checkAdmin(session.user.id).finally(() => setLoading(false));
+      }
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setLoading(false);
-      if (!session?.user) navigate('/admin/login');
+      if (!session?.user) {
+        setLoading(false);
+        navigate('/admin/login');
+      } else {
+        checkAdmin(session.user.id).finally(() => setLoading(false));
+      }
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
