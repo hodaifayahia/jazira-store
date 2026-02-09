@@ -5,67 +5,53 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon, Package, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
-import { TableSkeleton } from '@/components/LoadingSkeleton';
 import { useCategories } from '@/hooks/useCategories';
-
-const PAGE_SIZE = 10;
 
 export default function AdminProductsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { data: categoriesSettings } = useCategories();
-  const categoryNames = categoriesSettings?.map(c => c.name) || [];
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const { data: categoriesData } = useCategories();
+  const categoryNames = categoriesData?.map(c => c.name) || [];
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', description: '', price: '', categories: [] as string[], stock: '0', is_active: true, shippingPrice: '0', mainImageIndex: 0 });
+  const [form, setForm] = useState({ name: '', description: '', price: '', category: '' as string, stock: '0', is_active: true });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
+      const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
       return data || [];
     },
   });
 
-  const filtered = products?.filter(p => p.name.toLowerCase().includes(search.toLowerCase())) || [];
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
   const saveMutation = useMutation({
     mutationFn: async () => {
-      let imageUrls = [...existingImages];
-      for (const file of imageFiles) {
-        const ext = file.name.split('.').pop();
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('products').upload(path, file);
-        if (error) throw error;
-        const { data } = supabase.storage.from('products').getPublicUrl(path);
-        imageUrls.push(data.publicUrl);
+      let imageUrls: string[] = editing?.images || [];
+      if (imageFiles.length > 0) {
+        for (const file of imageFiles) {
+          const ext = file.name.split('.').pop();
+          const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { error } = await supabase.storage.from('products').upload(path, file);
+          if (error) throw error;
+          const { data } = supabase.storage.from('products').getPublicUrl(path);
+          imageUrls.push(data.publicUrl);
+        }
       }
       const payload = {
         name: form.name,
         description: form.description,
         price: Number(form.price),
-        category: form.categories,
+        category: [form.category],
         stock: Number(form.stock),
         is_active: form.is_active,
         images: imageUrls,
-        shipping_price: Number(form.shippingPrice),
-        main_image_index: form.mainImageIndex,
       };
       if (editing) {
         const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
@@ -77,10 +63,12 @@ export default function AdminProductsPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-products'] });
-      closeSheet();
-      toast({ title: editing ? 'تم تحديث المنتج ✅' : 'تمت إضافة المنتج ✅' });
+      setDialogOpen(false);
+      setEditing(null);
+      setImageFiles([]);
+      toast({ title: editing ? 'تم التعديل' : 'تمت الإضافة' });
     },
-    onError: () => toast({ title: 'خطأ', description: 'حدث خطأ أثناء الحفظ', variant: 'destructive' }),
+    onError: () => toast({ title: 'خطأ', variant: 'destructive' }),
   });
 
   const deleteMutation = useMutation({
@@ -90,288 +78,93 @@ export default function AdminProductsPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-products'] });
-      toast({ title: 'تم حذف المنتج ✅' });
-      setDeleteTarget(null);
+      toast({ title: 'تم الحذف' });
     },
   });
-
-  const toggleActive = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase.from('products').update({ is_active }).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-products'] }),
-  });
-
-  const closeSheet = () => {
-    setSheetOpen(false);
-    setEditing(null);
-    setImageFiles([]);
-    setImagePreviews([]);
-    setExistingImages([]);
-  };
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', description: '', price: '', categories: [], stock: '0', is_active: true, shippingPrice: '0', mainImageIndex: 0 });
+    setForm({ name: '', description: '', price: '', category: categoryNames[0] || '', stock: '0', is_active: true });
     setImageFiles([]);
-    setImagePreviews([]);
-    setExistingImages([]);
-    setSheetOpen(true);
+    setDialogOpen(true);
   };
 
   const openEdit = (p: any) => {
     setEditing(p);
-    const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
-    setForm({
-      name: p.name,
-      description: p.description || '',
-      price: String(p.price),
-      categories: cats,
-      stock: String(p.stock ?? 0),
-      is_active: p.is_active !== false,
-      shippingPrice: String(p.shipping_price ?? 0),
-      mainImageIndex: p.main_image_index ?? 0,
-    });
+    setForm({ name: p.name, description: p.description || '', price: String(p.price), category: Array.isArray(p.category) ? p.category[0] : p.category, stock: String(p.stock), is_active: p.is_active });
     setImageFiles([]);
-    setImagePreviews([]);
-    setExistingImages(p.images || []);
-    setSheetOpen(true);
+    setDialogOpen(true);
   };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setImageFiles(prev => [...prev, ...files]);
-    const previews = files.map(f => URL.createObjectURL(f));
-    setImagePreviews(prev => [...prev, ...previews]);
-  };
-
-  const removeNewImage = (index: number) => {
-    // Adjust mainImageIndex if needed
-    const totalExisting = existingImages.length;
-    const globalIndex = totalExisting + index;
-    setForm(f => {
-      let newMain = f.mainImageIndex;
-      if (f.mainImageIndex === globalIndex) newMain = 0;
-      else if (f.mainImageIndex > globalIndex) newMain = f.mainImageIndex - 1;
-      return { ...f, mainImageIndex: newMain };
-    });
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => {
-      URL.revokeObjectURL(prev[index]);
-      return prev.filter((_, i) => i !== index);
-    });
-  };
-
-  const removeExistingImage = (index: number) => {
-    setForm(f => {
-      let newMain = f.mainImageIndex;
-      if (f.mainImageIndex === index) newMain = 0;
-      else if (f.mainImageIndex > index) newMain = f.mainImageIndex - 1;
-      return { ...f, mainImageIndex: newMain };
-    });
-    setExistingImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const toggleCategory = (cat: string) => {
-    setForm(f => ({
-      ...f,
-      categories: f.categories.includes(cat)
-        ? f.categories.filter(c => c !== cat)
-        : [...f.categories, cat],
-    }));
-  };
-
-  const allImages = [...existingImages, ...imagePreviews];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <h2 className="font-cairo font-bold text-xl">المنتجات ({filtered.length})</h2>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} placeholder="بحث عن منتج..." className="font-cairo pr-9" />
-          </div>
-          <Button onClick={openCreate} className="font-cairo gap-1 shrink-0"><Plus className="w-4 h-4" /> إضافة منتج جديد</Button>
-        </div>
+      <div className="flex justify-between items-center">
+        <h2 className="font-cairo font-bold text-xl">المنتجات ({products?.length || 0})</h2>
+        <Button onClick={openCreate} className="font-cairo gap-1"><Plus className="w-4 h-4" /> إضافة منتج</Button>
       </div>
 
-      {isLoading ? <TableSkeleton rows={5} cols={7} /> : <div className="bg-card border rounded-lg overflow-x-auto">
+      <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
-              <th className="p-3 text-right font-cairo">صورة</th>
-              <th className="p-3 text-right font-cairo">اسم المنتج</th>
+              <th className="p-3 text-right font-cairo">المنتج</th>
               <th className="p-3 text-right font-cairo">السعر</th>
-              <th className="p-3 text-right font-cairo">التصنيف</th>
-              <th className="p-3 text-right font-cairo">الكمية</th>
+              <th className="p-3 text-right font-cairo">الفئة</th>
+              <th className="p-3 text-right font-cairo">المخزون</th>
               <th className="p-3 text-right font-cairo">الحالة</th>
               <th className="p-3 text-right font-cairo">إجراءات</th>
             </tr>
           </thead>
           <tbody>
-            {paginated.map(p => {
-              const mainIdx = p.main_image_index ?? 0;
-              const cats = Array.isArray(p.category) ? p.category : [p.category];
-              return (
-                <tr key={p.id} className="border-b hover:bg-muted/50">
-                  <td className="p-3">
-                    {p.images && p.images.length > 0 ? (
-                      <img src={p.images[mainIdx] || p.images[0]} alt={p.name} className="w-10 h-10 rounded object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center"><ImageIcon className="w-4 h-4 text-muted-foreground" /></div>
-                    )}
-                  </td>
-                  <td className="p-3 font-cairo font-medium">{p.name}</td>
-                  <td className="p-3 font-roboto">{formatPrice(Number(p.price))}</td>
-                  <td className="p-3 font-cairo text-xs">{cats.join('، ')}</td>
-                  <td className="p-3 font-roboto">{p.stock}</td>
-                  <td className="p-3">
-                    <Switch
-                      checked={p.is_active !== false}
-                      onCheckedChange={v => toggleActive.mutate({ id: p.id, is_active: v })}
-                    />
-                  </td>
-                  <td className="p-3">
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {paginated.length === 0 && (
-              <tr><td colSpan={7} className="p-8 text-center font-cairo text-muted-foreground">
-                <Package className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
-                لا توجد منتجات بعد
-              </td></tr>
-            )}
+            {products?.map(p => (
+              <tr key={p.id} className="border-b hover:bg-muted/50">
+                <td className="p-3 font-cairo font-medium">{p.name}</td>
+                <td className="p-3 font-roboto">{formatPrice(Number(p.price))}</td>
+                <td className="p-3 font-cairo text-xs">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</td>
+                <td className="p-3 font-roboto">{p.stock}</td>
+                <td className="p-3">
+                  <span className={`text-xs px-2 py-1 rounded-full font-cairo ${p.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    {p.is_active ? 'نشط' : 'معطّل'}
+                  </span>
+                </td>
+                <td className="p-3 flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm('هل أنت متأكد من الحذف؟')) deleteMutation.mutate(p.id); }}><Trash2 className="w-3.5 h-3.5" /></Button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
-      </div>}
+      </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} className="font-cairo">السابق</Button>
-          <span className="font-cairo text-sm text-muted-foreground">{page + 1} / {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="font-cairo">التالي</Button>
-        </div>
-      )}
-
-      {/* Sheet for Create/Edit */}
-      <Sheet open={sheetOpen} onOpenChange={v => { if (!v) closeSheet(); else setSheetOpen(true); }}>
-        <SheetContent side="left" className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="font-cairo">{editing ? 'تعديل المنتج' : 'إضافة منتج جديد'}</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4 mt-6">
-            <div>
-              <Label className="font-cairo">اسم المنتج *</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="font-cairo mt-1" />
-            </div>
-            <div>
-              <Label className="font-cairo">الوصف *</Label>
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="font-cairo mt-1" rows={4} />
-            </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="font-cairo">{editing ? 'تعديل المنتج' : 'إضافة منتج جديد'}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label className="font-cairo">اسم المنتج</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="font-cairo mt-1" /></div>
+            <div><Label className="font-cairo">الوصف</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="font-cairo mt-1" /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="font-cairo">السعر (دج) *</Label>
-                <Input type="number" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="font-roboto mt-1" />
-              </div>
-              <div>
-                <Label className="font-cairo">الكمية المتوفرة</Label>
-                <Input type="number" min="0" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="font-roboto mt-1" />
-              </div>
+              <div><Label className="font-cairo">السعر (دج)</Label><Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="font-roboto mt-1" /></div>
+              <div><Label className="font-cairo">المخزون</Label><Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="font-roboto mt-1" /></div>
             </div>
             <div>
-              <Label className="font-cairo">سعر التوصيل (دج)</Label>
-              <Input type="number" min="0" value={form.shippingPrice} onChange={e => setForm(f => ({ ...f, shippingPrice: e.target.value }))} className="font-roboto mt-1" placeholder="0 = سعر الولاية الافتراضي" />
-              <p className="text-xs text-muted-foreground font-cairo mt-1">اتركه 0 لاستخدام سعر التوصيل الافتراضي للولاية</p>
+              <Label className="font-cairo">الفئة</Label>
+              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
+                <SelectTrigger className="font-cairo mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label className="font-cairo mb-2 block">التصنيفات</Label>
-              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
-                {categoryNames.map(cat => (
-                  <label key={cat} className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={form.categories.includes(cat)}
-                      onCheckedChange={() => toggleCategory(cat)}
-                    />
-                    <span className="font-cairo text-sm">{cat}</span>
-                  </label>
-                ))}
-                {categoryNames.length === 0 && (
-                  <p className="font-cairo text-xs text-muted-foreground col-span-2">لا توجد تصنيفات بعد</p>
-                )}
-              </div>
-            </div>
-            <div>
-              <Label className="font-cairo">رفع الصور</Label>
-              <Input type="file" multiple accept="image/*" onChange={handleFileChange} className="mt-1" />
-              {/* All images grid with main selector */}
-              {allImages.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {allImages.map((url, i) => {
-                    const isMain = i === form.mainImageIndex;
-                    const isExisting = i < existingImages.length;
-                    return (
-                      <div key={url} className="relative group">
-                        <button
-                          type="button"
-                          onClick={() => setForm(f => ({ ...f, mainImageIndex: i }))}
-                          className={`w-16 h-16 rounded object-cover border-2 overflow-hidden block ${isMain ? 'border-primary ring-2 ring-primary/30' : isExisting ? 'border-border' : 'border-primary/30'}`}
-                        >
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                        </button>
-                        {isMain && (
-                          <div className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                            <Star className="w-3 h-3 fill-current" />
-                          </div>
-                        )}
-                        <button
-                          onClick={() => isExisting ? removeExistingImage(i) : removeNewImage(i - existingImages.length)}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {allImages.length > 0 && (
-                <p className="text-xs text-muted-foreground font-cairo mt-1">اضغط على الصورة لتعيينها كصورة رئيسية ⭐</p>
-              )}
-            </div>
+            <div><Label className="font-cairo">صور المنتج</Label><Input type="file" multiple accept="image/*" onChange={e => setImageFiles(Array.from(e.target.files || []))} className="mt-1" /></div>
             <div className="flex items-center gap-2">
               <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
-              <Label className="font-cairo">{form.is_active ? 'مفعّل' : 'معطّل'}</Label>
+              <Label className="font-cairo">نشط</Label>
             </div>
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.name || !form.price} className="w-full font-cairo font-semibold">
-              {saveMutation.isPending ? <><Loader2 className="w-4 h-4 ml-2 animate-spin" /> جاري الحفظ...</> : editing ? 'تحديث' : 'حفظ'}
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="w-full font-cairo font-semibold">
+              {saveMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-cairo">حذف المنتج</AlertDialogTitle>
-            <AlertDialogDescription className="font-cairo">هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-cairo">إلغاء</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground font-cairo" onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}>
-              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حذف'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

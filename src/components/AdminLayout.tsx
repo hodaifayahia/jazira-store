@@ -1,7 +1,7 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -11,73 +11,28 @@ const NAV_ITEMS = [
   { href: '/admin/orders', label: 'الطلبات', icon: ShoppingCart },
   { href: '/admin/wilayas', label: 'الولايات', icon: MapPin },
   { href: '/admin/coupons', label: 'كوبونات', icon: Tag },
-  { href: '/admin/categories', label: 'التصنيفات', icon: Layers },
   { href: '/admin/settings', label: 'الإعدادات', icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    let isMounted = true;
-
-    const checkAdmin = async (userId: string) => {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
-      return !!data;
-    };
-
-    // Listener for ongoing auth changes (does NOT control loading)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
-      if (!isMounted) return;
-      if (!session?.user) {
-        setUser(null);
-        setIsAdmin(false);
-        navigate('/admin/login');
-        return;
-      }
-      setUser(session.user);
-      const admin = await checkAdmin(session.user.id);
-      if (!isMounted) return;
-      setIsAdmin(admin);
-      if (!admin) {
-        await supabase.auth.signOut();
-        navigate('/admin/login');
-      }
-    });
-
-    // Initial load — only this sets loading = false
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!isMounted) return;
-      if (!session?.user) {
-        setLoading(false);
-        navigate('/admin/login');
-        return;
-      }
-      setUser(session.user);
-      const admin = await checkAdmin(session.user.id);
-      if (!isMounted) return;
-      setIsAdmin(admin);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null);
       setLoading(false);
-      if (!admin) {
-        await supabase.auth.signOut();
-        navigate('/admin/login');
-      }
+      if (!session?.user) navigate('/admin/login');
     });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+      if (!session?.user) navigate('/admin/login');
+    });
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleLogout = async () => {
@@ -86,7 +41,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Skeleton className="w-32 h-8" /></div>;
-  if (!user || !isAdmin) return null;
+  if (!user) return null;
 
   return (
     <div className="min-h-screen flex bg-muted">
@@ -123,16 +78,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Main */}
       <div className="flex-1 md:mr-64">
-        <header className="sticky top-0 z-40 bg-card border-b h-14 flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
-              <Menu className="w-5 h-5" />
-            </Button>
-            <h1 className="font-cairo font-bold text-lg">
-              {NAV_ITEMS.find(i => i.href === location.pathname)?.label || 'لوحة التحكم'}
-            </h1>
-          </div>
-          <span className="font-cairo text-xs text-muted-foreground hidden sm:block">{user?.email}</span>
+        <header className="sticky top-0 z-40 bg-card border-b h-14 flex items-center px-4 gap-3">
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
+            <Menu className="w-5 h-5" />
+          </Button>
+          <h1 className="font-cairo font-bold text-lg">
+            {NAV_ITEMS.find(i => i.href === location.pathname)?.label || 'لوحة التحكم'}
+          </h1>
         </header>
         <main className="p-4 md:p-6">{children}</main>
       </div>

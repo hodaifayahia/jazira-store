@@ -6,15 +6,9 @@ export interface Category {
   icon: string;
 }
 
-const DEFAULT_CATEGORIES: Category[] = [
-  { name: 'أدوات منزلية', icon: 'Home' },
-  { name: 'منتجات زينة', icon: 'Sparkles' },
-  { name: 'إكسسوارات', icon: 'Watch' },
-];
-
 export function useCategories() {
   return useQuery({
-    queryKey: ['categories-settings'],
+    queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('settings')
@@ -22,14 +16,8 @@ export function useCategories() {
         .eq('key', 'categories')
         .maybeSingle();
       if (error) throw error;
-      if (data?.value) {
-        try {
-          return JSON.parse(data.value) as Category[];
-        } catch {
-          return DEFAULT_CATEGORIES;
-        }
-      }
-      return DEFAULT_CATEGORIES;
+      if (!data?.value) return [];
+      return JSON.parse(data.value) as Category[];
     },
     staleTime: 5 * 60 * 1000,
   });
