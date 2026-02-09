@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -9,9 +9,10 @@ import { Home, Sparkles, Watch, ArrowLeft, ShoppingBag, Gift, Star, Heart, Shirt
   Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
   Wrench, Gamepad2, Crown, Flower2, Bike, Briefcase, Stethoscope,
   Truck, Shield, Clock, HeadphonesIcon, BadgeCheck, MapPin, CreditCard,
-  ChevronLeft,
+  ChevronLeft, Search, TrendingUp, Award,
   type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
 import { useCategories } from '@/hooks/useCategories';
@@ -26,60 +27,91 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 export default function IndexPage() {
   const { data: categoriesData } = useCategories();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['featured-products'],
+  // Fetch ALL active products for different sections
+  const { data: allProducts, isLoading } = useQuery({
+    queryKey: ['all-active-products'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(8);
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch hero banners (multiple) and single fallback
+  // Derived product lists
+  const newestProducts = allProducts?.slice(0, 8) || [];
+  const mostExpensive = [...(allProducts || [])].sort((a, b) => Number(b.price) - Number(a.price)).slice(0, 4);
+  const bestProducts = [...(allProducts || [])].sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0)).slice(0, 4);
+
+  // Fetch hero banners
   const { data: heroBanners } = useQuery({
     queryKey: ['hero-banners'],
     queryFn: async () => {
       const { data } = await supabase.from('settings').select('key, value').in('key', ['hero_banners', 'hero_banner']);
       const map: Record<string, string> = {};
       data?.forEach(s => { map[s.key] = s.value || ''; });
-
-      // Try multiple banners first
       if (map.hero_banners) {
         try {
           const parsed = JSON.parse(map.hero_banners) as string[];
           if (parsed.length > 0) return parsed;
         } catch { /* fallback */ }
       }
-      // Fallback to single banner
       if (map.hero_banner) return [map.hero_banner];
       return [heroBannerFallback];
     },
   });
 
+  // Fetch product images for the product carousel
+  const productImages = allProducts?.flatMap(p => p.images || []).filter(Boolean).slice(0, 8) || [];
+
   const bannerImages = heroBanners || [heroBannerFallback];
 
-  // Embla carousel
+  // Hero Embla carousel
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, direction: 'rtl' }, [
     Autoplay({ delay: 5000, stopOnInteraction: false }),
   ]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Product images carousel
+  const [prodCarouselRef, prodCarouselApi] = useEmblaCarousel({ loop: true, direction: 'rtl', align: 'start' }, [
+    Autoplay({ delay: 3000, stopOnInteraction: false }),
+  ]);
+  const [prodSelectedIndex, setProdSelectedIndex] = useState(0);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setSelectedIndex(emblaApi.selectedScrollSnap());
   }, [emblaApi]);
 
+  const onProdSelect = useCallback(() => {
+    if (!prodCarouselApi) return;
+    setProdSelectedIndex(prodCarouselApi.selectedScrollSnap());
+  }, [prodCarouselApi]);
+
   useEffect(() => {
     if (!emblaApi) return;
     emblaApi.on('select', onSelect);
     onSelect();
   }, [emblaApi, onSelect]);
+
+  useEffect(() => {
+    if (!prodCarouselApi) return;
+    prodCarouselApi.on('select', onProdSelect);
+    onProdSelect();
+  }, [prodCarouselApi, onProdSelect]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const trustItems = [
     { icon: Truck, label: 'توصيل لجميع الولايات', desc: '58 ولاية' },
@@ -93,6 +125,24 @@ export default function IndexPage() {
     { icon: MapPin, title: 'توصيل وطني', desc: 'نوصّل طلباتكم إلى جميع ولايات الوطن بسرعة وأمان.' },
     { icon: CreditCard, title: 'أسعار تنافسية', desc: 'أسعار مناسبة للجميع مع عروض وخصومات حصرية.' },
   ];
+
+  const renderProductGrid = (products: typeof newestProducts) => (
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+      {products.map(p => (
+        <ProductCard
+          key={p.id}
+          id={p.id}
+          name={p.name}
+          price={Number(p.price)}
+          image={p.images?.[p.main_image_index ?? 0] || p.images?.[0] || ''}
+          images={p.images || []}
+          mainImageIndex={p.main_image_index ?? 0}
+          category={p.category || []}
+          stock={p.stock ?? 0}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,11 +158,8 @@ export default function IndexPage() {
             ))}
           </div>
         </div>
-
-        {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-l from-foreground/90 via-foreground/70 to-foreground/30 z-[1]" />
 
-        {/* Content */}
         <div className="container relative z-10 flex items-center min-h-[520px] md:min-h-[600px] py-24 md:py-32">
           <div className="max-w-xl space-y-6">
             <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/10 backdrop-blur-sm rounded-full px-4 py-1.5">
@@ -125,6 +172,23 @@ export default function IndexPage() {
             <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md">
               أفضل المنتجات المنزلية، الزينة والإكسسوارات بأسعار مناسبة مع التوصيل لجميع الولايات.
             </p>
+
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
+              <div className="relative flex-1">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="ابحث عن منتج..."
+                  className="pr-10 font-cairo bg-background/95 backdrop-blur-sm border-background/20 rounded-xl h-12"
+                />
+              </div>
+              <Button type="submit" size="lg" className="font-cairo font-bold rounded-xl h-12 px-6">
+                بحث
+              </Button>
+            </form>
+
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <Link to="/products">
                 <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
@@ -133,7 +197,7 @@ export default function IndexPage() {
                 </Button>
               </Link>
               <Link to="/track">
-                <Button size="lg" variant="outline" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl border-background/30 text-background hover:bg-background/10 hover:border-background/50 backdrop-blur-sm">
+                <Button size="lg" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/25 hover:shadow-secondary/40 transition-shadow">
                   تتبع طلبك
                 </Button>
               </Link>
@@ -141,7 +205,6 @@ export default function IndexPage() {
           </div>
         </div>
 
-        {/* Dots */}
         {bannerImages.length > 1 && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2">
             {bannerImages.map((_, i) => (
@@ -176,12 +239,43 @@ export default function IndexPage() {
         </div>
       </section>
 
+      {/* ─── Product Images Carousel ─── */}
+      {productImages.length > 2 && (
+        <section className="py-10 bg-muted/30">
+          <div className="container">
+            <SectionHeader title="صور من منتجاتنا" subtitle="تصفح مجموعة مختارة من منتجاتنا" />
+            <div className="mt-6 overflow-hidden rounded-2xl" ref={prodCarouselRef}>
+              <div className="flex gap-4" style={{ direction: 'ltr' }}>
+                {productImages.map((img, i) => (
+                  <div key={i} className="flex-[0_0_280px] md:flex-[0_0_320px] min-w-0">
+                    <img src={img} alt="" className="w-full aspect-[4/3] object-cover rounded-xl" loading="lazy" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            {productImages.length > 3 && (
+              <div className="flex justify-center gap-1.5 mt-4">
+                {productImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => prodCarouselApi?.scrollTo(i)}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      i === prodSelectedIndex ? 'bg-primary w-6' : 'bg-muted-foreground/25 hover:bg-muted-foreground/40'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* ─── Categories ─── */}
       {(categoriesData?.length ?? 0) > 0 && (
         <section className="py-14 md:py-20">
           <div className="container">
             <SectionHeader title="تصفح حسب الفئة" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-6">
               {(categoriesData || []).map((cat) => {
                 const Icon = ICON_MAP[cat.icon] || Home;
                 return (
@@ -204,7 +298,7 @@ export default function IndexPage() {
         </section>
       )}
 
-      {/* ─── Featured Products ─── */}
+      {/* ─── Newest Products ─── */}
       <section className="py-14 md:py-20 bg-muted/40">
         <div className="container">
           <div className="flex items-end justify-between gap-4 mb-8">
@@ -216,33 +310,60 @@ export default function IndexPage() {
               </Button>
             </Link>
           </div>
-          {isLoading ? (
-            <ProductGridSkeleton />
-          ) : products && products.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
-              {products.map(p => (
-                <ProductCard
-                  key={p.id}
-                  id={p.id}
-                  name={p.name}
-                  price={Number(p.price)}
-                  image={p.images?.[p.main_image_index ?? 0] || p.images?.[0] || ''}
-                  images={p.images || []}
-                  mainImageIndex={p.main_image_index ?? 0}
-                  category={p.category || []}
-                  stock={p.stock ?? 0}
-                />
-              ))}
-            </div>
-          ) : (
+          {isLoading ? <ProductGridSkeleton /> : newestProducts.length > 0 ? renderProductGrid(newestProducts) : (
             <div className="text-center py-20 bg-card rounded-2xl border border-dashed">
               <ShoppingBag className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
               <p className="font-cairo text-muted-foreground text-lg">لا توجد منتجات حالياً</p>
-              <p className="font-cairo text-muted-foreground/60 text-sm mt-1">يتم إضافة منتجات جديدة قريباً!</p>
             </div>
           )}
         </div>
       </section>
+
+      {/* ─── Most Expensive (Premium) Products ─── */}
+      {mostExpensive.length > 0 && (
+        <section className="py-14 md:py-20">
+          <div className="container">
+            <div className="flex items-end justify-between gap-4 mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-secondary" />
+                </div>
+                <SectionHeader title="منتجات مميزة" subtitle="أفخم المنتجات في متجرنا" />
+              </div>
+              <Link to="/products" className="shrink-0">
+                <Button variant="ghost" className="font-cairo font-semibold gap-1 text-primary hover:text-primary hover:bg-primary/10 rounded-xl">
+                  عرض الكل
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+            {renderProductGrid(mostExpensive)}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Best Products (highest stock = popular) ─── */}
+      {bestProducts.length > 0 && (
+        <section className="py-14 md:py-20 bg-muted/40">
+          <div className="container">
+            <div className="flex items-end justify-between gap-4 mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Award className="w-5 h-5 text-primary" />
+                </div>
+                <SectionHeader title="أفضل منتجاتنا" subtitle="الأكثر طلباً وشعبية" />
+              </div>
+              <Link to="/products" className="shrink-0">
+                <Button variant="ghost" className="font-cairo font-semibold gap-1 text-primary hover:text-primary hover:bg-primary/10 rounded-xl">
+                  عرض الكل
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+            {renderProductGrid(bestProducts)}
+          </div>
+        </section>
+      )}
 
       {/* ─── Why Choose Us ─── */}
       <section className="py-16 md:py-24">
