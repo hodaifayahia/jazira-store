@@ -20,9 +20,11 @@ const PAGE_SIZE = 10;
 export default function AdminProductsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { data: categoriesSettings } = useCategories();
+  const categoryNames = categoriesSettings?.map(c => c.name) || [];
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', description: '', price: '', category: CATEGORIES[0], stock: '0', is_active: true });
+  const [form, setForm] = useState({ name: '', description: '', price: '', category: '', stock: '0', is_active: true });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
