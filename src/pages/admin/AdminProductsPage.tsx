@@ -29,10 +29,11 @@ export default function AdminProductsPage() {
   const [page, setPage] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const { data: products } = useQuery({
+  const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
   });
