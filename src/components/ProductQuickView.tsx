@@ -51,7 +51,7 @@ export default function ProductQuickView({ productId, open, onOpenChange }: Prod
     if (!product) return;
     setCheckoutIntent({
       type: 'direct',
-      items: [{ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0, quantity: 1 }],
+      items: [{ id: product.id, name: product.name, price: Number(product.price), image: images[mainIdx] || images[0] || '', stock: product.stock ?? 0, quantity: 1, shippingPrice: Number(product.shipping_price ?? 0) }],
     });
     onOpenChange(false);
     navigate('/checkout');
