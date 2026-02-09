@@ -186,9 +186,35 @@ export default function SingleProductPage() {
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : 0;
 
+  // Build selected variation for cart
+  const selectedVariationForCart: CartItemVariation | undefined = (() => {
+    const types = Object.keys(variationGroups);
+    if (types.length === 0) return undefined;
+    // Use the first selected variation only (simplification)
+    for (const type of types) {
+      const value = selectedVariations[type];
+      if (value) {
+        const v = variationGroups[type]?.find(vr => vr.variation_value === value);
+        if (v) return { type: v.variation_type, value: v.variation_value, priceAdjustment: Number(v.price_adjustment) || 0 };
+      }
+    }
+    return undefined;
+  })();
+
+  const priceAdjustment = selectedVariationForCart?.priceAdjustment || 0;
+  const effectivePrice = Number(product.price) + priceAdjustment;
+
   const handleAdd = () => {
     for (let i = 0; i < qty; i++) {
-      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: Number(product.price),
+        image: images[0] || '',
+        stock: product.stock ?? 0,
+        shippingPrice: Number(product.shipping_price) || 0,
+        variation: selectedVariationForCart,
+      });
     }
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
@@ -202,7 +228,7 @@ export default function SingleProductPage() {
   const productShippingRate = Number(product.shipping_price) || 0;
   const shippingRate = productShippingRate > 0 ? productShippingRate : wilayaBaseRate;
   const shippingCost = shippingRate * qty;
-  const itemSubtotal = Number(product.price) * qty;
+  const itemSubtotal = effectivePrice * qty;
   const orderTotal = itemSubtotal + shippingCost;
 
   const baridimobEnabled = settings?.baridimob_enabled === 'true';
