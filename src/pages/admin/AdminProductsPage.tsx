@@ -710,80 +710,26 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         </div>
       </div>
 
-      {/* ─── Variations Section ─── */}
-      <div className="bg-card border rounded-xl p-5 space-y-4">
+      {/* ─── Variations Link ─── */}
+      <div className="bg-card border rounded-xl p-5">
         <div className="flex items-center justify-between">
-          <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
               <Tag className="w-4 h-4 text-secondary" />
             </div>
-            المتغيرات (ألوان، مقاسات...)
-          </h3>
-          <Button variant="outline" size="sm" onClick={addVariation} className="font-cairo gap-1.5">
-            <Plus className="w-4 h-4" /> إضافة متغير
-          </Button>
+            <div>
+              <h3 className="font-cairo font-semibold text-base">المتغيرات (ألوان، مقاسات...)</h3>
+              <p className="font-cairo text-xs text-muted-foreground">
+                {product ? `${variationsCount || 0} متغير مرتبط بهذا المنتج` : 'أضف المنتج أولاً ثم أدر المتغيرات'}
+              </p>
+            </div>
+          </div>
+          {product && (
+            <Button variant="outline" size="sm" className="font-cairo gap-1.5" onClick={() => { window.location.href = '/admin/variations'; }}>
+              <Pencil className="w-3.5 h-3.5" /> إدارة المتغيرات
+            </Button>
+          )}
         </div>
-
-        {variations.length === 0 ? (
-          <div className="border-2 border-dashed border-muted-foreground/20 rounded-xl py-8 text-center">
-            <Tag className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="font-cairo text-muted-foreground text-sm">لا توجد متغيرات — أضف ألوان أو مقاسات أو أنواع</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {variations.map((v, idx) => (
-              <div key={idx} className="border rounded-xl p-4 space-y-3 bg-muted/20">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="font-cairo text-xs">النوع (مثل: اللون، المقاس)</Label>
-                    <Input
-                      value={v.variation_type}
-                      onChange={e => updateVariation(idx, 'variation_type', e.target.value)}
-                      placeholder="اللون"
-                      className="font-cairo mt-1 h-9 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="font-cairo text-xs">القيمة (مثل: أحمر، XL)</Label>
-                    <Input
-                      value={v.variation_value}
-                      onChange={e => updateVariation(idx, 'variation_value', e.target.value)}
-                      placeholder="أحمر"
-                      className="font-cairo mt-1 h-9 text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="font-cairo text-xs">فرق السعر (دج)</Label>
-                    <Input
-                      type="number"
-                      value={v.price_adjustment}
-                      onChange={e => updateVariation(idx, 'price_adjustment', e.target.value)}
-                      placeholder="0"
-                      className="font-roboto mt-1 h-9 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="font-cairo text-xs">المخزون</Label>
-                    <Input
-                      type="number"
-                      value={v.stock}
-                      onChange={e => updateVariation(idx, 'stock', e.target.value)}
-                      placeholder="0"
-                      className="font-roboto mt-1 h-9 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeVariation(idx)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Actions */}
