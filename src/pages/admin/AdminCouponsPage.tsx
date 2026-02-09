@@ -84,7 +84,7 @@ export default function AdminCouponsPage() {
         <h2 className="font-cairo font-bold text-xl">كوبونات الخصم</h2>
         <Button onClick={() => { setEditing(null); setForm({ code: '', discount_type: 'percentage', discount_value: '', expiry_date: '', is_active: true }); setValidationError(''); setDialogOpen(true); }} className="font-cairo gap-1"><Plus className="w-4 h-4" /> إضافة كوبون</Button>
       </div>
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {isLoading ? <TableSkeleton rows={3} cols={6} /> : <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
