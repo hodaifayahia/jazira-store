@@ -107,6 +107,27 @@ export default function SingleProductPage() {
     enabled: !!id,
   });
 
+  // Fetch variation_options to get color_code
+  const { data: variationOptions } = useQuery({
+    queryKey: ['variation-options'],
+    queryFn: async () => {
+      const { data } = await supabase.from('variation_options').select('*').eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  // Map variation to its color_code from variation_options
+  const getColorCode = (type: string, value: string) => {
+    if (!variationOptions) return null;
+    const opt = variationOptions.find(o => o.variation_type === type && o.variation_value === value);
+    return opt?.color_code || null;
+  };
+
+  const isColorType = (type: string) => {
+    const t = type.toLowerCase();
+    return t.includes('لون') || t.includes('color') || t.includes('colour');
+  };
+
   // Group variations by type
   const variationGroups = useMemo(() => {
     if (!variations || variations.length === 0) return {};
@@ -411,51 +432,83 @@ export default function SingleProductPage() {
               <p className="font-cairo text-sm text-primary">متوفر في المخزون ({product.stock} قطعة)</p>
             )}
 
-            {/* Variation Selector */}
+            {/* Variation Selector - WooCommerce Style */}
             {Object.keys(variationGroups).length > 0 && (
-              <div className="space-y-3 pt-2">
-                {Object.entries(variationGroups).map(([type, vars]) => (
-                  <div key={type}>
-                    <Label className="font-cairo font-semibold text-sm mb-2 block">{type}</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {vars.map(v => {
-                        const isSelected = selectedVariations[type] === v.variation_value;
-                        return (
-                          <button
-                            key={v.id}
-                            onClick={() => {
-                              setSelectedVariations(prev => ({ ...prev, [type]: isSelected ? '' : v.variation_value }));
-                              // Switch gallery to variation image if available
-                              if (!isSelected && v.image_url) {
-                                const idx = images.indexOf(v.image_url);
-                                if (idx >= 0) {
-                                  setSelectedImage(idx);
-                                }
-                              }
-                            }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-cairo font-medium transition-all ${
-                              isSelected
-                                ? 'border-primary bg-primary/10 text-primary'
-                                : 'border-border hover:border-primary/30 text-foreground'
-                            } ${(v.stock ?? 0) <= 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
-                            disabled={(v.stock ?? 0) <= 0}
-                          >
-                            {v.image_url && (
-                              <img src={v.image_url} alt={v.variation_value} className="w-6 h-6 rounded-md object-cover" />
-                            )}
-                            {v.variation_value}
-                            {Number(v.price_adjustment) > 0 && (
-                              <span className="font-roboto text-xs text-muted-foreground mr-1">(+{formatPrice(Number(v.price_adjustment))})</span>
-                            )}
-                            {Number(v.price_adjustment) < 0 && (
-                              <span className="font-roboto text-xs text-primary mr-1">({formatPrice(Number(v.price_adjustment))})</span>
-                            )}
-                          </button>
-                        );
-                      })}
+              <div className="space-y-4 pt-2">
+                {Object.entries(variationGroups).map(([type, vars]) => {
+                  const isColor = isColorType(type);
+                  return (
+                    <div key={type}>
+                      <Label className="font-cairo font-semibold text-sm mb-2 block">
+                        {type}
+                        {selectedVariations[type] && (
+                          <span className="font-normal text-muted-foreground mr-2">: {selectedVariations[type]}</span>
+                        )}
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {vars.map(v => {
+                          const isSelected = selectedVariations[type] === v.variation_value;
+                          const colorCode = getColorCode(type, v.variation_value);
+                          const isOutOfStock = (v.stock ?? 0) <= 0;
+
+                          const handleClick = () => {
+                            setSelectedVariations(prev => ({ ...prev, [type]: isSelected ? '' : v.variation_value }));
+                            if (!isSelected && v.image_url) {
+                              const idx = images.indexOf(v.image_url);
+                              if (idx >= 0) setSelectedImage(idx);
+                            }
+                          };
+
+                          // Color swatch (round circle)
+                          if (isColor && colorCode) {
+                            return (
+                              <button
+                                key={v.id}
+                                onClick={handleClick}
+                                disabled={isOutOfStock}
+                                title={`${v.variation_value}${Number(v.price_adjustment) > 0 ? ` (+${formatPrice(Number(v.price_adjustment))})` : ''}`}
+                                className={`relative w-9 h-9 rounded-full border-2 transition-all ring-2 ring-offset-2 ${
+                                  isSelected ? 'ring-primary border-primary' : 'ring-transparent border-muted-foreground/30 hover:border-muted-foreground/50'
+                                } ${isOutOfStock ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                style={{ backgroundColor: colorCode }}
+                              >
+                                {isOutOfStock && (
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-full h-0.5 bg-destructive rotate-45 rounded-full" />
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          }
+
+                          // Non-color: bordered button (size, material, etc.)
+                          return (
+                            <button
+                              key={v.id}
+                              onClick={handleClick}
+                              disabled={isOutOfStock}
+                              className={`relative px-4 py-2 rounded-lg border-2 text-sm font-cairo font-medium transition-all ${
+                                isSelected
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-border hover:border-primary/30 text-foreground'
+                              } ${isOutOfStock ? 'opacity-30 cursor-not-allowed' : ''}`}
+                            >
+                              {v.variation_value}
+                              {Number(v.price_adjustment) > 0 && (
+                                <span className="font-roboto text-xs text-muted-foreground mr-1">(+{formatPrice(Number(v.price_adjustment))})</span>
+                              )}
+                              {isOutOfStock && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-full h-0.5 bg-destructive/50 rotate-45 rounded-full" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

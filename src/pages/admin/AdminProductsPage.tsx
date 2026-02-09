@@ -820,7 +820,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         </div>
       </div>
 
-      {/* ─── Variations Picker ─── */}
+      {/* ─── Variations Picker (WooCommerce-style) ─── */}
       <div className="bg-card border rounded-xl p-5 space-y-4">
         <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
@@ -838,70 +838,112 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {Object.entries(groupedOptions).map(([type, opts]) => (
-              <div key={type}>
-                <Label className="font-cairo text-sm font-semibold mb-2 block">{type}</Label>
-                <div className="flex flex-wrap gap-2">
-                  {opts!.map(o => {
-                    const selected = selectedVariationIds.has(o.id);
-                    const isColor = isColorType(type);
+          <div className="space-y-5">
+            {Object.entries(groupedOptions).map(([type, opts]) => {
+              const isColor = isColorType(type);
+              const selectedOfType = opts!.filter(o => selectedVariationIds.has(o.id));
 
-                    return (
-                      <button
-                        key={o.id}
-                        type="button"
-                        onClick={() => toggleVariation(o.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-sm font-cairo ${
-                          selected
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-muted-foreground/20 hover:border-muted-foreground/40'
-                        }`}
-                      >
-                        {isColor && o.color_code && (
-                          <div
-                            className="w-5 h-5 rounded-full border border-muted-foreground/30 shrink-0"
-                            style={{ backgroundColor: o.color_code }}
-                          />
-                        )}
-                        <span>{o.variation_value}</span>
-                        {selected && <span className="text-primary">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
+              return (
+                <div key={type}>
+                  <Label className="font-cairo text-sm font-semibold mb-3 block">{type}</Label>
+                  {/* Selection swatches */}
+                  <div className="flex flex-wrap gap-2">
+                    {opts!.map(o => {
+                      const selected = selectedVariationIds.has(o.id);
 
-                {/* Show price/stock fields for selected items of this type */}
-                {opts!.filter(o => selectedVariationIds.has(o.id)).length > 0 && (
-                  <div className="mt-3 space-y-2 bg-muted/30 rounded-lg p-3">
-                    {opts!.filter(o => selectedVariationIds.has(o.id)).map(o => (
-                      <div key={o.id} className="flex items-center gap-3">
-                        {isColorType(type) && o.color_code && (
-                          <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: o.color_code }} />
-                        )}
-                        <span className="font-cairo text-sm w-20 shrink-0">{o.variation_value}</span>
-                        <div className="flex items-center gap-2 flex-1">
-                          <Label className="font-cairo text-xs shrink-0">فرق السعر:</Label>
-                          <Input
-                            type="number"
-                            value={variationPriceAdj[o.id] || '0'}
-                            onChange={e => setVariationPriceAdj(prev => ({ ...prev, [o.id]: e.target.value }))}
-                            className="font-roboto h-8 w-24"
-                          />
-                          <Label className="font-cairo text-xs shrink-0">المخزون:</Label>
-                          <Input
-                            type="number"
-                            value={variationStock[o.id] || '0'}
-                            onChange={e => setVariationStock(prev => ({ ...prev, [o.id]: e.target.value }))}
-                            className="font-roboto h-8 w-20"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      if (isColor && o.color_code) {
+                        return (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => toggleVariation(o.id)}
+                            title={o.variation_value}
+                            className="flex flex-col items-center gap-1 group"
+                          >
+                            <div
+                              className={`w-10 h-10 rounded-full border-2 transition-all ring-2 ring-offset-2 ${
+                                selected ? 'ring-primary border-primary' : 'ring-transparent border-muted-foreground/30 hover:border-muted-foreground/50'
+                              }`}
+                              style={{ backgroundColor: o.color_code }}
+                            />
+                            <span className={`font-cairo text-[11px] ${selected ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                              {o.variation_value}
+                            </span>
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={o.id}
+                          type="button"
+                          onClick={() => toggleVariation(o.id)}
+                          className={`px-4 py-2 rounded-lg border-2 transition-all text-sm font-cairo font-medium ${
+                            selected
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-muted-foreground/20 hover:border-muted-foreground/40'
+                          }`}
+                        >
+                          {o.variation_value}
+                          {selected && <span className="mr-1">✓</span>}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* WooCommerce-style table for selected variations */}
+                  {selectedOfType.length > 0 && (
+                    <div className="mt-3 border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المتغير</th>
+                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">فرق السعر (دج)</th>
+                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المخزون</th>
+                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {selectedOfType.map(o => (
+                            <tr key={o.id} className="hover:bg-muted/20">
+                              <td className="p-2.5">
+                                <div className="flex items-center gap-2">
+                                  {isColor && o.color_code && (
+                                    <div className="w-6 h-6 rounded-full border border-muted-foreground/30 shrink-0" style={{ backgroundColor: o.color_code }} />
+                                  )}
+                                  <span className="font-cairo font-medium">{o.variation_value}</span>
+                                </div>
+                              </td>
+                              <td className="p-2.5">
+                                <Input
+                                  type="number"
+                                  value={variationPriceAdj[o.id] || '0'}
+                                  onChange={e => setVariationPriceAdj(prev => ({ ...prev, [o.id]: e.target.value }))}
+                                  className="font-roboto h-8 w-28"
+                                />
+                              </td>
+                              <td className="p-2.5">
+                                <Input
+                                  type="number"
+                                  value={variationStock[o.id] || '0'}
+                                  onChange={e => setVariationStock(prev => ({ ...prev, [o.id]: e.target.value }))}
+                                  className="font-roboto h-8 w-24"
+                                />
+                              </td>
+                              <td className="p-2.5">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/60 hover:text-destructive" onClick={() => toggleVariation(o.id)}>
+                                  <X className="w-3.5 h-3.5" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
