@@ -38,9 +38,34 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [newOrderCount, setNewOrderCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { data: logoUrl } = useStoreLogo();
+
+  // Realtime new order notifications
+  useEffect(() => {
+    const channel = supabase
+      .channel('new-orders')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          const order = payload.new as any;
+          setNewOrderCount((c) => c + 1);
+          playNotificationSound();
+          toast(`🛒 طلب جديد #${order.order_number}`, {
+            description: order.customer_name,
+            action: {
+              label: 'عرض',
+              onClick: () => navigate('/admin/orders'),
+            },
+          });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [navigate]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
