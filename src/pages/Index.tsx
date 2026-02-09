@@ -16,6 +16,8 @@ const COLOR_CLASSES = [
 ];
 
 export default function IndexPage() {
+  const { data: categoriesData } = useCategories();
+
   const { data: products, isLoading } = useQuery({
     queryKey: ['featured-products'],
     queryFn: async () => {
