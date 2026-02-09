@@ -108,7 +108,7 @@ export default function SingleProductPage() {
 
         {/* Info */}
         <div className="space-y-4">
-          <Badge className="font-cairo bg-secondary text-secondary-foreground">{product.category}</Badge>
+          <Badge className="font-cairo bg-secondary text-secondary-foreground">{Array.isArray(product.category) ? product.category.join(', ') : product.category}</Badge>
           <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
           <p className="font-roboto font-bold text-2xl text-primary">{formatPrice(Number(product.price))}</p>
           
