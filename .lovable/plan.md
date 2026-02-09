@@ -1,45 +1,76 @@
 
 
-## Plan: Low Stock Alert + RTL Switch/Checkbox Fix
+## Plan: Limit Coupons to Specific Products
 
-### 1. Low Stock Alert on Dashboard
-
-The dashboard already has a low stock section at the bottom. This task will add a prominent alert banner at the top of the dashboard when there are products with stock of 5 or fewer units.
-
-**Changes in `src/pages/admin/AdminDashboardPage.tsx`:**
-- Import `Alert`, `AlertTitle`, `AlertDescription` from `@/components/ui/alert`.
-- Add a visible alert banner at the very top of the dashboard (before the stats grid) when `lowStockProducts.length > 0`.
-- The alert will show the count and list the product names with their remaining stock.
-- Uses the `destructive` variant for visual urgency.
+### Overview
+Add the ability to restrict a coupon so it only applies to selected products. When creating or editing a coupon, the admin can optionally pick specific products. If products are selected, the coupon discount only applies to those products in the cart (not the full subtotal).
 
 ---
 
-### 2. RTL Fix for Switch Component
+### 1. Database: New Junction Table
 
-The Switch component's thumb uses `translate-x-5` (moves right when checked) and `translate-x-0` (rests at left when unchecked). In RTL, this is reversed -- the thumb should move LEFT when checked.
+Create a `coupon_products` table to link coupons to specific products (many-to-many):
 
-**Changes in `src/components/ui/switch.tsx`:**
-- Replace `data-[state=checked]:translate-x-5` with `data-[state=checked]:ltr:translate-x-5 data-[state=checked]:rtl:-translate-x-5`
-- This ensures the thumb slides in the correct direction based on text direction.
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | Primary key |
+| coupon_id | uuid | FK to coupons.id (ON DELETE CASCADE) |
+| product_id | uuid | FK to products.id (ON DELETE CASCADE) |
 
-This fix applies globally to all Switch usages across the site (Wilayas page, Products page, etc.).
-
----
-
-### 3. RTL Fix for Checkbox Component
-
-The Checkbox component itself is mostly fine (it's a simple square with a checkmark), but the check icon positioning can be slightly off in RTL. Review and ensure the indicator renders correctly.
-
-After inspecting the Checkbox code, the checkbox itself (a square with a centered checkmark) does not have directional translation issues like the Switch. No changes needed for the Checkbox component specifically.
+RLS policies:
+- Public SELECT (same as coupons -- needed at checkout to validate)
+- Admin ALL (same pattern as other admin tables)
 
 ---
 
-### Technical Summary
+### 2. Admin Coupons Page (`AdminCouponsPage.tsx`)
 
-| File | Change |
-|------|--------|
-| `src/components/ui/switch.tsx` | Fix thumb translation direction for RTL using `ltr:` and `rtl:` Tailwind variants |
-| `src/pages/admin/AdminDashboardPage.tsx` | Add prominent low-stock alert banner at top of dashboard |
+- Fetch the products list to display as selectable options.
+- Add a multi-select section in the coupon dialog where admin can pick products. If none are selected, the coupon applies to all products (current behavior).
+- When saving, insert/delete rows in `coupon_products` to match the selection.
+- Show a "products limited" badge in the coupons table when a coupon has product restrictions.
+- When editing, pre-load the selected products from `coupon_products`.
 
-### Note on Tailwind RTL support
-Tailwind CSS v3+ supports `ltr:` and `rtl:` variants out of the box when `dir="rtl"` is set on the HTML element (which this project already has).
+---
+
+### 3. Checkout Page (`CheckoutPage.tsx`)
+
+- When applying a coupon, also fetch its linked products from `coupon_products`.
+- If the coupon has linked products, calculate the discount only on cart items that match those product IDs (not the full subtotal).
+- If no linked products exist, apply to full subtotal (current behavior).
+
+---
+
+### Technical Details
+
+**Database migration:**
+```sql
+CREATE TABLE public.coupon_products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  coupon_id uuid NOT NULL REFERENCES public.coupons(id) ON DELETE CASCADE,
+  product_id uuid NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+  UNIQUE(coupon_id, product_id)
+);
+
+ALTER TABLE public.coupon_products ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Coupon products publicly readable"
+  ON public.coupon_products FOR SELECT USING (true);
+
+CREATE POLICY "Admin can manage coupon products"
+  ON public.coupon_products FOR ALL
+  USING (has_role(auth.uid(), 'admin'::app_role))
+  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
+```
+
+**AdminCouponsPage.tsx changes:**
+- Add a `useQuery` to fetch all products (id, name).
+- Add `selectedProductIds: string[]` to form state.
+- Render a scrollable checkbox list of products inside the dialog.
+- On save: after upserting the coupon, delete existing `coupon_products` for that coupon, then insert new rows for selected product IDs.
+- In the table, show product count badge per coupon.
+
+**CheckoutPage.tsx changes:**
+- In `applyCoupon()`, after fetching the coupon, also query `coupon_products` for that coupon ID.
+- If results exist, sum only the matching cart items' subtotal and apply the discount to that sum instead of the full subtotal.
+
