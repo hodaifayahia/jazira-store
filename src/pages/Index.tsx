@@ -6,6 +6,7 @@ import { Home, Sparkles, Watch, ArrowLeft, ShoppingBag, Gift, Star, Heart, Shirt
   Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
   Wrench, Gamepad2, Crown, Flower2, Bike, Briefcase, Stethoscope,
   Truck, Shield, Clock, HeadphonesIcon, BadgeCheck, MapPin, CreditCard,
+  ChevronLeft,
   type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
@@ -61,42 +62,60 @@ export default function IndexPage() {
   ];
 
   return (
-    <div className="min-h-screen">
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={heroBanner} alt="DZ Store" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-l from-foreground/80 via-foreground/60 to-foreground/40" />
-        </div>
-        <div className="container relative py-20 md:py-32">
-          <div className="max-w-lg">
-            <h1 className="font-cairo font-bold text-4xl md:text-5xl text-background mb-4 leading-tight">
-              مرحباً بك في <span className="text-primary">DZ Store</span>
+    <div className="min-h-screen bg-background">
+
+      {/* ─── Hero ─── */}
+      <section className="relative isolate overflow-hidden min-h-[520px] md:min-h-[600px] flex items-center">
+        {/* Background image */}
+        <img
+          src={heroBanner}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Gradient overlay – denser on the text side (right in RTL) */}
+        <div className="absolute inset-0 bg-gradient-to-l from-foreground/90 via-foreground/70 to-foreground/30" />
+
+        <div className="container relative z-10 py-24 md:py-32">
+          <div className="max-w-xl space-y-6">
+            <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/10 backdrop-blur-sm rounded-full px-4 py-1.5">
+              🇩🇿 أفضل المنتجات في الجزائر
+            </span>
+            <h1 className="font-cairo font-extrabold text-4xl sm:text-5xl lg:text-6xl text-background leading-[1.15] tracking-tight">
+              مرحباً بك في{' '}
+              <span className="text-primary">DZ Store</span>
             </h1>
-            <p className="font-cairo text-background/80 text-lg mb-8">
+            <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md">
               أفضل المنتجات المنزلية، الزينة والإكسسوارات بأسعار مناسبة مع التوصيل لجميع الولايات.
             </p>
-            <Link to="/products">
-              <Button size="lg" className="font-cairo font-semibold gap-2 text-base px-8">
-                تسوّق الآن
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Link to="/products">
+                <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
+                  تسوّق الآن
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+              </Link>
+              <Link to="/track">
+                <Button size="lg" variant="outline" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl border-background/30 text-background hover:bg-background/10 hover:border-background/50 backdrop-blur-sm">
+                  تتبع طلبك
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Trust Bar */}
-      <section className="bg-card border-b">
-        <div className="container py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* ─── Trust Bar ─── */}
+      <section className="border-b bg-card">
+        <div className="container py-5 md:py-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-4 gap-x-6">
             {trustItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-3 justify-center md:justify-start">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <div key={i} className="flex items-center gap-3 group">
+                <div className="shrink-0 w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                   <item.icon className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <p className="font-cairo font-semibold text-sm text-foreground">{item.label}</p>
+                <div className="min-w-0">
+                  <p className="font-cairo font-semibold text-sm text-foreground truncate">{item.label}</p>
                   <p className="font-cairo text-xs text-muted-foreground">{item.desc}</p>
                 </div>
               </div>
@@ -105,48 +124,52 @@ export default function IndexPage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="container py-12">
-        <h2 className="font-cairo font-bold text-2xl text-foreground mb-6">تصفح حسب الفئة</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {(categoriesData || []).map((cat, i) => {
-            const Icon = ICON_MAP[cat.icon] || Home;
-            const gradients = [
-              'from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10',
-              'from-secondary/10 to-secondary/5 hover:from-secondary/20 hover:to-secondary/10',
-              'from-accent to-accent/50 hover:from-accent hover:to-accent/80',
-            ];
-            return (
-              <Link key={cat.name} to={`/products?category=${encodeURIComponent(cat.name)}`}>
-                <div className={`rounded-xl p-6 bg-gradient-to-br ${gradients[i % gradients.length]} hover:shadow-lg transition-all duration-300 text-center group border border-transparent hover:border-primary/20`}>
-                  {cat.image ? (
-                    <img src={cat.image} alt={cat.name} className="w-12 h-12 mx-auto mb-3 rounded-xl object-cover group-hover:scale-110 transition-transform duration-300" />
-                  ) : (
-                    <Icon className="w-12 h-12 mx-auto mb-3 text-primary group-hover:scale-110 transition-transform duration-300" />
-                  )}
-                  <h3 className="font-cairo font-bold text-base">{cat.name}</h3>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      {/* ─── Categories ─── */}
+      {(categoriesData?.length ?? 0) > 0 && (
+        <section className="py-14 md:py-20">
+          <div className="container">
+            <SectionHeader title="تصفح حسب الفئة" />
 
-      {/* Featured Products */}
-      <section className="bg-muted/30">
-        <div className="container py-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-cairo font-bold text-2xl text-foreground">أحدث المنتجات</h2>
-            <Link to="/products">
-              <Button variant="outline" className="font-cairo gap-1">
-                عرض الكل <ArrowLeft className="w-4 h-4" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {(categoriesData || []).map((cat) => {
+                const Icon = ICON_MAP[cat.icon] || Home;
+                return (
+                  <Link key={cat.name} to={`/products?category=${encodeURIComponent(cat.name)}`}>
+                    <div className="relative rounded-2xl border border-border bg-card p-6 text-center hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 transition-all duration-300 group">
+                      <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 group-hover:scale-105 transition-all duration-300">
+                        {cat.image ? (
+                          <img src={cat.image} alt={cat.name} className="w-8 h-8 rounded-lg object-cover" />
+                        ) : (
+                          <Icon className="w-7 h-7 text-primary" />
+                        )}
+                      </div>
+                      <h3 className="font-cairo font-bold text-sm text-foreground">{cat.name}</h3>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ─── Featured Products ─── */}
+      <section className="py-14 md:py-20 bg-muted/40">
+        <div className="container">
+          <div className="flex items-end justify-between gap-4 mb-8">
+            <SectionHeader title="أحدث المنتجات" subtitle="اكتشف أحدث ما أضفناه لمجموعتنا" />
+            <Link to="/products" className="shrink-0">
+              <Button variant="ghost" className="font-cairo font-semibold gap-1 text-primary hover:text-primary hover:bg-primary/10 rounded-xl">
+                عرض الكل
+                <ChevronLeft className="w-4 h-4" />
               </Button>
             </Link>
           </div>
+
           {isLoading ? (
             <ProductGridSkeleton />
           ) : products && products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
               {products.map(p => (
                 <ProductCard
                   key={p.id}
@@ -160,44 +183,75 @@ export default function IndexPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-16">
-              <p className="font-cairo text-muted-foreground text-lg">لا توجد منتجات حالياً. يتم إضافة منتجات جديدة قريباً!</p>
+            <div className="text-center py-20 bg-card rounded-2xl border border-dashed">
+              <ShoppingBag className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
+              <p className="font-cairo text-muted-foreground text-lg">لا توجد منتجات حالياً</p>
+              <p className="font-cairo text-muted-foreground/60 text-sm mt-1">يتم إضافة منتجات جديدة قريباً!</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Why Choose Us */}
-      <section className="container py-16">
-        <h2 className="font-cairo font-bold text-2xl text-foreground text-center mb-10">لماذا تختارنا؟</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {whyUsItems.map((item, i) => (
-            <div key={i} className="bg-card border rounded-2xl p-8 text-center hover:shadow-lg transition-shadow duration-300 group">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-primary/20 transition-colors">
-                <item.icon className="w-8 h-8 text-primary" />
+      {/* ─── Why Choose Us ─── */}
+      <section className="py-16 md:py-24">
+        <div className="container">
+          <SectionHeader title="لماذا تختارنا؟" subtitle="نسعى لتقديم أفضل تجربة تسوق لكم" center />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+            {whyUsItems.map((item, i) => (
+              <div
+                key={i}
+                className="relative bg-card border border-border rounded-2xl p-8 text-center hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-primary/15 group-hover:scale-105 transition-all duration-300">
+                  <item.icon className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="font-cairo font-bold text-lg mb-2 text-foreground">{item.title}</h3>
+                <p className="font-cairo text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
               </div>
-              <h3 className="font-cairo font-bold text-lg mb-2">{item.title}</h3>
-              <p className="font-cairo text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-primary">
-        <div className="container py-12 text-center">
-          <h2 className="font-cairo font-bold text-2xl text-primary-foreground mb-3">جاهز للتسوق؟</h2>
-          <p className="font-cairo text-primary-foreground/80 mb-6 max-w-md mx-auto">
+      {/* ─── CTA Banner ─── */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-bl from-primary via-primary to-primary/90" />
+        {/* Decorative circles */}
+        <div className="absolute top-0 left-0 w-72 h-72 bg-background/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-background/5 rounded-full translate-x-1/3 translate-y-1/3" />
+
+        <div className="container relative z-10 py-16 md:py-20 text-center">
+          <h2 className="font-cairo font-extrabold text-3xl md:text-4xl text-primary-foreground mb-4">
+            جاهز للتسوق؟
+          </h2>
+          <p className="font-cairo text-primary-foreground/80 text-lg mb-8 max-w-lg mx-auto leading-relaxed">
             اكتشف مجموعتنا الواسعة من المنتجات واستفد من عروضنا الحصرية.
           </p>
           <Link to="/products">
-            <Button size="lg" variant="secondary" className="font-cairo font-semibold gap-2 text-base px-8">
+            <Button
+              size="lg"
+              variant="secondary"
+              className="font-cairo font-bold text-base px-10 h-12 rounded-xl gap-2 shadow-lg hover:shadow-xl transition-shadow"
+            >
               تصفح المنتجات
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
         </div>
       </section>
+    </div>
+  );
+}
+
+/* ─── Reusable section header ─── */
+function SectionHeader({ title, subtitle, center }: { title: string; subtitle?: string; center?: boolean }) {
+  return (
+    <div className={center ? 'text-center mb-0' : 'mb-0'}>
+      <h2 className="font-cairo font-extrabold text-2xl md:text-3xl text-foreground">{title}</h2>
+      {subtitle && (
+        <p className="font-cairo text-muted-foreground mt-1.5 text-sm md:text-base">{subtitle}</p>
+      )}
     </div>
   );
 }

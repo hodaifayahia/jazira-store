@@ -1,55 +1,72 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, Menu, X, Home, Package, MapPin } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
 
+const NAV_LINKS = [
+  { to: '/', label: 'الرئيسية', icon: Home },
+  { to: '/products', label: 'المنتجات', icon: Package },
+  { to: '/track', label: 'تتبع الطلب', icon: MapPin },
+];
+
 export default function Navbar() {
   const { totalItems } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const { data: logoUrl } = useStoreLogo();
+  const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b">
+    <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b">
       <div className="container flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-2">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2.5">
           {logoUrl ? (
-            <img src={logoUrl} alt="DZ Store" className="w-10 h-10 rounded-lg object-contain" />
+            <img src={logoUrl} alt="DZ Store" className="w-9 h-9 rounded-lg object-contain" />
           ) : (
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-cairo font-bold text-lg">DZ</span>
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-cairo font-bold text-base">DZ</span>
             </div>
           )}
-          <span className="font-cairo font-bold text-xl text-foreground">DZ Store</span>
+          <span className="font-cairo font-bold text-lg text-foreground">DZ Store</span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors font-cairo font-medium">
-            <Home className="w-4 h-4" />
-            الرئيسية
-          </Link>
-          <Link to="/products" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors font-cairo font-medium">
-            <Package className="w-4 h-4" />
-            المنتجات
-          </Link>
-          <Link to="/track" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors font-cairo font-medium">
-            <MapPin className="w-4 h-4" />
-            تتبع الطلب
-          </Link>
+        <nav className="hidden md:flex items-center gap-1">
+          {NAV_LINKS.map(link => {
+            const isActive = location.pathname === link.to;
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-cairo font-medium transition-colors ${
+                  isActive
+                    ? 'text-primary bg-primary/10'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                <link.icon className="w-4 h-4" />
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="flex items-center gap-3">
-          <Link to="/cart" className="relative p-2 rounded-lg hover:bg-muted transition-colors">
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          <Link
+            to="/cart"
+            className="relative p-2.5 rounded-xl hover:bg-muted transition-colors"
+          >
             <ShoppingCart className="w-5 h-5 text-foreground" />
             {totalItems > 0 && (
-              <span className="absolute -top-1 -left-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-roboto rounded-full flex items-center justify-center font-bold">
+              <span className="absolute -top-0.5 -left-0.5 w-5 h-5 bg-primary text-primary-foreground text-[11px] font-roboto rounded-full flex items-center justify-center font-bold shadow-sm">
                 {totalItems}
               </span>
             )}
           </Link>
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
+          <Button variant="ghost" size="icon" className="md:hidden rounded-xl" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
         </div>
@@ -57,17 +74,26 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t bg-card animate-fade-in">
-          <nav className="container py-4 flex flex-col gap-3">
-            <Link to="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted font-cairo font-medium">
-              <Home className="w-4 h-4" /> الرئيسية
-            </Link>
-            <Link to="/products" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted font-cairo font-medium">
-              <Package className="w-4 h-4" /> المنتجات
-            </Link>
-            <Link to="/track" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted font-cairo font-medium">
-              <MapPin className="w-4 h-4" /> تتبع الطلب
-            </Link>
+        <div className="md:hidden border-t bg-card/95 backdrop-blur-xl animate-fade-in">
+          <nav className="container py-3 flex flex-col gap-1">
+            {NAV_LINKS.map(link => {
+              const isActive = location.pathname === link.to;
+              return (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-cairo font-medium text-sm transition-colors ${
+                    isActive
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <link.icon className="w-4 h-4" />
+                  {link.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
       )}

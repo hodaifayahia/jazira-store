@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
-import { Phone, Mail, MapPin } from 'lucide-react';
+import { Phone, Mail, MapPin, ChevronLeft } from 'lucide-react';
 
 export default function Footer() {
   const { data: logoUrl } = useStoreLogo();
@@ -25,52 +25,78 @@ export default function Footer() {
   const email = settings?.footer_email;
   const address = settings?.footer_address || 'الجزائر';
 
+  const quickLinks = [
+    { to: '/products', label: 'المنتجات' },
+    { to: '/track', label: 'تتبع الطلب' },
+    { to: '/cart', label: 'السلة' },
+  ];
+
   return (
     <footer className="bg-foreground text-background mt-auto">
-      <div className="container py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
+      <div className="container py-12 md:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8">
+
+          {/* Brand column */}
+          <div className="md:col-span-5">
+            <div className="flex items-center gap-2.5 mb-4">
               {logoUrl ? (
-                <img src={logoUrl} alt={storeName} className="w-8 h-8 rounded object-contain bg-background/10 p-0.5" />
+                <img src={logoUrl} alt={storeName} className="w-9 h-9 rounded-lg object-contain bg-background/10 p-0.5" />
               ) : (
-                <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
+                <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-cairo font-bold text-sm">DZ</span>
                 </div>
               )}
-              <h3 className="font-cairo font-bold text-lg">{storeName}</h3>
+              <h3 className="font-cairo font-bold text-xl">{storeName}</h3>
             </div>
-            <p className="text-background/70 font-cairo text-sm">{description}</p>
+            <p className="text-background/60 font-cairo text-sm leading-relaxed max-w-sm">{description}</p>
           </div>
-          <div>
-            <h3 className="font-cairo font-bold text-lg mb-3">روابط سريعة</h3>
-            <nav className="flex flex-col gap-2">
-              <Link to="/products" className="text-background/70 hover:text-background font-cairo text-sm transition-colors">المنتجات</Link>
-              <Link to="/track" className="text-background/70 hover:text-background font-cairo text-sm transition-colors">تتبع الطلب</Link>
-              <Link to="/cart" className="text-background/70 hover:text-background font-cairo text-sm transition-colors">السلة</Link>
+
+          {/* Quick links */}
+          <div className="md:col-span-3">
+            <h3 className="font-cairo font-bold text-sm uppercase tracking-wider text-background/40 mb-4">روابط سريعة</h3>
+            <nav className="flex flex-col gap-2.5">
+              {quickLinks.map(link => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="flex items-center gap-1 text-background/60 hover:text-primary font-cairo text-sm transition-colors group"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  {link.label}
+                </Link>
+              ))}
             </nav>
           </div>
-          <div>
-            <h3 className="font-cairo font-bold text-lg mb-3">تواصل معنا</h3>
-            <div className="space-y-2">
+
+          {/* Contact */}
+          <div className="md:col-span-4">
+            <h3 className="font-cairo font-bold text-sm uppercase tracking-wider text-background/40 mb-4">تواصل معنا</h3>
+            <div className="space-y-3">
               {phone && (
-                <a href={`tel:${phone}`} className="flex items-center gap-2 text-background/70 hover:text-background font-cairo text-sm transition-colors">
-                  <Phone className="w-4 h-4" /> <span className="font-roboto" dir="ltr">{phone}</span>
+                <a href={`tel:${phone}`} className="flex items-center gap-2.5 text-background/60 hover:text-primary font-cairo text-sm transition-colors">
+                  <Phone className="w-4 h-4 shrink-0" />
+                  <span className="font-roboto" dir="ltr">{phone}</span>
                 </a>
               )}
               {email && (
-                <a href={`mailto:${email}`} className="flex items-center gap-2 text-background/70 hover:text-background font-cairo text-sm transition-colors">
-                  <Mail className="w-4 h-4" /> <span className="font-roboto" dir="ltr">{email}</span>
+                <a href={`mailto:${email}`} className="flex items-center gap-2.5 text-background/60 hover:text-primary font-cairo text-sm transition-colors">
+                  <Mail className="w-4 h-4 shrink-0" />
+                  <span className="font-roboto" dir="ltr">{email}</span>
                 </a>
               )}
-              <div className="flex items-center gap-2 text-background/70 font-cairo text-sm">
-                <MapPin className="w-4 h-4 shrink-0" /> {address}
+              <div className="flex items-center gap-2.5 text-background/60 font-cairo text-sm">
+                <MapPin className="w-4 h-4 shrink-0" />
+                {address}
               </div>
             </div>
           </div>
         </div>
-        <div className="border-t border-background/20 mt-8 pt-6 text-center">
-          <p className="text-background/50 font-cairo text-sm">© {new Date().getFullYear()} {storeName}. جميع الحقوق محفوظة.</p>
+
+        {/* Bottom bar */}
+        <div className="border-t border-background/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-background/40 font-cairo text-xs">
+            © {new Date().getFullYear()} {storeName}. جميع الحقوق محفوظة.
+          </p>
         </div>
       </div>
     </footer>
