@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
+import { useCategories } from '@/hooks/useCategories';
 
-const CATEGORIES = ['الكل', 'أدوات منزلية', 'منتجات زينة', 'إكسسوارات'];
 const SORT_OPTIONS = [
   { value: 'newest', label: 'الأحدث' },
   { value: 'cheapest', label: 'الأرخص' },
@@ -23,6 +23,9 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState('newest');
+
+  const { data: categoriesSettings } = useCategories();
+  const categoryNames = ['الكل', ...(categoriesSettings?.map(c => c.name) || [])];
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['products', category, sort],
@@ -71,7 +74,7 @@ export default function ProductsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {CATEGORIES.map(c => (
+            {categoryNames.map(c => (
               <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>
             ))}
           </SelectContent>

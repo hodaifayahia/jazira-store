@@ -13,8 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon, Package } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { TableSkeleton } from '@/components/LoadingSkeleton';
+import { useCategories } from '@/hooks/useCategories';
 
-const CATEGORIES = ['أدوات منزلية', 'منتجات زينة', 'إكسسوارات'];
 const PAGE_SIZE = 10;
 
 export default function AdminProductsPage() {

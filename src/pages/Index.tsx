@@ -1,19 +1,16 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Truck, Shield, Headphones, Star, Home, Sparkles, Watch, Grid3X3 } from 'lucide-react';
+import { ArrowLeft, Truck, Shield, Headphones, Star, Grid3X3 } from 'lucide-react';
+import { icons } from 'lucide-react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
+import { useCategories } from '@/hooks/useCategories';
 import heroBanner from '@/assets/hero-banner-new.jpg';
 
-const CATEGORY_ICONS: Record<string, any> = {
-  'أدوات منزلية': Home,
-  'منتجات زينة': Sparkles,
-  'إكسسوارات': Watch,
-};
 const CATEGORY_COLORS = [
   'from-primary/20 to-primary/5 border-primary/20',
   'from-secondary/20 to-secondary/5 border-secondary/20',
@@ -46,20 +43,12 @@ export default function IndexPage() {
     },
   });
 
-  // Dynamic categories from DB
-  const { data: categories, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['product-categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('category')
-        .eq('is_active', true);
-      if (error) throw error;
-      const unique = [...new Set(data?.map(p => p.category))];
-      return unique;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: categoriesSettings, isLoading: categoriesLoading } = useCategories();
+
+  const renderIcon = (iconName: string) => {
+    const IconComponent = (icons as any)[iconName];
+    return IconComponent ? <IconComponent className="w-7 h-7 text-foreground" /> : <Grid3X3 className="w-7 h-7 text-foreground" />;
+  };
 
   return (
     <div className="min-h-screen">
@@ -97,8 +86,6 @@ export default function IndexPage() {
             </div>
           </div>
         </div>
-
-        {/* Decorative bottom wave */}
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
             <path d="M0 60H1440V30C1440 30 1320 0 1080 0C840 0 720 30 480 30C240 30 120 0 0 0V60Z" fill="hsl(var(--background))" />
@@ -137,18 +124,17 @@ export default function IndexPage() {
               <Skeleton key={i} className="h-28 rounded-xl" />
             ))}
           </div>
-        ) : categories && categories.length > 0 ? (
+        ) : categoriesSettings && categoriesSettings.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {categories.map((cat, i) => {
-              const Icon = CATEGORY_ICONS[cat] || Grid3X3;
+            {categoriesSettings.map((cat, i) => {
               const colorClass = CATEGORY_COLORS[i % CATEGORY_COLORS.length];
               return (
-                <Link key={cat} to={`/products?category=${encodeURIComponent(cat)}`}>
+                <Link key={cat.name} to={`/products?category=${encodeURIComponent(cat.name)}`}>
                   <div className={`relative rounded-xl border bg-gradient-to-br ${colorClass} p-6 text-center group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer`}>
                     <div className="w-14 h-14 mx-auto mb-3 rounded-xl bg-card/80 backdrop-blur flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300">
-                      <Icon className="w-7 h-7 text-foreground" />
+                      {renderIcon(cat.icon)}
                     </div>
-                    <h3 className="font-cairo font-bold text-base text-foreground">{cat}</h3>
+                    <h3 className="font-cairo font-bold text-base text-foreground">{cat.name}</h3>
                   </div>
                 </Link>
               );

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/admin/orders', label: 'الطلبات', icon: ShoppingCart },
   { href: '/admin/wilayas', label: 'الولايات', icon: MapPin },
   { href: '/admin/coupons', label: 'كوبونات', icon: Tag },
+  { href: '/admin/categories', label: 'التصنيفات', icon: Layers },
   { href: '/admin/settings', label: 'الإعدادات', icon: Settings },
 ];
 
