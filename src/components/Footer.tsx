@@ -24,6 +24,7 @@ export default function Footer() {
   const phone = settings?.footer_phone;
   const email = settings?.footer_email;
   const address = settings?.footer_address || 'الجزائر';
+  const facebookUrl = settings?.facebook_url;
 
   const quickLinks = [
     { to: '/products', label: 'المنتجات' },
