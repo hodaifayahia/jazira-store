@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle } from 'lucide-react';
+import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
 
 const STATUSES = ['جديد', 'قيد المعالجة', 'تم الشحن', 'تم التسليم', 'ملغي'];
@@ -30,6 +31,20 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [newStatus, setNewStatus] = useState('');
 
+  // Advanced filters
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [wilayaFilter, setWilayaFilter] = useState('الكل');
+  const [paymentFilter, setPaymentFilter] = useState('الكل');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [minTotal, setMinTotal] = useState('');
+  const [maxTotal, setMaxTotal] = useState('');
+
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatusDialog, setBulkStatusDialog] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState('');
+
   const { data: orders } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
@@ -48,6 +63,14 @@ export default function AdminOrdersPage() {
     enabled: !!selectedOrder,
   });
 
+  const { data: wilayas } = useQuery({
+    queryKey: ['wilayas-list'],
+    queryFn: async () => {
+      const { data } = await supabase.from('wilayas').select('name').order('name');
+      return data?.map(w => w.name) || [];
+    },
+  });
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from('orders').update({ status }).eq('id', id);
@@ -56,6 +79,19 @@ export default function AdminOrdersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-orders'] });
       toast({ title: 'تم تحديث الحالة ✅' });
+    },
+  });
+
+  const bulkUpdateStatus = useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
+      const { error } = await supabase.from('orders').update({ status }).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-orders'] });
+      setSelectedIds(new Set());
+      setBulkStatusDialog(false);
+      toast({ title: `تم تحديث حالة ${selectedIds.size} طلب ✅` });
     },
   });
 
@@ -78,23 +114,69 @@ export default function AdminOrdersPage() {
     return result;
   }, [orders]);
 
-  const filtered = orders?.filter(o => {
-    const matchSearch = !search || o.order_number?.includes(search) || o.customer_name?.includes(search);
-    const matchStatus = statusFilter === 'الكل' || o.status === statusFilter;
-    return matchSearch && matchStatus;
-  }) || [];
+  const filtered = useMemo(() => {
+    return (orders || []).filter(o => {
+      const matchSearch = !search || o.order_number?.includes(search) || o.customer_name?.includes(search) || o.customer_phone?.includes(search);
+      const matchStatus = statusFilter === 'الكل' || o.status === statusFilter;
+      const wilayaName = (o as any).wilayas?.name;
+      const matchWilaya = wilayaFilter === 'الكل' || wilayaName === wilayaFilter;
+      const matchPayment = paymentFilter === 'الكل' || o.payment_method === paymentFilter;
+      const matchDateFrom = !dateFrom || (o.created_at && o.created_at >= dateFrom);
+      const matchDateTo = !dateTo || (o.created_at && o.created_at <= dateTo + 'T23:59:59');
+      const matchMinTotal = !minTotal || Number(o.total_amount) >= Number(minTotal);
+      const matchMaxTotal = !maxTotal || Number(o.total_amount) <= Number(maxTotal);
+      return matchSearch && matchStatus && matchWilaya && matchPayment && matchDateFrom && matchDateTo && matchMinTotal && matchMaxTotal;
+    });
+  }, [orders, search, statusFilter, wilayaFilter, paymentFilter, dateFrom, dateTo, minTotal, maxTotal]);
 
   const handleQuickStatus = (orderId: string, status: string) => {
     updateStatus.mutate({ id: orderId, status });
   };
 
+  // Selection helpers
+  const allSelected = filtered.length > 0 && filtered.every(o => selectedIds.has(o.id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(o => o.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const clearAdvanced = () => {
+    setWilayaFilter('الكل');
+    setPaymentFilter('الكل');
+    setDateFrom('');
+    setDateTo('');
+    setMinTotal('');
+    setMaxTotal('');
+  };
+
+  const hasAdvancedFilters = wilayaFilter !== 'الكل' || paymentFilter !== 'الكل' || dateFrom || dateTo || minTotal || maxTotal;
+
+  // Quick bulk status for filtered orders
+  const handleBulkQuickStatus = (status: string) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    bulkUpdateStatus.mutate({ ids, status });
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-4">
+        {/* Search & basic filter */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث برقم الطلب أو اسم العميل" className="pr-10 font-cairo" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث برقم الطلب أو اسم العميل أو الهاتف" className="pr-10 font-cairo" />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-40 font-cairo"><SelectValue /></SelectTrigger>
@@ -114,12 +196,110 @@ export default function AdminOrdersPage() {
               })}
             </SelectContent>
           </Select>
+          <Button
+            variant={showAdvanced ? 'default' : 'outline'}
+            className="font-cairo gap-1.5"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            <Filter className="w-4 h-4" />
+            فلتر متقدم
+            {hasAdvancedFilters && <span className="w-2 h-2 rounded-full bg-destructive" />}
+            {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </Button>
         </div>
+
+        {/* Advanced Filters */}
+        {showAdvanced && (
+          <div className="bg-card border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-cairo font-semibold text-sm flex items-center gap-2">
+                <Filter className="w-4 h-4 text-primary" /> فلتر متقدم
+              </h3>
+              {hasAdvancedFilters && (
+                <Button variant="ghost" size="sm" className="font-cairo text-xs" onClick={clearAdvanced}>
+                  مسح الفلاتر
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div>
+                <Label className="font-cairo text-xs">الولاية</Label>
+                <Select value={wilayaFilter} onValueChange={setWilayaFilter}>
+                  <SelectTrigger className="font-cairo mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="الكل" className="font-cairo">الكل</SelectItem>
+                    {wilayas?.map(w => <SelectItem key={w} value={w} className="font-cairo">{w}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="font-cairo text-xs">طريقة الدفع</Label>
+                <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                  <SelectTrigger className="font-cairo mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="الكل" className="font-cairo">الكل</SelectItem>
+                    <SelectItem value="baridimob" className="font-cairo">بريدي موب</SelectItem>
+                    <SelectItem value="flexy" className="font-cairo">فليكسي</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="font-cairo text-xs">من تاريخ</Label>
+                <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="mt-1 h-9 text-xs" />
+              </div>
+              <div>
+                <Label className="font-cairo text-xs">إلى تاريخ</Label>
+                <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="mt-1 h-9 text-xs" />
+              </div>
+              <div>
+                <Label className="font-cairo text-xs">أقل مبلغ</Label>
+                <Input type="number" value={minTotal} onChange={e => setMinTotal(e.target.value)} placeholder="0" className="mt-1 h-9 text-xs font-roboto" />
+              </div>
+              <div>
+                <Label className="font-cairo text-xs">أعلى مبلغ</Label>
+                <Input type="number" value={maxTotal} onChange={e => setMaxTotal(e.target.value)} placeholder="∞" className="mt-1 h-9 text-xs font-roboto" />
+              </div>
+            </div>
+            <p className="font-cairo text-xs text-muted-foreground">{filtered.length} طلب مطابق</p>
+          </div>
+        )}
+
+        {/* Bulk Actions Bar */}
+        {someSelected && (
+          <div className="flex flex-wrap items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3">
+            <CheckSquare className="w-5 h-5 text-primary" />
+            <span className="font-cairo text-sm font-medium text-primary">{selectedIds.size} طلب محدد</span>
+            <div className="flex flex-wrap gap-2 mr-auto">
+              {STATUSES.map(s => {
+                const cfg = STATUS_CONFIG[s];
+                const Icon = cfg.icon;
+                return (
+                  <Button
+                    key={s}
+                    size="sm"
+                    variant="outline"
+                    className={`font-cairo gap-1.5 text-xs ${cfg.color}`}
+                    onClick={() => handleBulkQuickStatus(s)}
+                    disabled={bulkUpdateStatus.isPending}
+                  >
+                    <Icon className="w-3.5 h-3.5" /> {s}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button size="sm" variant="ghost" className="font-cairo text-xs" onClick={() => setSelectedIds(new Set())}>
+              إلغاء التحديد
+            </Button>
+          </div>
+        )}
 
         <div className="bg-card border rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr>
+                <th className="p-3 text-right">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
+                </th>
                 <th className="p-3 text-right font-cairo">رقم الطلب</th>
                 <th className="p-3 text-right font-cairo">العميل</th>
                 <th className="p-3 text-right font-cairo">الهاتف</th>
@@ -137,7 +317,10 @@ export default function AdminOrdersPage() {
                 const statusCfg = STATUS_CONFIG[o.status || 'جديد'] || STATUS_CONFIG['جديد'];
                 const StatusIcon = statusCfg.icon;
                 return (
-                  <tr key={o.id} className="border-b hover:bg-muted/50">
+                  <tr key={o.id} className={`border-b hover:bg-muted/50 ${selectedIds.has(o.id) ? 'bg-primary/5' : ''}`}>
+                    <td className="p-3">
+                      <Checkbox checked={selectedIds.has(o.id)} onCheckedChange={() => toggleSelect(o.id)} />
+                    </td>
                     <td className="p-3 font-roboto font-bold text-primary">{o.order_number}</td>
                     <td className="p-3 font-cairo">{o.customer_name}</td>
                     <td className="p-3 font-roboto text-xs">{o.customer_phone}</td>
@@ -158,7 +341,6 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="p-3 font-roboto">{formatPrice(Number(o.total_amount))}</td>
                     <td className="p-3">
-                      {/* Status dropdown - change directly from table */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-cairo cursor-pointer hover:opacity-80 transition-opacity ${statusCfg.bg} ${statusCfg.color}`}>
@@ -198,7 +380,6 @@ export default function AdminOrdersPage() {
                           <TooltipContent className="font-cairo">عرض التفاصيل</TooltipContent>
                         </Tooltip>
 
-                        {/* Quick actions */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">

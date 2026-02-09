@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Star, X, Upload, ImageIcon, Loader2, Package, Search, Copy, Download, FileUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, X, Upload, ImageIcon, Loader2, Package, Search, Copy, Download, FileUp, ChevronLeft, ChevronRight, DollarSign, Tag, CheckSquare } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { useCategories } from '@/hooks/useCategories';
+
+const ITEMS_PER_PAGE = 10;
 
 export default function AdminProductsPage() {
   const qc = useQueryClient();
@@ -25,6 +29,15 @@ export default function AdminProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('الكل');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPriceDialog, setBulkPriceDialog] = useState(false);
+  const [bulkCategoryDialog, setBulkCategoryDialog] = useState(false);
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
+  const [bulkPrice, setBulkPrice] = useState('');
+  const [bulkCategory, setBulkCategory] = useState('');
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -68,11 +81,92 @@ export default function AdminProductsPage() {
     },
   });
 
+  // Bulk mutations
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('products').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-products'] });
+      setSelectedIds(new Set());
+      setBulkDeleteDialog(false);
+      toast({ title: `تم حذف ${selectedIds.size} منتج ✅` });
+    },
+  });
+
+  const bulkUpdatePriceMutation = useMutation({
+    mutationFn: async ({ ids, price }: { ids: string[]; price: number }) => {
+      const { error } = await supabase.from('products').update({ price }).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-products'] });
+      setSelectedIds(new Set());
+      setBulkPriceDialog(false);
+      setBulkPrice('');
+      toast({ title: `تم تحديث السعر لـ ${selectedIds.size} منتج ✅` });
+    },
+  });
+
+  const bulkUpdateCategoryMutation = useMutation({
+    mutationFn: async ({ ids, category }: { ids: string[]; category: string }) => {
+      const { error } = await supabase.from('products').update({ category: [category] }).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-products'] });
+      setSelectedIds(new Set());
+      setBulkCategoryDialog(false);
+      setBulkCategory('');
+      toast({ title: `تم تحديث الفئة لـ ${selectedIds.size} منتج ✅` });
+    },
+  });
+
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
 
   const openCreate = () => { setEditingProduct(null); setShowForm(true); };
   const openEdit = (p: any) => { setEditingProduct(p); setShowForm(true); };
   const handleFormClose = () => { setShowForm(false); setEditingProduct(null); };
+
+  // Filtered products
+  const filteredProducts = useMemo(() => {
+    return (products || []).filter(p => {
+      const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchCategory = filterCategory === 'الكل' || (Array.isArray(p.category) ? p.category.includes(filterCategory) : p.category === filterCategory);
+      const matchStatus = filterStatus === 'all' || (filterStatus === 'active' ? p.is_active : !p.is_active);
+      return matchSearch && matchCategory && matchStatus;
+    });
+  }, [products, searchQuery, filterCategory, filterStatus]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset page when filters change
+  const handleFilterChange = (setter: (v: string) => void) => (v: string) => { setter(v); setCurrentPage(1); };
+
+  // Selection helpers
+  const allPageSelected = paginatedProducts.length > 0 && paginatedProducts.every(p => selectedIds.has(p.id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = () => {
+    if (allPageSelected) {
+      const next = new Set(selectedIds);
+      paginatedProducts.forEach(p => next.delete(p.id));
+      setSelectedIds(next);
+    } else {
+      const next = new Set(selectedIds);
+      paginatedProducts.forEach(p => next.add(p.id));
+      setSelectedIds(next);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
 
   // --- Export CSV ---
   const exportCSV = () => {
@@ -102,7 +196,7 @@ export default function AdminProductsPage() {
     const text = await file.text();
     const lines = text.split('\n').filter(l => l.trim());
     if (lines.length < 2) { toast({ title: 'الملف فارغ', variant: 'destructive' }); return; }
-    const rows = lines.slice(1); // skip header
+    const rows = lines.slice(1);
     let imported = 0, errors = 0;
     for (const row of rows) {
       try {
@@ -153,16 +247,16 @@ export default function AdminProductsPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="ابحث باسم المنتج..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pr-10 font-cairo h-10" />
+          <Input placeholder="ابحث باسم المنتج..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="pr-10 font-cairo h-10" />
         </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
+        <Select value={filterCategory} onValueChange={handleFilterChange(setFilterCategory)}>
           <SelectTrigger className="w-full sm:w-44 font-cairo h-10"><SelectValue placeholder="الفئة" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="الكل" className="font-cairo">كل الفئات</SelectItem>
             {categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={handleFilterChange(setFilterStatus)}>
           <SelectTrigger className="w-full sm:w-36 font-cairo h-10"><SelectValue placeholder="الحالة" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all" className="font-cairo">كل الحالات</SelectItem>
@@ -172,78 +266,135 @@ export default function AdminProductsPage() {
         </Select>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {someSelected && (
+        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3">
+          <CheckSquare className="w-5 h-5 text-primary" />
+          <span className="font-cairo text-sm font-medium text-primary">{selectedIds.size} منتج محدد</span>
+          <div className="flex gap-2 mr-auto">
+            <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => { setBulkPrice(''); setBulkPriceDialog(true); }}>
+              <DollarSign className="w-3.5 h-3.5" /> تغيير السعر
+            </Button>
+            <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => { setBulkCategory(categoryNames[0] || ''); setBulkCategoryDialog(true); }}>
+              <Tag className="w-3.5 h-3.5" /> تغيير الفئة
+            </Button>
+            <Button size="sm" variant="destructive" className="font-cairo gap-1.5" onClick={() => setBulkDeleteDialog(true)}>
+              <Trash2 className="w-3.5 h-3.5" /> حذف
+            </Button>
+          </div>
+          <Button size="sm" variant="ghost" className="font-cairo text-xs" onClick={() => setSelectedIds(new Set())}>
+            إلغاء التحديد
+          </Button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-center py-12 font-cairo text-muted-foreground">جاري التحميل...</div>
-      ) : products && products.length > 0 ? (
-        <div className="bg-card border rounded-xl overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 border-b">
-              <tr>
-                <th className="p-3 text-right font-cairo font-semibold">الصورة</th>
-                <th className="p-3 text-right font-cairo font-semibold">المنتج</th>
-                <th className="p-3 text-right font-cairo font-semibold">السعر</th>
-                <th className="p-3 text-right font-cairo font-semibold">الفئة</th>
-                <th className="p-3 text-right font-cairo font-semibold">المخزون</th>
-                <th className="p-3 text-right font-cairo font-semibold">الصور</th>
-                <th className="p-3 text-right font-cairo font-semibold">الحالة</th>
-                <th className="p-3 text-right font-cairo font-semibold">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {products.filter(p => {
-                const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
-                const matchCategory = filterCategory === 'الكل' || (Array.isArray(p.category) ? p.category.includes(filterCategory) : p.category === filterCategory);
-                const matchStatus = filterStatus === 'all' || (filterStatus === 'active' ? p.is_active : !p.is_active);
-                return matchSearch && matchCategory && matchStatus;
-              }).map(p => {
-                const mainIdx = p.main_image_index ?? 0;
-                const mainImage = p.images?.[mainIdx] || p.images?.[0];
-                return (
-                  <tr key={p.id} className="hover:bg-muted/30 transition-colors group">
-                    <td className="p-3">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
-                        {mainImage ? (
-                          <img src={mainImage} alt={p.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="w-5 h-5 text-muted-foreground/40" />
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3 font-cairo font-medium text-foreground max-w-[200px] truncate">{p.name}</td>
-                    <td className="p-3 font-roboto font-bold text-primary">{formatPrice(Number(p.price))}</td>
-                    <td className="p-3 font-cairo text-xs text-muted-foreground">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</td>
-                    <td className="p-3 font-roboto">{p.stock}</td>
-                    <td className="p-3 font-roboto text-muted-foreground">{p.images?.length || 0}</td>
-                    <td className="p-3">
-                      <button
-                        onClick={() => toggleStatusMutation.mutate({ id: p.id, is_active: !p.is_active })}
-                        disabled={toggleStatusMutation.isPending}
-                        className={`text-xs px-2.5 py-1 rounded-full font-cairo cursor-pointer transition-all hover:scale-105 active:scale-95 ${p.is_active ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-muted text-muted-foreground hover:bg-muted-foreground/10'}`}
+      ) : filteredProducts.length > 0 ? (
+        <>
+          <div className="bg-card border rounded-xl overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b">
+                <tr>
+                  <th className="p-3 text-right">
+                    <Checkbox checked={allPageSelected} onCheckedChange={toggleSelectAll} />
+                  </th>
+                  <th className="p-3 text-right font-cairo font-semibold">الصورة</th>
+                  <th className="p-3 text-right font-cairo font-semibold">المنتج</th>
+                  <th className="p-3 text-right font-cairo font-semibold">السعر</th>
+                  <th className="p-3 text-right font-cairo font-semibold">الفئة</th>
+                  <th className="p-3 text-right font-cairo font-semibold">المخزون</th>
+                  <th className="p-3 text-right font-cairo font-semibold">الصور</th>
+                  <th className="p-3 text-right font-cairo font-semibold">الحالة</th>
+                  <th className="p-3 text-right font-cairo font-semibold">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {paginatedProducts.map(p => {
+                  const mainIdx = p.main_image_index ?? 0;
+                  const mainImage = p.images?.[mainIdx] || p.images?.[0];
+                  return (
+                    <tr key={p.id} className={`hover:bg-muted/30 transition-colors group ${selectedIds.has(p.id) ? 'bg-primary/5' : ''}`}>
+                      <td className="p-3">
+                        <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
+                      </td>
+                      <td className="p-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
+                          {mainImage ? (
+                            <img src={mainImage} alt={p.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="w-5 h-5 text-muted-foreground/40" />
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3 font-cairo font-medium text-foreground max-w-[200px] truncate">{p.name}</td>
+                      <td className="p-3 font-roboto font-bold text-primary">{formatPrice(Number(p.price))}</td>
+                      <td className="p-3 font-cairo text-xs text-muted-foreground">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</td>
+                      <td className="p-3 font-roboto">{p.stock}</td>
+                      <td className="p-3 font-roboto text-muted-foreground">{p.images?.length || 0}</td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => toggleStatusMutation.mutate({ id: p.id, is_active: !p.is_active })}
+                          disabled={toggleStatusMutation.isPending}
+                          className={`text-xs px-2.5 py-1 rounded-full font-cairo cursor-pointer transition-all hover:scale-105 active:scale-95 ${p.is_active ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-muted text-muted-foreground hover:bg-muted-foreground/10'}`}
+                        >
+                          {p.is_active ? 'نشط' : 'معطّل'}
+                        </button>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)} title="تعديل">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-secondary/10 hover:text-secondary" onClick={() => duplicateMutation.mutate(p)} title="نسخ">
+                            <Copy className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)} title="حذف">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2">
+              <span className="font-cairo text-sm text-muted-foreground">
+                صفحة {currentPage} من {totalPages} ({filteredProducts.length} منتج)
+              </span>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                  .map((page, idx, arr) => (
+                    <span key={page}>
+                      {idx > 0 && arr[idx - 1] !== page - 1 && <span className="px-1 text-muted-foreground">...</span>}
+                      <Button
+                        variant={page === currentPage ? 'default' : 'outline'}
+                        size="icon"
+                        className="h-8 w-8 font-roboto text-xs"
+                        onClick={() => setCurrentPage(page)}
                       >
-                        {p.is_active ? 'نشط' : 'معطّل'}
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)} title="تعديل">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-secondary/10 hover:text-secondary" onClick={() => duplicateMutation.mutate(p)} title="نسخ">
-                          <Copy className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)} title="حذف">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        {page}
+                      </Button>
+                    </span>
+                  ))}
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-16 bg-card border rounded-xl">
           <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
@@ -256,7 +407,7 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/* Delete confirmation */}
+      {/* Delete single confirmation */}
       <Dialog open={deleteDialog !== null} onOpenChange={() => setDeleteDialog(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -270,6 +421,76 @@ export default function AdminProductsPage() {
             <div className="flex gap-2 justify-center pt-2">
               <Button variant="outline" onClick={() => setDeleteDialog(null)} className="font-cairo px-6">إلغاء</Button>
               <Button variant="destructive" onClick={() => { if (deleteDialog) { deleteMutation.mutate(deleteDialog); setDeleteDialog(null); } }} className="font-cairo px-6">حذف</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog open={bulkDeleteDialog} onOpenChange={setBulkDeleteDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-cairo text-center">حذف {selectedIds.size} منتج</DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-4 py-2">
+            <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6 text-destructive" />
+            </div>
+            <p className="font-cairo text-muted-foreground">هل أنت متأكد من حذف {selectedIds.size} منتج محدد؟</p>
+            <div className="flex gap-2 justify-center pt-2">
+              <Button variant="outline" onClick={() => setBulkDeleteDialog(false)} className="font-cairo px-6">إلغاء</Button>
+              <Button variant="destructive" onClick={() => bulkDeleteMutation.mutate(Array.from(selectedIds))} disabled={bulkDeleteMutation.isPending} className="font-cairo px-6">
+                {bulkDeleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حذف الكل'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Price Dialog */}
+      <Dialog open={bulkPriceDialog} onOpenChange={setBulkPriceDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-cairo text-center">تغيير سعر {selectedIds.size} منتج</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="font-cairo">السعر الجديد (دج)</Label>
+              <Input type="number" value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} className="font-roboto mt-1.5" placeholder="0" />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setBulkPriceDialog(false)} className="font-cairo">إلغاء</Button>
+              <Button onClick={() => bulkUpdatePriceMutation.mutate({ ids: Array.from(selectedIds), price: Number(bulkPrice) })} disabled={!bulkPrice || Number(bulkPrice) <= 0 || bulkUpdatePriceMutation.isPending} className="font-cairo gap-1.5">
+                {bulkUpdatePriceMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+                تطبيق
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Category Dialog */}
+      <Dialog open={bulkCategoryDialog} onOpenChange={setBulkCategoryDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-cairo text-center">تغيير فئة {selectedIds.size} منتج</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="font-cairo">الفئة الجديدة</Label>
+              <Select value={bulkCategory} onValueChange={setBulkCategory}>
+                <SelectTrigger className="font-cairo mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setBulkCategoryDialog(false)} className="font-cairo">إلغاء</Button>
+              <Button onClick={() => bulkUpdateCategoryMutation.mutate({ ids: Array.from(selectedIds), category: bulkCategory })} disabled={!bulkCategory || bulkUpdateCategoryMutation.isPending} className="font-cairo gap-1.5">
+                {bulkUpdateCategoryMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Tag className="w-4 h-4" />}
+                تطبيق
+              </Button>
             </div>
           </div>
         </DialogContent>
