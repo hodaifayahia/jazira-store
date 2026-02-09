@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
@@ -21,7 +21,7 @@ export default function SingleProductPage() {
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*').eq('id', id!).single();
+      const { data, error } = await supabase.from('products').select('*').eq('id', id!).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -46,8 +46,12 @@ export default function SingleProductPage() {
 
   if (!product) {
     return (
-      <div className="container py-16 text-center">
+      <div className="container py-16 text-center space-y-4">
         <p className="font-cairo text-xl text-muted-foreground">المنتج غير موجود</p>
+        <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-primary hover:underline">
+          <ArrowRight className="w-4 h-4" />
+          العودة إلى المنتجات
+        </Link>
       </div>
     );
   }
@@ -59,11 +63,17 @@ export default function SingleProductPage() {
     for (let i = 0; i < qty; i++) {
       addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
     }
-    toast({ title: 'تمت الإضافة', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
+    toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
 
   return (
     <div className="container py-8">
+      {/* Back link */}
+      <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-sm text-muted-foreground hover:text-foreground mb-4">
+        <ArrowRight className="w-4 h-4" />
+        العودة إلى المنتجات
+      </Link>
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 font-cairo">
         <Link to="/" className="hover:text-foreground">الرئيسية</Link>
