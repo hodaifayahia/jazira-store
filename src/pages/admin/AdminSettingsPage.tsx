@@ -5,8 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Save } from 'lucide-react';
+import { Save, Plus, Trash2, Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+const AVAILABLE_ICONS: { value: string; label: string; Icon: LucideIcon }[] = [
+  { value: 'Home', label: 'منزل', Icon: Home },
+  { value: 'Sparkles', label: 'زينة', Icon: Sparkles },
+  { value: 'Watch', label: 'ساعة', Icon: Watch },
+  { value: 'ShoppingBag', label: 'حقيبة', Icon: ShoppingBag },
+  { value: 'Gift', label: 'هدية', Icon: Gift },
+  { value: 'Star', label: 'نجمة', Icon: Star },
+  { value: 'Heart', label: 'قلب', Icon: Heart },
+  { value: 'Shirt', label: 'ملابس', Icon: Shirt },
+];
 
 export default function AdminSettingsPage() {
   const qc = useQueryClient();
