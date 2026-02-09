@@ -515,53 +515,16 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [mainImageIndex, setMainImageIndex] = useState<number>(product?.main_image_index ?? 0);
   const [uploading, setUploading] = useState(false);
 
-  // Variations state
-  const [variations, setVariations] = useState<Array<{
-    id?: string;
-    variation_type: string;
-    variation_value: string;
-    price_adjustment: string;
-    stock: string;
-    is_active: boolean;
-  }>>([]);
-  const [variationsLoaded, setVariationsLoaded] = useState(false);
-
-  // Load existing variations when editing
-  const { } = useQuery({
-    queryKey: ['admin-variations', product?.id],
+  // Variations count for display
+  const { data: variationsCount } = useQuery({
+    queryKey: ['admin-variations-count', product?.id],
     queryFn: async () => {
-      if (!product?.id) return [];
-      const { data } = await supabase.from('product_variations').select('*').eq('product_id', product.id).order('variation_type');
-      if (data && data.length > 0) {
-        setVariations(data.map(v => ({
-          id: v.id,
-          variation_type: v.variation_type,
-          variation_value: v.variation_value,
-          price_adjustment: String(v.price_adjustment || 0),
-          stock: String(v.stock || 0),
-          is_active: v.is_active ?? true,
-        })));
-      }
-      setVariationsLoaded(true);
-      return data || [];
+      if (!product?.id) return 0;
+      const { count } = await supabase.from('product_variations').select('*', { count: 'exact', head: true }).eq('product_id', product.id);
+      return count || 0;
     },
     enabled: !!product?.id,
   });
-
-  // If creating new product, mark loaded
-  if (!product && !variationsLoaded) setVariationsLoaded(true);
-
-  const addVariation = () => {
-    setVariations(prev => [...prev, { variation_type: '', variation_value: '', price_adjustment: '0', stock: '0', is_active: true }]);
-  };
-
-  const removeVariation = (index: number) => {
-    setVariations(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateVariation = (index: number, field: string, value: any) => {
-    setVariations(prev => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
-  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
