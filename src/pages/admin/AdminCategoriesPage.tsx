@@ -71,44 +71,44 @@ export default function AdminCategoriesPage() {
   const SelectedIcon = AVAILABLE_ICONS.find(i => i.value === newIcon)?.Icon || Home;
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div className="bg-card border rounded-lg p-6 space-y-4">
-        <h2 className="font-cairo font-bold text-xl">الفئات الحالية</h2>
-        <div className="space-y-2">
-          {currentCategories.map(cat => {
-            const CatIcon = AVAILABLE_ICONS.find(i => i.value === cat.icon)?.Icon || Home;
-            return (
-              <div key={cat.name} className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <CatIcon className="w-5 h-5 text-muted-foreground" />
-                  <span className="font-cairo font-medium">{cat.name}</span>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCategory(cat.name)}>
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            );
-          })}
-          {currentCategories.length === 0 && (
-            <p className="font-cairo text-muted-foreground text-sm text-center py-4">لا توجد فئات. أضف فئة جديدة.</p>
-          )}
+    <div className="space-y-6 max-w-3xl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-cairo font-bold text-2xl text-foreground">إدارة الفئات</h2>
+          <p className="font-cairo text-sm text-muted-foreground mt-1">أضف وأدر فئات المنتجات التي تظهر في المتجر</p>
+        </div>
+        <div className="bg-primary/10 text-primary font-cairo font-bold text-sm px-3 py-1.5 rounded-full">
+          {currentCategories.length} فئة
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg p-6 space-y-4">
-        <h2 className="font-cairo font-bold text-xl">إضافة فئة جديدة</h2>
-        <div className="flex gap-2 items-end">
-          <div className="flex-1">
-            <Label className="font-cairo">اسم الفئة</Label>
-            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="مثال: ملابس" className="font-cairo mt-1" onKeyDown={e => e.key === 'Enter' && addCategory()} />
+      {/* Add new category - top for quick access */}
+      <div className="bg-card border rounded-xl p-5 shadow-sm">
+        <h3 className="font-cairo font-semibold text-base mb-4 flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Plus className="w-4 h-4 text-primary" />
           </div>
-          <div className="w-36">
-            <Label className="font-cairo">الأيقونة</Label>
+          إضافة فئة جديدة
+        </h3>
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <Label className="font-cairo text-xs text-muted-foreground">اسم الفئة</Label>
+            <Input
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="مثال: ملابس، أحذية، إلكترونيات..."
+              className="font-cairo mt-1.5 h-11"
+              onKeyDown={e => e.key === 'Enter' && addCategory()}
+            />
+          </div>
+          <div className="w-40">
+            <Label className="font-cairo text-xs text-muted-foreground">الأيقونة</Label>
             <Select value={newIcon} onValueChange={setNewIcon}>
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="mt-1.5 h-11">
                 <div className="flex items-center gap-2">
-                  <SelectedIcon className="w-4 h-4" />
-                  <SelectValue />
+                  <SelectedIcon className="w-4 h-4 text-primary" />
+                  <span className="font-cairo text-sm">{AVAILABLE_ICONS.find(i => i.value === newIcon)?.label}</span>
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -123,10 +123,51 @@ export default function AdminCategoriesPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={addCategory} disabled={saveMutation.isPending} className="font-cairo gap-1">
+          <Button onClick={addCategory} disabled={saveMutation.isPending || !newName.trim()} className="font-cairo gap-1.5 h-11 px-5">
             <Plus className="w-4 h-4" /> إضافة
           </Button>
         </div>
+      </div>
+
+      {/* Categories list */}
+      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-3.5 border-b bg-muted/30">
+          <h3 className="font-cairo font-semibold text-sm text-muted-foreground">الفئات الحالية</h3>
+        </div>
+        {currentCategories.length > 0 ? (
+          <div className="divide-y">
+            {currentCategories.map((cat, index) => {
+              const CatIcon = AVAILABLE_ICONS.find(i => i.value === cat.icon)?.Icon || Home;
+              return (
+                <div key={cat.name} className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <span className="font-roboto text-xs text-muted-foreground w-5 text-center">{index + 1}</span>
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <CatIcon className="w-4.5 h-4.5 text-primary" />
+                    </div>
+                    <span className="font-cairo font-medium text-foreground">{cat.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeCategory(cat.name)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+              <ShoppingBag className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="font-cairo text-muted-foreground text-sm">لا توجد فئات بعد</p>
+            <p className="font-cairo text-muted-foreground/60 text-xs mt-1">أضف فئة جديدة من الأعلى</p>
+          </div>
+        )}
       </div>
     </div>
   );
