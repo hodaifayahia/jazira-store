@@ -87,6 +87,9 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
+      {/* Categories Management */}
+      <CategoriesSection settings={settings || {}} />
+
       {/* Store Settings */}
       <div className="bg-card border rounded-lg p-6 space-y-4">
         <h2 className="font-cairo font-bold text-xl">إعدادات المتجر</h2>
