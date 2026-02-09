@@ -25,6 +25,7 @@ import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminLeadsPage from "./pages/admin/AdminLeadsPage";
+import AdminVariationsPage from "./pages/admin/AdminVariationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
