@@ -120,7 +120,7 @@ export default function AdminProductsPage() {
               <tr key={p.id} className="border-b hover:bg-muted/50">
                 <td className="p-3 font-cairo font-medium">{p.name}</td>
                 <td className="p-3 font-roboto">{formatPrice(Number(p.price))}</td>
-                <td className="p-3 font-cairo text-xs">{p.category}</td>
+                <td className="p-3 font-cairo text-xs">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</td>
                 <td className="p-3 font-roboto">{p.stock}</td>
                 <td className="p-3">
                   <span className={`text-xs px-2 py-1 rounded-full font-cairo ${p.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
