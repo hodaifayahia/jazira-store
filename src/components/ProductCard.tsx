@@ -11,7 +11,7 @@ interface ProductCardProps {
   name: string;
   price: number;
   image: string;
-  category: string;
+  category: string | string[];
   stock: number;
 }
 
