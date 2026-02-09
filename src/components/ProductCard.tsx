@@ -29,27 +29,48 @@ export default function ProductCard({ id, name, price, image, category, stock }:
 
   return (
     <Link to={`/product/${id}`} className="group block animate-fade-in">
-      <div className="bg-card rounded-lg border overflow-hidden hover:shadow-lg transition-all duration-300">
-        <div className="relative aspect-square overflow-hidden bg-muted">
+      <div className="bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
+        {/* Image */}
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           {image ? (
-            <img src={image} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+            <img
+              src={image}
+              alt={name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+              loading="lazy"
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <ShoppingCart className="w-12 h-12" />
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground/40">
+              <ShoppingCart className="w-10 h-10" />
             </div>
           )}
+
           {outOfStock && (
-            <div className="absolute inset-0 bg-foreground/40 flex items-center justify-center">
-              <Badge variant="destructive" className="font-cairo text-sm px-3 py-1">غير متوفر</Badge>
+            <div className="absolute inset-0 bg-foreground/50 backdrop-blur-[2px] flex items-center justify-center">
+              <Badge variant="destructive" className="font-cairo text-sm px-4 py-1.5 rounded-full">غير متوفر</Badge>
             </div>
           )}
-          <Badge className="absolute top-2 right-2 font-cairo bg-secondary text-secondary-foreground">{Array.isArray(category) ? category[0] : category}</Badge>
+
+          <Badge className="absolute top-2.5 right-2.5 font-cairo text-[11px] bg-foreground/70 backdrop-blur-sm text-background border-0 rounded-full px-2.5 py-0.5">
+            {Array.isArray(category) ? category[0] : category}
+          </Badge>
         </div>
-        <div className="p-4">
-          <h3 className="font-cairo font-semibold text-foreground line-clamp-2 mb-2">{name}</h3>
+
+        {/* Content */}
+        <div className="p-4 space-y-3">
+          <h3 className="font-cairo font-semibold text-foreground text-sm leading-snug line-clamp-2 min-h-[2.5rem]">
+            {name}
+          </h3>
           <div className="flex items-center justify-between gap-2">
-            <span className="font-roboto font-bold text-primary text-lg">{formatPrice(price)}</span>
-            <Button size="sm" disabled={outOfStock} onClick={handleAdd} className="font-cairo text-xs gap-1">
+            <span className="font-roboto font-bold text-primary text-lg tracking-tight">
+              {formatPrice(price)}
+            </span>
+            <Button
+              size="sm"
+              disabled={outOfStock}
+              onClick={handleAdd}
+              className="font-cairo text-xs gap-1.5 rounded-xl h-8 px-3 shadow-sm hover:shadow transition-shadow"
+            >
               <ShoppingCart className="w-3.5 h-3.5" />
               إضافة
             </Button>
