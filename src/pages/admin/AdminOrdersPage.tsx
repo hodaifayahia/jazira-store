@@ -7,11 +7,20 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
 
 const STATUSES = ['جديد', 'قيد المعالجة', 'تم الشحن', 'تم التسليم', 'ملغي'];
+
+const STATUS_CONFIG: Record<string, { icon: typeof Clock; color: string; bg: string }> = {
+  'جديد': { icon: Clock, color: 'text-secondary', bg: 'bg-secondary/10' },
+  'قيد المعالجة': { icon: PackageOpen, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+  'تم الشحن': { icon: Truck, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  'تم التسليم': { icon: PackageCheck, color: 'text-primary', bg: 'bg-primary/10' },
+  'ملغي': { icon: Ban, color: 'text-destructive', bg: 'bg-destructive/10' },
+};
 
 export default function AdminOrdersPage() {
   const qc = useQueryClient();
@@ -40,18 +49,16 @@ export default function AdminOrdersPage() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', selectedOrder.id);
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from('orders').update({ status }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-orders'] });
-      toast({ title: 'تم تحديث الحالة' });
-      setSelectedOrder(null);
+      toast({ title: 'تم تحديث الحالة ✅' });
     },
   });
 
-  // Calculate high-cancellation wilayas
   const riskyWilayas = useMemo(() => {
     if (!orders) return new Map<string, number>();
     const stats: Record<string, { total: number; cancelled: number }> = {};
@@ -77,6 +84,10 @@ export default function AdminOrdersPage() {
     return matchSearch && matchStatus;
   }) || [];
 
+  const handleQuickStatus = (orderId: string, status: string) => {
+    updateStatus.mutate({ id: orderId, status });
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-4">
@@ -89,7 +100,18 @@ export default function AdminOrdersPage() {
             <SelectTrigger className="w-full sm:w-40 font-cairo"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="الكل" className="font-cairo">الكل</SelectItem>
-              {STATUSES.map(s => <SelectItem key={s} value={s} className="font-cairo">{s}</SelectItem>)}
+              {STATUSES.map(s => {
+                const cfg = STATUS_CONFIG[s];
+                const Icon = cfg.icon;
+                return (
+                  <SelectItem key={s} value={s} className="font-cairo">
+                    <span className="flex items-center gap-2">
+                      <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
+                      {s}
+                    </span>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
@@ -105,13 +127,15 @@ export default function AdminOrdersPage() {
                 <th className="p-3 text-right font-cairo">الإجمالي</th>
                 <th className="p-3 text-right font-cairo">الحالة</th>
                 <th className="p-3 text-right font-cairo">التاريخ</th>
-                <th className="p-3 text-right font-cairo">عرض</th>
+                <th className="p-3 text-right font-cairo">إجراءات</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(o => {
                 const wilayaName = (o as any).wilayas?.name;
                 const cancelRate = wilayaName ? riskyWilayas.get(wilayaName) : undefined;
+                const statusCfg = STATUS_CONFIG[o.status || 'جديد'] || STATUS_CONFIG['جديد'];
+                const StatusIcon = statusCfg.icon;
                 return (
                   <tr key={o.id} className="border-b hover:bg-muted/50">
                     <td className="p-3 font-roboto font-bold text-primary">{o.order_number}</td>
@@ -134,17 +158,73 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="p-3 font-roboto">{formatPrice(Number(o.total_amount))}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-cairo ${
-                        o.status === 'جديد' ? 'bg-secondary/10 text-secondary' :
-                        o.status === 'تم التسليم' ? 'bg-primary/10 text-primary' :
-                        o.status === 'ملغي' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'
-                      }`}>{o.status}</span>
+                      {/* Status dropdown - change directly from table */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-cairo cursor-pointer hover:opacity-80 transition-opacity ${statusCfg.bg} ${statusCfg.color}`}>
+                            <StatusIcon className="w-3.5 h-3.5" />
+                            {o.status}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="bg-popover border z-50 min-w-[160px]">
+                          {STATUSES.map(s => {
+                            const cfg = STATUS_CONFIG[s];
+                            const Icon = cfg.icon;
+                            const isActive = o.status === s;
+                            return (
+                              <DropdownMenuItem
+                                key={s}
+                                onClick={() => !isActive && handleQuickStatus(o.id, s)}
+                                className={`font-cairo gap-2 cursor-pointer ${isActive ? 'bg-muted font-bold' : ''}`}
+                              >
+                                <Icon className={`w-4 h-4 ${cfg.color}`} />
+                                {s}
+                                {isActive && <CheckCircle className="w-3.5 h-3.5 text-primary mr-auto" />}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                     <td className="p-3 font-cairo text-xs text-muted-foreground">{formatDate(o.created_at!)}</td>
                     <td className="p-3">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedOrder(o); setNewStatus(o.status || 'جديد'); }}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedOrder(o); setNewStatus(o.status || 'جديد'); }}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="font-cairo">عرض التفاصيل</TooltipContent>
+                        </Tooltip>
+
+                        {/* Quick actions */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover border z-50 min-w-[160px]">
+                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'قيد المعالجة')} className="font-cairo gap-2 cursor-pointer">
+                              <PackageOpen className="w-4 h-4 text-orange-500" />
+                              قيد المعالجة
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'تم الشحن')} className="font-cairo gap-2 cursor-pointer">
+                              <Truck className="w-4 h-4 text-blue-500" />
+                              تم الشحن
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'تم التسليم')} className="font-cairo gap-2 cursor-pointer">
+                              <PackageCheck className="w-4 h-4 text-primary" />
+                              تم التسليم
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'ملغي')} className="font-cairo gap-2 cursor-pointer text-destructive">
+                              <Ban className="w-4 h-4" />
+                              إلغاء الطلب
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -189,10 +269,23 @@ export default function AdminOrdersPage() {
                     <Label className="font-cairo">تحديث الحالة</Label>
                     <Select value={newStatus} onValueChange={setNewStatus}>
                       <SelectTrigger className="font-cairo mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s} className="font-cairo">{s}</SelectItem>)}</SelectContent>
+                      <SelectContent>
+                        {STATUSES.map(s => {
+                          const cfg = STATUS_CONFIG[s];
+                          const Icon = cfg.icon;
+                          return (
+                            <SelectItem key={s} value={s} className="font-cairo">
+                              <span className="flex items-center gap-2">
+                                <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
+                                {s}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={() => updateStatus.mutate()} disabled={updateStatus.isPending} className="font-cairo">حفظ</Button>
+                  <Button onClick={() => { updateStatus.mutate({ id: selectedOrder.id, status: newStatus }); setSelectedOrder(null); }} disabled={updateStatus.isPending} className="font-cairo">حفظ</Button>
                 </div>
               </div>
             )}
