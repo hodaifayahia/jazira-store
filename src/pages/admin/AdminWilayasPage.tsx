@@ -106,7 +106,7 @@ export default function AdminWilayasPage() {
         <Button onClick={openCreate} className="font-cairo gap-1"><Plus className="w-4 h-4" /> إضافة ولاية</Button>
       </div>
 
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {isLoading ? <TableSkeleton rows={5} cols={4} /> : <div className="bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
