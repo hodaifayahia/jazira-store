@@ -18,7 +18,7 @@ export default function SingleProductPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
