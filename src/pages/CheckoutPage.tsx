@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/lib/format';
+import { calculateShipping, getShippingBreakdown } from '@/lib/shipping';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,9 +16,15 @@ import { Copy, Upload, CheckCircle, Loader2, X, FileText } from 'lucide-react';
 
 export default function CheckoutPage() {
   usePageTitle('إتمام الطلب - DZ Store');
-  const { items, subtotal, clearCart } = useCart();
+  const { items: cartItems, subtotal: cartSubtotal, clearCart, removeItems, ensureInCart, checkoutIntent, setCheckoutIntent } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const orderCompletedRef = useRef(false);
+
+  // Determine which items to use for checkout
+  const isDirectOrder = checkoutIntent.type === 'direct';
+  const checkoutItems = isDirectOrder ? checkoutIntent.items : cartItems;
+  const subtotal = checkoutItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -37,9 +44,21 @@ export default function CheckoutPage() {
   const [wilayaError, setWilayaError] = useState('');
   const [paymentError, setPaymentError] = useState('');
 
+  // If no items to checkout, redirect
   useEffect(() => {
-    if (items.length === 0) navigate('/cart');
-  }, [items, navigate]);
+    if (checkoutItems.length === 0 && !isDirectOrder) navigate('/cart');
+  }, [checkoutItems, isDirectOrder, navigate]);
+
+  // Cleanup on unmount: if direct order and not completed, add items to cart
+  useEffect(() => {
+    return () => {
+      if (isDirectOrder && !orderCompletedRef.current) {
+        ensureInCart(checkoutIntent.type === 'direct' ? checkoutIntent.items : []);
+        setCheckoutIntent({ type: 'cart' });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -69,7 +88,9 @@ export default function CheckoutPage() {
   });
 
   const selectedWilaya = wilayas?.find(w => w.id === wilayaId);
-  const shippingCost = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
+  const wilayaShippingPrice = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
+  const shippingCost = selectedWilaya ? calculateShipping(checkoutItems, wilayaShippingPrice) : 0;
+  const shippingBreakdown = selectedWilaya ? getShippingBreakdown(checkoutItems, wilayaShippingPrice) : [];
   const total = subtotal - discount + shippingCost;
 
   const applyCoupon = async () => {
@@ -180,7 +201,7 @@ export default function CheckoutPage() {
       }).select().single();
       if (error) throw error;
 
-      const orderItems = items.map(item => ({
+      const orderItems = checkoutItems.map(item => ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
@@ -188,7 +209,16 @@ export default function CheckoutPage() {
       }));
       await supabase.from('order_items').insert(orderItems);
 
-      clearCart();
+      orderCompletedRef.current = true;
+
+      if (isDirectOrder) {
+        // Remove the ordered items from cart if they exist
+        removeItems(checkoutItems.map(i => i.id));
+        setCheckoutIntent({ type: 'cart' });
+      } else {
+        clearCart();
+      }
+
       navigate(`/order-confirmation/${order.order_number}`);
     } catch (err) {
       toast({ title: 'خطأ', description: 'حدث خطأ أثناء إرسال الطلب', variant: 'destructive' });
@@ -207,7 +237,10 @@ export default function CheckoutPage() {
 
   return (
     <div className="container py-8 max-w-4xl">
-      <h1 className="font-cairo font-bold text-3xl mb-8">إتمام الطلب</h1>
+      <h1 className="font-cairo font-bold text-3xl mb-2">إتمام الطلب</h1>
+      {isDirectOrder && (
+        <p className="font-cairo text-sm text-muted-foreground mb-6">طلب مباشر — المنتجات المحددة فقط</p>
+      )}
 
       <div className="grid md:grid-cols-5 gap-8">
         <div className="md:col-span-3 space-y-6">
@@ -309,7 +342,6 @@ export default function CheckoutPage() {
                         </div>
                         <p className="font-cairo">المبلغ المتبقي عند التسليم: <span className="font-roboto font-bold">{formatPrice(total - Number(settings.flexy_deposit_amount || 500))}</span></p>
 
-                        {/* Flexy step-by-step instructions */}
                         <div className="bg-muted/50 rounded p-3 mt-3 space-y-1">
                           <p className="font-cairo font-semibold text-xs">خطوات إرسال فليكسي:</p>
                           <ol className="list-decimal list-inside space-y-1 text-xs font-cairo text-muted-foreground">
@@ -344,7 +376,7 @@ export default function CheckoutPage() {
         <div className="md:col-span-2">
           <div className="bg-card border rounded-lg p-6 sticky top-20 space-y-3">
             <h2 className="font-cairo font-bold text-xl mb-4">ملخص الطلب</h2>
-            {items.map(item => (
+            {checkoutItems.map(item => (
               <div key={item.id} className="flex justify-between text-sm font-cairo">
                 <span>{item.name} ×{item.quantity}</span>
                 <span className="font-roboto">{formatPrice(item.price * item.quantity)}</span>
@@ -370,6 +402,19 @@ export default function CheckoutPage() {
               <span>التوصيل</span>
               <span className="font-roboto font-bold">{shippingCost > 0 ? formatPrice(shippingCost) : 'اختر الولاية'}</span>
             </div>
+            {shippingBreakdown.length > 0 && (
+              <div className="space-y-1 pr-4">
+                {shippingBreakdown.map(b => (
+                  <div key={b.id} className="flex justify-between text-xs font-cairo text-muted-foreground">
+                    <span>{b.name} ×{b.quantity}</span>
+                    <span className="font-roboto">{formatPrice(b.shipping)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {selectedWilaya && (
+              <p className="text-xs font-cairo text-muted-foreground">سعر التوصيل يحسب على كل منتج على حدة</p>
+            )}
             <hr className="my-3" />
             <div className="flex justify-between font-cairo font-bold text-lg">
               <span>الإجمالي</span>

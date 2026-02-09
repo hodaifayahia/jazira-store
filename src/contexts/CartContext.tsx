@@ -9,14 +9,22 @@ export interface CartItem {
   stock: number;
 }
 
+export type CheckoutIntent =
+  | { type: 'cart' }
+  | { type: 'direct'; items: CartItem[] };
+
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
   removeItem: (id: string) => void;
+  removeItems: (ids: string[]) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
+  ensureInCart: (items: CartItem[]) => void;
   totalItems: number;
   subtotal: number;
+  checkoutIntent: CheckoutIntent;
+  setCheckoutIntent: (intent: CheckoutIntent) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -32,6 +40,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [];
     }
   });
+
+  const [checkoutIntent, setCheckoutIntent] = useState<CheckoutIntent>({ type: 'cart' });
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
@@ -49,6 +59,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const removeItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
 
+  const removeItems = (ids: string[]) => setItems(prev => prev.filter(i => !ids.includes(i.id)));
+
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) return removeItem(id);
     setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.min(quantity, i.stock) } : i));
@@ -56,11 +68,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => setItems([]);
 
+  const ensureInCart = (newItems: CartItem[]) => {
+    setItems(prev => {
+      const updated = [...prev];
+      for (const item of newItems) {
+        const existing = updated.find(i => i.id === item.id);
+        if (!existing) {
+          updated.push(item);
+        }
+      }
+      return updated;
+    });
+  };
+
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, subtotal }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, removeItems, updateQuantity, clearCart, ensureInCart, totalItems, subtotal, checkoutIntent, setCheckoutIntent }}>
       {children}
     </CartContext.Provider>
   );

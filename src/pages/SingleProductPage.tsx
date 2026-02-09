@@ -1,8 +1,8 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ArrowRight, Zap } from 'lucide-react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +14,9 @@ import { Link } from 'react-router-dom';
 
 export default function SingleProductPage() {
   const { id } = useParams<{ id: string }>();
-  const { addItem } = useCart();
+  const { addItem, setCheckoutIntent } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
 
@@ -69,15 +70,28 @@ export default function SingleProductPage() {
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
 
+  const handleDirectOrder = () => {
+    setCheckoutIntent({
+      type: 'direct',
+      items: [{
+        id: product.id,
+        name: product.name,
+        price: Number(product.price),
+        image: images[0] || '',
+        stock: product.stock ?? 0,
+        quantity: qty,
+      }],
+    });
+    navigate('/checkout');
+  };
+
   return (
     <div className="container py-8">
-      {/* Back link */}
       <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowRight className="w-4 h-4" />
         العودة إلى المنتجات
       </Link>
 
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 font-cairo">
         <Link to="/" className="hover:text-foreground">الرئيسية</Link>
         <ChevronRight className="w-3 h-3 rotate-180" />
@@ -87,7 +101,6 @@ export default function SingleProductPage() {
       </nav>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Images */}
         <div>
           <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3">
             {images[selectedImage] ? (
@@ -109,7 +122,6 @@ export default function SingleProductPage() {
           )}
         </div>
 
-        {/* Info */}
         <div className="space-y-4">
           <Badge className="font-cairo bg-secondary text-secondary-foreground">{product.category}</Badge>
           <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
@@ -126,15 +138,21 @@ export default function SingleProductPage() {
           )}
 
           {!outOfStock && (
-            <div className="flex items-center gap-4 pt-4">
-              <div className="flex items-center border rounded-lg">
-                <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))}><Minus className="w-4 h-4" /></Button>
-                <span className="w-10 text-center font-roboto font-bold">{qty}</span>
-                <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))}><Plus className="w-4 h-4" /></Button>
+            <div className="space-y-3 pt-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border rounded-lg">
+                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))}><Minus className="w-4 h-4" /></Button>
+                  <span className="w-10 text-center font-roboto font-bold">{qty}</span>
+                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))}><Plus className="w-4 h-4" /></Button>
+                </div>
+                <Button onClick={handleAdd} className="font-cairo font-semibold gap-2 flex-1" variant="outline">
+                  <ShoppingCart className="w-4 h-4" />
+                  إضافة إلى السلة
+                </Button>
               </div>
-              <Button onClick={handleAdd} className="font-cairo font-semibold gap-2 flex-1">
-                <ShoppingCart className="w-4 h-4" />
-                إضافة إلى السلة
+              <Button onClick={handleDirectOrder} className="font-cairo font-semibold gap-2 w-full">
+                <Zap className="w-4 h-4" />
+                طلب مباشرة
               </Button>
             </div>
           )}
