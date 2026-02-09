@@ -21,6 +21,9 @@ export default function AdminProductsPage() {
 
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('الكل');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
