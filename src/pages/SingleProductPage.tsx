@@ -106,8 +106,8 @@ export default function SingleProductPage() {
       <div className="grid md:grid-cols-2 gap-8">
         <div>
           <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3">
-            {images[selectedImage] ? (
-              <img src={images[selectedImage]} alt={product.name} className="w-full h-full object-cover" />
+            {images[(selectedImage ?? mainIdx)] ? (
+              <img src={images[(selectedImage ?? mainIdx)]} alt={product.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 <ShoppingCart className="w-16 h-16" />
