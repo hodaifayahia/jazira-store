@@ -137,12 +137,14 @@ export default function CheckoutPage() {
   };
 
   const handleSubmit = async () => {
-    if (!name.trim() || !phone.trim() || !wilayaId || !paymentMethod) {
-      toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة', variant: 'destructive' });
-      return;
-    }
-    if (!/^0[567]\d{8}$/.test(phone)) {
-      toast({ title: 'خطأ', description: 'رقم الهاتف غير صالح', variant: 'destructive' });
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) newErrors.name = 'الاسم مطلوب';
+    if (!phone.trim() || !validatePhone(phone)) newErrors.phone = 'رقم الهاتف يجب أن يبدأ بـ 05/06/07 ويتكون من 10 أرقام';
+    if (!wilayaId) newErrors.wilaya = 'يرجى اختيار الولاية';
+    if (!paymentMethod) newErrors.payment = 'يرجى اختيار طريقة الدفع';
+    if (Object.values(newErrors).some(Boolean)) {
+      setErrors(newErrors);
+      toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة بشكل صحيح', variant: 'destructive' });
       return;
     }
 
