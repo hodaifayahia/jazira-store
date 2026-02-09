@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OrderConfirmationPage() {
+  usePageTitle('تأكيد الطلب - DZ Store');
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const { toast } = useToast();
 
