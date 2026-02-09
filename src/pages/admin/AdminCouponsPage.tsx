@@ -11,8 +11,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Loader2, CalendarIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, CalendarIcon, Tag } from 'lucide-react';
 import { formatDate } from '@/lib/format';
+import { TableSkeleton } from '@/components/LoadingSkeleton';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
