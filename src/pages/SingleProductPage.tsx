@@ -124,15 +124,29 @@ export default function SingleProductPage() {
           )}
 
           {!outOfStock && (
-            <div className="flex items-center gap-4 pt-4">
-              <div className="flex items-center border rounded-lg">
-                <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))}><Minus className="w-4 h-4" /></Button>
-                <span className="w-10 text-center font-roboto font-bold">{qty}</span>
-                <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))}><Plus className="w-4 h-4" /></Button>
+            <div className="space-y-3 pt-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border rounded-lg">
+                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))}><Minus className="w-4 h-4" /></Button>
+                  <span className="w-10 text-center font-roboto font-bold">{qty}</span>
+                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))}><Plus className="w-4 h-4" /></Button>
+                </div>
+                <Button onClick={handleAdd} variant="outline" className="font-cairo font-semibold gap-2 flex-1">
+                  <ShoppingCart className="w-4 h-4" />
+                  إضافة إلى السلة
+                </Button>
               </div>
-              <Button onClick={handleAdd} className="font-cairo font-semibold gap-2 flex-1">
-                <ShoppingCart className="w-4 h-4" />
-                إضافة إلى السلة
+              <Button
+                onClick={() => {
+                  for (let i = 0; i < qty; i++) {
+                    addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
+                  }
+                  navigate('/checkout');
+                }}
+                className="w-full font-cairo font-semibold gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                طلب مباشرة
               </Button>
             </div>
           )}
