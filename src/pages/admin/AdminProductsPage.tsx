@@ -199,7 +199,10 @@ export default function AdminProductsPage() {
               </tr>
             ))}
             {paginated.length === 0 && (
-              <tr><td colSpan={7} className="p-8 text-center font-cairo text-muted-foreground">لا توجد منتجات</td></tr>
+              <tr><td colSpan={7} className="p-8 text-center font-cairo text-muted-foreground">
+                <Package className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+                لا توجد منتجات بعد
+              </td></tr>
             )}
           </tbody>
         </table>
