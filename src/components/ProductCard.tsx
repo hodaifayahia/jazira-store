@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Zap, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/lib/format';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProductCardProps {
   id: string;
@@ -16,15 +18,30 @@ interface ProductCardProps {
   mainImageIndex?: number;
   category: string | string[];
   stock: number;
+  shippingPrice?: number;
 }
 
-export default function ProductCard({ id, name, price, image, images, mainImageIndex, category, stock }: ProductCardProps) {
+export default function ProductCard({ id, name, price, image, images, mainImageIndex, category, stock, shippingPrice }: ProductCardProps) {
   const { addItem } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
   const outOfStock = stock <= 0;
 
-  // Build the full image list, falling back to single image
+  const { data: variationTypes } = useQuery({
+    queryKey: ['product-variation-types', id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('product_variations')
+        .select('variation_type, variation_value')
+        .eq('product_id', id)
+        .eq('is_active', true);
+      if (!data || data.length === 0) return null;
+      const grouped: Record<string, number> = {};
+      data.forEach(v => { grouped[v.variation_type] = (grouped[v.variation_type] || 0) + 1; });
+      return grouped;
+    },
+  });
+
   const allImages = images && images.length > 0 ? images : (image ? [image] : []);
   const initialIndex = mainImageIndex != null && mainImageIndex < allImages.length ? mainImageIndex : 0;
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -32,14 +49,14 @@ export default function ProductCard({ id, name, price, image, images, mainImageI
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({ id, name, price, image: allImages[0] || '', stock });
+    addItem({ id, name, price, image: allImages[0] || '', stock, shippingPrice });
     toast({ title: 'تمت الإضافة', description: `تمت إضافة "${name}" إلى السلة` });
   };
 
   const handleDirectOrder = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({ id, name, price, image: allImages[0] || '', stock });
+    addItem({ id, name, price, image: allImages[0] || '', stock, shippingPrice });
     navigate('/checkout');
   };
 
@@ -79,31 +96,17 @@ export default function ProductCard({ id, name, price, image, images, mainImageI
             </div>
           )}
 
-          {/* Navigation arrows - only show if multiple images */}
           {allImages.length > 1 && (
             <>
-              <button
-                onClick={handlePrev}
-                className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background shadow-sm"
-              >
+              <button onClick={handlePrev} className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background shadow-sm">
                 <ChevronLeft className="w-4 h-4 text-foreground" />
               </button>
-              <button
-                onClick={handleNext}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background shadow-sm"
-              >
+              <button onClick={handleNext} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background shadow-sm">
                 <ChevronRight className="w-4 h-4 text-foreground" />
               </button>
-              {/* Dots */}
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
                 {allImages.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => handleDotClick(e, i)}
-                    className={`w-1.5 h-1.5 rounded-full transition-all ${
-                      i === currentIndex ? 'bg-background w-3' : 'bg-background/60'
-                    }`}
-                  />
+                  <button key={i} onClick={(e) => handleDotClick(e, i)} className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIndex ? 'bg-background w-3' : 'bg-background/60'}`} />
                 ))}
               </div>
             </>
@@ -121,30 +124,38 @@ export default function ProductCard({ id, name, price, image, images, mainImageI
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-3">
+        <div className="p-4 space-y-2">
           <h3 className="font-cairo font-semibold text-foreground text-sm leading-snug line-clamp-2 min-h-[2.5rem]">
             {name}
           </h3>
+
+          {/* Variation badges */}
+          {variationTypes && Object.keys(variationTypes).length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {Object.entries(variationTypes).map(([type, count]) => (
+                <span key={type} className="font-cairo text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                  {count} {type}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
-            <span className="font-roboto font-bold text-primary text-lg tracking-tight">
-              {formatPrice(price)}
-            </span>
+            <div>
+              <span className="font-roboto font-bold text-primary text-lg tracking-tight">
+                {formatPrice(price)}
+              </span>
+              {(shippingPrice ?? 0) > 0 && (
+                <p className="font-cairo text-[10px] text-muted-foreground flex items-center gap-0.5">
+                  <Truck className="w-3 h-3" /> {formatPrice(shippingPrice!)}
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-1.5">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={outOfStock}
-                onClick={handleAdd}
-                className="font-cairo text-xs gap-1 rounded-xl h-8 px-2.5"
-              >
+              <Button size="sm" variant="outline" disabled={outOfStock} onClick={handleAdd} className="font-cairo text-xs gap-1 rounded-xl h-8 px-2.5">
                 <ShoppingCart className="w-3.5 h-3.5" />
               </Button>
-              <Button
-                size="sm"
-                disabled={outOfStock}
-                onClick={handleDirectOrder}
-                className="font-cairo text-xs gap-1 rounded-xl h-8 px-3 shadow-sm hover:shadow transition-shadow"
-              >
+              <Button size="sm" disabled={outOfStock} onClick={handleDirectOrder} className="font-cairo text-xs gap-1 rounded-xl h-8 px-3 shadow-sm hover:shadow transition-shadow">
                 <Zap className="w-3.5 h-3.5" />
                 اطلب
               </Button>
