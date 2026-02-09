@@ -111,7 +111,7 @@ export default function AdminProductsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', description: '', price: '', category: CATEGORIES[0], stock: '0', is_active: true });
+    setForm({ name: '', description: '', price: '', category: categoryNames[0] || '', stock: '0', is_active: true });
     setImageFiles([]);
     setImagePreviews([]);
     setExistingImages([]);
