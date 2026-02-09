@@ -186,18 +186,15 @@ export default function SingleProductPage() {
   };
 
   const handleDirectOrder = async () => {
-    if (!orderName.trim() || !orderPhone.trim() || !orderWilayaId || !paymentMethod) {
-      toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة', variant: 'destructive' });
-      return;
-    }
-    if (!/^0[567]\d{8}$/.test(orderPhone)) {
-      toast({ title: 'خطأ', description: 'رقم الهاتف غير صالح (مثال: 05XXXXXXXX)', variant: 'destructive' });
-      return;
-    }
-    if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) {
-      toast({ title: 'خطأ', description: 'يرجى إرفاق إيصال الدفع', variant: 'destructive' });
-      return;
-    }
+    const newErrors: Record<string, string> = {};
+    if (!orderName.trim()) newErrors.orderName = 'يرجى إدخال الاسم الكامل';
+    if (!orderPhone.trim()) newErrors.orderPhone = 'يرجى إدخال رقم الهاتف';
+    else if (!/^0[567]\d{8}$/.test(orderPhone)) newErrors.orderPhone = 'رقم الهاتف غير صالح (مثال: 05XXXXXXXX)';
+    if (!orderWilayaId) newErrors.orderWilayaId = 'يرجى اختيار الولاية';
+    if (!paymentMethod) newErrors.paymentMethod = 'يرجى اختيار طريقة الدفع';
+    if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) newErrors.receiptFile = 'يرجى إرفاق إيصال الدفع';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     setSubmittingOrder(true);
     try {
