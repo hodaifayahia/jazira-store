@@ -94,8 +94,8 @@ export default function IndexPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-transparent" />
         </div>
 
-        <div className="container relative z-10 py-20 md:py-28 lg:py-36">
-          <div className="max-w-xl space-y-6">
+        <div className="container relative z-10 py-20 md:py-28 lg:py-36 flex justify-center">
+          <div className="max-w-2xl text-center space-y-6">
             <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/20 backdrop-blur-sm rounded-full px-4 py-1.5 animate-fade-in">
               🇩🇿 أفضل المنتجات في الجزائر
             </span>
