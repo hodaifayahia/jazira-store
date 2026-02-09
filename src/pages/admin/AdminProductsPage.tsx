@@ -576,18 +576,21 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
       const selected = new Set<string>();
       const priceAdj: Record<string, string> = {};
       const stockMap: Record<string, string> = {};
+      const imgMap: Record<string, string> = {};
       productVariations.forEach(pv => {
         const opt = variationOptions.find(o => o.variation_type === pv.variation_type && o.variation_value === pv.variation_value);
         if (opt) {
           selected.add(opt.id);
           priceAdj[opt.id] = String(pv.price_adjustment || 0);
           stockMap[opt.id] = String(pv.stock || 0);
+          if (pv.image_url) imgMap[opt.id] = pv.image_url;
         }
       });
       if (selected.size > 0) {
         setSelectedVariationIds(selected);
         setVariationPriceAdj(priceAdj);
         setVariationStock(stockMap);
+        setVariationImages(imgMap);
       }
     }
   }, [productVariations, variationOptions]);
