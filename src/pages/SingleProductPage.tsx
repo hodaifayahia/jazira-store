@@ -15,6 +15,7 @@ export default function SingleProductPage() {
   const { id } = useParams<{ id: string }>();
   const { addItem } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
 
