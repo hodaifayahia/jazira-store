@@ -30,6 +30,25 @@ export default function CheckoutPage() {
   const [couponApplied, setCouponApplied] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validatePhone = (v: string) => /^0[567]\d{8}$/.test(v);
+
+  const handleBlurName = () => {
+    setErrors(e => ({ ...e, name: name.trim() ? '' : 'الاسم مطلوب' }));
+  };
+  const handlePhoneChange = (v: string) => {
+    setPhone(v);
+    if (v && !validatePhone(v)) {
+      setErrors(e => ({ ...e, phone: 'رقم الهاتف يجب أن يبدأ بـ 05/06/07 ويتكون من 10 أرقام' }));
+    } else {
+      setErrors(e => ({ ...e, phone: '' }));
+    }
+  };
+  const handleWilayaChange = (v: string) => {
+    setWilayaId(v);
+    setErrors(e => ({ ...e, wilaya: '' }));
+  };
 
   useEffect(() => {
     if (items.length === 0) navigate('/cart');
