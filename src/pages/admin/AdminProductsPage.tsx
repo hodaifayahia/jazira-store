@@ -639,7 +639,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
     }
   };
 
-
+  const saveMutation = useMutation({
     mutationFn: async () => {
       if (!name.trim()) throw new Error('اسم المنتج مطلوب');
       if (!price || Number(price) <= 0) throw new Error('السعر مطلوب');
