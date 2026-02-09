@@ -395,12 +395,53 @@ export default function SingleProductPage() {
               </div>
             )}
 
-            <p className="font-roboto font-bold text-3xl text-primary">{formatPrice(Number(product.price))}</p>
+            <p className="font-roboto font-bold text-3xl text-primary">
+              {formatPrice(effectivePrice)}
+              {priceAdjustment !== 0 && (
+                <span className="text-base text-muted-foreground line-through mr-2">{formatPrice(Number(product.price))}</span>
+              )}
+            </p>
 
             {outOfStock ? (
               <Badge variant="destructive" className="font-cairo">غير متوفر حالياً</Badge>
             ) : (
               <p className="font-cairo text-sm text-primary">متوفر في المخزون ({product.stock} قطعة)</p>
+            )}
+
+            {/* Variation Selector */}
+            {Object.keys(variationGroups).length > 0 && (
+              <div className="space-y-3 pt-2">
+                {Object.entries(variationGroups).map(([type, vars]) => (
+                  <div key={type}>
+                    <Label className="font-cairo font-semibold text-sm mb-2 block">{type}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {vars.map(v => {
+                        const isSelected = selectedVariations[type] === v.variation_value;
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => setSelectedVariations(prev => ({ ...prev, [type]: isSelected ? '' : v.variation_value }))}
+                            className={`px-4 py-2 rounded-xl border text-sm font-cairo font-medium transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border hover:border-primary/30 text-foreground'
+                            } ${(v.stock ?? 0) <= 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            disabled={(v.stock ?? 0) <= 0}
+                          >
+                            {v.variation_value}
+                            {Number(v.price_adjustment) > 0 && (
+                              <span className="font-roboto text-xs text-muted-foreground mr-1">(+{formatPrice(Number(v.price_adjustment))})</span>
+                            )}
+                            {Number(v.price_adjustment) < 0 && (
+                              <span className="font-roboto text-xs text-primary mr-1">({formatPrice(Number(v.price_adjustment))})</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {product.description && (
