@@ -352,7 +352,7 @@ export default function CheckoutPage() {
               <span className="font-roboto font-bold">{formatPrice(subtotal)}</span>
             </div>
             {discount > 0 && (
-              <div className="flex justify-between items-center font-cairo text-sm text-green-600">
+              <div className="flex justify-between items-center font-cairo text-sm text-primary">
                 <span className="flex items-center gap-1">
                   الخصم
                   <button onClick={removeCoupon} className="text-destructive hover:text-destructive/80 transition-colors" title="إزالة الخصم">
