@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import useEmblaCarousel from 'embla-carousel-react';
-import Autoplay from 'embla-carousel-autoplay';
 import { Home, Sparkles, Watch, ArrowLeft, ShoppingBag, Gift, Star, Heart, Shirt,
   Laptop, Smartphone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette,
   Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
@@ -16,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
 import { useCategories } from '@/hooks/useCategories';
-import heroBannerFallback from '@/assets/hero-banner.jpg';
+import heroBannerNew from '@/assets/hero-banner-new.jpg';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt,
@@ -30,7 +28,6 @@ export default function IndexPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch ALL active products for different sections
   const { data: allProducts, isLoading } = useQuery({
     queryKey: ['all-active-products'],
     queryFn: async () => {
@@ -44,67 +41,9 @@ export default function IndexPage() {
     },
   });
 
-  // Derived product lists
   const newestProducts = allProducts?.slice(0, 8) || [];
   const mostExpensive = [...(allProducts || [])].sort((a, b) => Number(b.price) - Number(a.price)).slice(0, 4);
   const bestProducts = [...(allProducts || [])].sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0)).slice(0, 4);
-
-  // Fetch hero banners
-  const { data: heroBanners } = useQuery({
-    queryKey: ['hero-banners'],
-    queryFn: async () => {
-      const { data } = await supabase.from('settings').select('key, value').in('key', ['hero_banners', 'hero_banner']);
-      const map: Record<string, string> = {};
-      data?.forEach(s => { map[s.key] = s.value || ''; });
-      if (map.hero_banners) {
-        try {
-          const parsed = JSON.parse(map.hero_banners) as string[];
-          if (parsed.length > 0) return parsed;
-        } catch { /* fallback */ }
-      }
-      if (map.hero_banner) return [map.hero_banner];
-      return [heroBannerFallback];
-    },
-  });
-
-  // Fetch product images for the product carousel
-  const productImages = allProducts?.flatMap(p => p.images || []).filter(Boolean).slice(0, 8) || [];
-
-  const bannerImages = heroBanners || [heroBannerFallback];
-
-  // Hero Embla carousel
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, direction: 'rtl' }, [
-    Autoplay({ delay: 5000, stopOnInteraction: false }),
-  ]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-
-  // Product images carousel
-  const [prodCarouselRef, prodCarouselApi] = useEmblaCarousel({ loop: true, direction: 'rtl', align: 'start' }, [
-    Autoplay({ delay: 3000, stopOnInteraction: false }),
-  ]);
-  const [prodSelectedIndex, setProdSelectedIndex] = useState(0);
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setSelectedIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
-
-  const onProdSelect = useCallback(() => {
-    if (!prodCarouselApi) return;
-    setProdSelectedIndex(prodCarouselApi.selectedScrollSnap());
-  }, [prodCarouselApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    emblaApi.on('select', onSelect);
-    onSelect();
-  }, [emblaApi, onSelect]);
-
-  useEffect(() => {
-    if (!prodCarouselApi) return;
-    prodCarouselApi.on('select', onProdSelect);
-    onProdSelect();
-  }, [prodCarouselApi, onProdSelect]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,41 +86,27 @@ export default function IndexPage() {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ─── Hero Carousel ─── */}
-      <section className="relative isolate overflow-hidden min-h-[520px] md:min-h-[600px]">
-        {/* Animated floating elements */}
-        <div className="absolute inset-0 z-[1] pointer-events-none overflow-hidden">
-          <div className="absolute top-20 left-10 w-32 h-32 rounded-full bg-primary/10 blur-2xl animate-pulse" />
-          <div className="absolute bottom-32 right-20 w-48 h-48 rounded-full bg-secondary/10 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/3 w-24 h-24 rounded-full bg-primary/5 blur-xl animate-pulse" style={{ animationDelay: '2s' }} />
+      {/* ─── Hero Section ─── */}
+      <section className="relative isolate overflow-hidden">
+        <div className="absolute inset-0">
+          <img src={heroBannerNew} alt="" aria-hidden className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-transparent" />
         </div>
 
-        <div className="absolute inset-0" ref={emblaRef}>
-          <div className="flex h-full" style={{ direction: 'ltr' }}>
-            {bannerImages.map((img, i) => (
-              <div key={i} className="flex-[0_0_100%] min-w-0 relative min-h-[520px] md:min-h-[600px]">
-                <img src={img} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-l from-foreground/95 via-foreground/75 to-foreground/20 z-[2]" />
-
-        <div className="container relative z-10 flex items-center min-h-[520px] md:min-h-[600px] py-24 md:py-32">
-          {/* Glassmorphism card */}
-          <div className="max-w-xl space-y-6 bg-foreground/10 backdrop-blur-md rounded-3xl p-8 md:p-10 border border-background/10">
+        <div className="container relative z-10 py-20 md:py-28 lg:py-36">
+          <div className="max-w-xl space-y-6">
             <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/20 backdrop-blur-sm rounded-full px-4 py-1.5 animate-fade-in">
               🇩🇿 أفضل المنتجات في الجزائر
             </span>
             <h1 className="font-cairo font-extrabold text-4xl sm:text-5xl lg:text-6xl text-background leading-[1.15] tracking-tight animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              مرحباً بك في{' '}
-              <span className="text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]">DZ Store</span>
+              تسوّق بثقة مع{' '}
+              <span className="text-primary">DZ Store</span>
             </h1>
             <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md animate-fade-in" style={{ animationDelay: '0.2s' }}>
               أفضل المنتجات المنزلية، الزينة والإكسسوارات بأسعار مناسبة مع التوصيل لجميع الولايات.
             </p>
 
-            {/* Enhanced Search Bar */}
+            {/* Search Bar */}
             <form onSubmit={handleSearch} className="flex gap-2 max-w-md animate-fade-in" style={{ animationDelay: '0.3s' }}>
               <div className="relative flex-1 group">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -189,23 +114,23 @@ export default function IndexPage() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="ابحث عن منتج..."
-                  className="pr-11 font-cairo bg-background/95 backdrop-blur-sm border-background/20 rounded-2xl h-14 text-base shadow-lg shadow-primary/10 focus:shadow-primary/20 focus:ring-primary/30 transition-shadow"
+                  className="pr-11 font-cairo bg-background/95 backdrop-blur-sm border-background/20 rounded-2xl h-14 text-base shadow-lg"
                 />
               </div>
-              <Button type="submit" size="lg" className="font-cairo font-bold rounded-2xl h-14 px-8 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all">
+              <Button type="submit" size="lg" className="font-cairo font-bold rounded-2xl h-14 px-8 shadow-lg">
                 بحث
               </Button>
             </form>
 
             <div className="flex flex-wrap items-center gap-3 pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
               <Link to="/products">
-                <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all">
+                <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg hover:scale-[1.02] transition-all">
                   تسوّق الآن
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
               <Link to="/track">
-                <Button size="lg" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/25 hover:shadow-secondary/40 hover:scale-[1.02] transition-all">
+                <Button size="lg" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg hover:scale-[1.02] transition-all">
                   تتبع طلبك
                 </Button>
               </Link>
@@ -217,20 +142,6 @@ export default function IndexPage() {
             </div>
           </div>
         </div>
-
-        {bannerImages.length > 1 && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-            {bannerImages.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => emblaApi?.scrollTo(i)}
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                  i === selectedIndex ? 'bg-primary w-8' : 'bg-background/50 hover:bg-background/80'
-                }`}
-              />
-            ))}
-          </div>
-        )}
       </section>
 
       {/* ─── Trust Bar ─── */}
@@ -251,37 +162,6 @@ export default function IndexPage() {
           </div>
         </div>
       </section>
-
-      {/* ─── Product Images Carousel ─── */}
-      {productImages.length > 2 && (
-        <section className="py-10 bg-muted/30">
-          <div className="container">
-            <SectionHeader title="صور من منتجاتنا" subtitle="تصفح مجموعة مختارة من منتجاتنا" />
-            <div className="mt-6 overflow-hidden rounded-2xl" ref={prodCarouselRef}>
-              <div className="flex gap-4" style={{ direction: 'ltr' }}>
-                {productImages.map((img, i) => (
-                  <div key={i} className="flex-[0_0_280px] md:flex-[0_0_320px] min-w-0">
-                    <img src={img} alt="" className="w-full aspect-[4/3] object-cover rounded-xl" loading="lazy" />
-                  </div>
-                ))}
-              </div>
-            </div>
-            {productImages.length > 3 && (
-              <div className="flex justify-center gap-1.5 mt-4">
-                {productImages.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => prodCarouselApi?.scrollTo(i)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      i === prodSelectedIndex ? 'bg-primary w-6' : 'bg-muted-foreground/25 hover:bg-muted-foreground/40'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
 
       {/* ─── Categories ─── */}
       {(categoriesData?.length ?? 0) > 0 && (
