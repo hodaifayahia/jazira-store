@@ -137,9 +137,25 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
-          <h1 className="font-cairo font-bold text-lg">
+          <h1 className="font-cairo font-bold text-lg flex-1">
             {NAV_ITEMS.find(i => i.href === location.pathname)?.label || 'لوحة التحكم'}
           </h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => {
+              setNewOrderCount(0);
+              navigate('/admin/orders');
+            }}
+          >
+            <Bell className="w-5 h-5" />
+            {newOrderCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {newOrderCount > 9 ? '9+' : newOrderCount}
+              </span>
+            )}
+          </Button>
         </header>
         <main className="p-4 md:p-6">{children}</main>
       </div>
