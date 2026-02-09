@@ -77,6 +77,40 @@ export default function AdminProductsPage() {
         </Button>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="ابحث باسم المنتج..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pr-10 font-cairo h-10"
+          />
+        </div>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-full sm:w-44 font-cairo h-10">
+            <SelectValue placeholder="الفئة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="الكل" className="font-cairo">كل الفئات</SelectItem>
+            {categoryNames.map(c => (
+              <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-36 font-cairo h-10">
+            <SelectValue placeholder="الحالة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="font-cairo">كل الحالات</SelectItem>
+            <SelectItem value="active" className="font-cairo">نشط</SelectItem>
+            <SelectItem value="inactive" className="font-cairo">معطّل</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <div className="text-center py-12 font-cairo text-muted-foreground">جاري التحميل...</div>
       ) : products && products.length > 0 ? (
