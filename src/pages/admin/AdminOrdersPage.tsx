@@ -238,6 +238,7 @@ export default function AdminOrdersPage() {
                   <SelectTrigger className="font-cairo mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="الكل" className="font-cairo">الكل</SelectItem>
+                    <SelectItem value="cod" className="font-cairo">الدفع عند التسليم</SelectItem>
                     <SelectItem value="baridimob" className="font-cairo">بريدي موب</SelectItem>
                     <SelectItem value="flexy" className="font-cairo">فليكسي</SelectItem>
                   </SelectContent>
@@ -423,7 +424,7 @@ export default function AdminOrdersPage() {
                   <div><span className="text-muted-foreground">الاسم:</span> {selectedOrder.customer_name}</div>
                   <div><span className="text-muted-foreground">الهاتف:</span> <span className="font-roboto">{selectedOrder.customer_phone}</span></div>
                   <div><span className="text-muted-foreground">الولاية:</span> {(selectedOrder as any).wilayas?.name}</div>
-                  <div><span className="text-muted-foreground">الدفع:</span> {selectedOrder.payment_method === 'baridimob' ? 'بريدي موب' : 'فليكسي'}</div>
+                  <div><span className="text-muted-foreground">الدفع:</span> {selectedOrder.payment_method === 'baridimob' ? 'بريدي موب' : selectedOrder.payment_method === 'flexy' ? 'فليكسي' : selectedOrder.payment_method === 'cod' ? 'الدفع عند التسليم' : selectedOrder.payment_method}</div>
                 </div>
                 {selectedOrder.address && <div className="font-cairo"><span className="text-muted-foreground">العنوان:</span> {selectedOrder.address}</div>}
                 {selectedOrder.payment_receipt_url && (
@@ -439,6 +440,21 @@ export default function AdminOrdersPage() {
                       <span className="font-roboto">{formatPrice(Number(item.unit_price) * item.quantity)}</span>
                     </div>
                   ))}
+                  <hr className="my-2" />
+                  <div className="flex justify-between font-cairo text-sm">
+                    <span>المجموع الفرعي</span>
+                    <span className="font-roboto">{formatPrice(Number(selectedOrder.subtotal))}</span>
+                  </div>
+                  <div className="flex justify-between font-cairo text-sm">
+                    <span>التوصيل</span>
+                    <span className="font-roboto">{formatPrice(Number(selectedOrder.shipping_cost))}</span>
+                  </div>
+                  {Number(selectedOrder.discount_amount) > 0 && (
+                    <div className="flex justify-between font-cairo text-sm text-primary">
+                      <span>الخصم {selectedOrder.coupon_code && `(${selectedOrder.coupon_code})`}</span>
+                      <span className="font-roboto">-{formatPrice(Number(selectedOrder.discount_amount))}</span>
+                    </div>
+                  )}
                   <hr className="my-2" />
                   <div className="flex justify-between font-cairo font-bold">
                     <span>الإجمالي</span>

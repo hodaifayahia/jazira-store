@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
-import { Phone, Mail, MapPin, ChevronLeft } from 'lucide-react';
+import { Phone, Mail, MapPin, ChevronLeft, Facebook } from 'lucide-react';
 
 export default function Footer() {
   const { data: logoUrl } = useStoreLogo();
@@ -24,6 +24,7 @@ export default function Footer() {
   const phone = settings?.footer_phone;
   const email = settings?.footer_email;
   const address = settings?.footer_address || 'الجزائر';
+  const facebookUrl = settings?.facebook_url;
 
   const quickLinks = [
     { to: '/products', label: 'المنتجات' },
@@ -97,6 +98,18 @@ export default function Footer() {
           <p className="text-background/40 font-cairo text-xs">
             © {new Date().getFullYear()} {storeName}. جميع الحقوق محفوظة.
           </p>
+          {facebookUrl && (
+            <a
+              href={facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-background/50 hover:text-primary transition-colors"
+              aria-label="Facebook"
+            >
+              <Facebook className="w-5 h-5" />
+              <span className="font-cairo text-xs">تابعنا على فيسبوك</span>
+            </a>
+          )}
         </div>
       </div>
     </footer>
