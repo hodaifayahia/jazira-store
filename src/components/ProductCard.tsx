@@ -15,6 +15,7 @@ interface ProductCardProps {
   image: string;
   category: string;
   stock: number;
+  shippingPrice: number;
 }
 
 export default function ProductCard({ id, name, price, image, category, stock }: ProductCardProps) {
