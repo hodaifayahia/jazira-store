@@ -77,7 +77,11 @@ export default function IndexPage() {
             return (
               <Link key={cat.name} to={`/products?category=${encodeURIComponent(cat.name)}`}>
                 <div className={`rounded-lg p-6 ${color} hover:shadow-md transition-all duration-200 text-center group`}>
-                  <Icon className="w-10 h-10 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+                  {cat.image ? (
+                    <img src={cat.image} alt={cat.name} className="w-10 h-10 mx-auto mb-3 rounded-lg object-cover group-hover:scale-110 transition-transform" />
+                  ) : (
+                    <Icon className="w-10 h-10 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+                  )}
                   <h3 className="font-cairo font-bold text-lg">{cat.name}</h3>
                 </div>
               </Link>
