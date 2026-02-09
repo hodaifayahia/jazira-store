@@ -70,7 +70,7 @@ export default function ProductsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {CATEGORIES.map(c => (
+            {categoryNames.map(c => (
               <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>
             ))}
           </SelectContent>
