@@ -34,10 +34,11 @@ export default function AdminOrdersPage() {
   const [newStatus, setNewStatus] = useState('');
   const [page, setPage] = useState(0);
 
-  const { data: orders } = useQuery({
+  const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      const { data } = await supabase.from('orders').select('*, wilayas(name)').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('orders').select('*, wilayas(name)').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
   });
@@ -46,7 +47,8 @@ export default function AdminOrdersPage() {
     queryKey: ['order-items', selectedOrder?.id],
     queryFn: async () => {
       if (!selectedOrder) return [];
-      const { data } = await supabase.from('order_items').select('*, products(name)').eq('order_id', selectedOrder.id);
+      const { data, error } = await supabase.from('order_items').select('*, products(name)').eq('order_id', selectedOrder.id);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!selectedOrder,
