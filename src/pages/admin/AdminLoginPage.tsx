@@ -15,13 +15,33 @@ export default function AdminLoginPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const checkAdminRole = async (userId: string): Promise<boolean> => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+    return !!data;
+  };
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session?.user) navigate('/admin');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (session?.user) {
+        const isAdmin = await checkAdminRole(session.user.id);
+        if (isAdmin) {
+          navigate('/admin');
+        }
+      }
       setCheckingSession(false);
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) navigate('/admin');
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const isAdmin = await checkAdminRole(session.user.id);
+        if (isAdmin) {
+          navigate('/admin');
+        }
+      }
       setCheckingSession(false);
     });
     return () => subscription.unsubscribe();
@@ -30,13 +50,25 @@ export default function AdminLoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
     if (error) {
+      setLoading(false);
       toast({ title: 'خطأ', description: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', variant: 'destructive' });
-    } else {
-      navigate('/admin');
+      return;
     }
+
+    // Check admin role
+    const isAdmin = await checkAdminRole(data.user.id);
+    setLoading(false);
+    
+    if (!isAdmin) {
+      await supabase.auth.signOut();
+      toast({ title: 'خطأ', description: 'ليس لديك صلاحيات الوصول إلى لوحة التحكم', variant: 'destructive' });
+      return;
+    }
+
+    navigate('/admin');
   };
 
   if (checkingSession) return (

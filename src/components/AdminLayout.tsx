@@ -1,7 +1,7 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -18,21 +18,56 @@ const NAV_ITEMS = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null);
+    const checkAdmin = async (userId: string) => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      return !!data;
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (!session?.user) {
+        setUser(null);
+        setIsAdmin(false);
+        setLoading(false);
+        navigate('/admin/login');
+        return;
+      }
+      setUser(session.user);
+      const admin = await checkAdmin(session.user.id);
+      setIsAdmin(admin);
       setLoading(false);
-      if (!session?.user) navigate('/admin/login');
+      if (!admin) {
+        await supabase.auth.signOut();
+        navigate('/admin/login');
+      }
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) {
+        setLoading(false);
+        navigate('/admin/login');
+        return;
+      }
+      setUser(session.user);
+      const admin = await checkAdmin(session.user.id);
+      setIsAdmin(admin);
       setLoading(false);
-      if (!session?.user) navigate('/admin/login');
+      if (!admin) {
+        await supabase.auth.signOut();
+        navigate('/admin/login');
+      }
     });
+
     return () => subscription.unsubscribe();
   }, [navigate]);
 
@@ -42,7 +77,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Skeleton className="w-32 h-8" /></div>;
-  if (!user) return null;
+  if (!user || !isAdmin) return null;
 
   return (
     <div className="min-h-screen flex bg-muted">
