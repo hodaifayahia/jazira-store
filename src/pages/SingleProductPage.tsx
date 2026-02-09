@@ -79,9 +79,10 @@ export default function SingleProductPage() {
         id: product.id,
         name: product.name,
         price: Number(product.price),
-        image: images[0] || '',
+        image: images[mainIdx] || images[0] || '',
         stock: product.stock ?? 0,
         quantity: qty,
+        shippingPrice: Number(product.shipping_price ?? 0),
       }],
     });
     navigate('/checkout');
