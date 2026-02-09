@@ -191,6 +191,9 @@ export default function CheckoutPage() {
       }));
       await supabase.from('order_items').insert(orderItems);
 
+      // Fire-and-forget Telegram notification
+      supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
+
       clearCart();
       navigate(`/order-confirmation/${order.order_number}`);
     } catch (err) {
