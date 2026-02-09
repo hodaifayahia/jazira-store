@@ -57,6 +57,8 @@ export default function SingleProductPage() {
     );
   }
 
+  usePageTitle(product ? `${product.name} - DZ Store` : 'DZ Store');
+
   const images = product.images || [];
   const outOfStock = (product.stock ?? 0) <= 0;
 
