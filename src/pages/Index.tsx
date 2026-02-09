@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Home, Sparkles, Watch, ArrowLeft, type LucideIcon } from 'lucide-react';
+import { Home, Sparkles, Watch, ArrowLeft, ShoppingBag, Gift, Star, Heart, Shirt, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
 import { useCategories } from '@/hooks/useCategories';
 import heroBanner from '@/assets/hero-banner.jpg';
 
-const ICON_MAP: Record<string, LucideIcon> = { Home, Sparkles, Watch };
+const ICON_MAP: Record<string, LucideIcon> = { Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt };
 const COLOR_CLASSES = [
   'bg-primary/10 text-primary',
   'bg-secondary/10 text-secondary',
