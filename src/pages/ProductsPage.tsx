@@ -62,7 +62,10 @@ export default function ProductsPage() {
   const filtered = useMemo(() => {
     if (!products) return [];
     return products.filter(p => {
-      if (search && !p.name.includes(search)) return false;
+      if (search) {
+        const normalize = (s: string) => s.toLowerCase().replace(/[\u0610-\u061A\u064B-\u065F\u0670]/g, '');
+        if (!normalize(p.name).includes(normalize(search))) return false;
+      }
       if (selectedCategories.length > 0) {
         const pCats = p.category || [];
         if (!selectedCategories.some(sc => pCats.includes(sc))) return false;
@@ -267,6 +270,7 @@ export default function ProductsPage() {
                   mainImageIndex={p.main_image_index ?? 0}
                   category={p.category || []}
                   stock={p.stock ?? 0}
+                  shippingPrice={Number(p.shipping_price) || 0}
                 />
               ))}
             </div>

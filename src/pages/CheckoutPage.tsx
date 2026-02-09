@@ -314,10 +314,12 @@ export default function CheckoutPage() {
         <div className="md:col-span-2">
           <div className="bg-card border rounded-lg p-6 sticky top-20 space-y-3">
             <h2 className="font-cairo font-bold text-xl mb-4">ملخص الطلب</h2>
-            {items.map(item => (
-              <div key={item.id} className="flex justify-between text-sm font-cairo">
-                <span>{item.name} ×{item.quantity}</span>
-                <span className="font-roboto">{formatPrice(item.price * item.quantity)}</span>
+            {items.map((item, idx) => (
+              <div key={`${item.id}-${item.variation?.value || ''}-${idx}`} className="flex justify-between text-sm font-cairo">
+                <span>
+                  {item.name} {item.variation ? `(${item.variation.value})` : ''} ×{item.quantity}
+                </span>
+                <span className="font-roboto">{formatPrice((item.price + (item.variation?.priceAdjustment || 0)) * item.quantity)}</span>
               </div>
             ))}
             <hr className="my-3" />

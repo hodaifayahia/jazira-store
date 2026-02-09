@@ -515,6 +515,54 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [mainImageIndex, setMainImageIndex] = useState<number>(product?.main_image_index ?? 0);
   const [uploading, setUploading] = useState(false);
 
+  // Variations state
+  const [variations, setVariations] = useState<Array<{
+    id?: string;
+    variation_type: string;
+    variation_value: string;
+    price_adjustment: string;
+    stock: string;
+    is_active: boolean;
+  }>>([]);
+  const [variationsLoaded, setVariationsLoaded] = useState(false);
+
+  // Load existing variations when editing
+  const { } = useQuery({
+    queryKey: ['admin-variations', product?.id],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      const { data } = await supabase.from('product_variations').select('*').eq('product_id', product.id).order('variation_type');
+      if (data && data.length > 0) {
+        setVariations(data.map(v => ({
+          id: v.id,
+          variation_type: v.variation_type,
+          variation_value: v.variation_value,
+          price_adjustment: String(v.price_adjustment || 0),
+          stock: String(v.stock || 0),
+          is_active: v.is_active ?? true,
+        })));
+      }
+      setVariationsLoaded(true);
+      return data || [];
+    },
+    enabled: !!product?.id,
+  });
+
+  // If creating new product, mark loaded
+  if (!product && !variationsLoaded) setVariationsLoaded(true);
+
+  const addVariation = () => {
+    setVariations(prev => [...prev, { variation_type: '', variation_value: '', price_adjustment: '0', stock: '0', is_active: true }]);
+  };
+
+  const removeVariation = (index: number) => {
+    setVariations(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateVariation = (index: number, field: string, value: any) => {
+    setVariations(prev => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!name.trim()) throw new Error('اسم المنتج مطلوب');
@@ -530,12 +578,42 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         images,
         main_image_index: mainImageIndex,
       };
+
+      let productId = product?.id;
+
       if (product) {
         const { error } = await supabase.from('products').update(payload).eq('id', product.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('products').insert(payload);
+        const { data, error } = await supabase.from('products').insert(payload).select().single();
         if (error) throw error;
+        productId = data.id;
+      }
+
+      // Save variations
+      if (productId) {
+        // Delete existing variations not in our list
+        const existingIds = variations.filter(v => v.id).map(v => v.id!);
+        if (product?.id) {
+          await supabase.from('product_variations').delete().eq('product_id', productId).not('id', 'in', `(${existingIds.join(',')})`);
+        }
+
+        for (const v of variations) {
+          if (!v.variation_type.trim() || !v.variation_value.trim()) continue;
+          const varPayload = {
+            product_id: productId,
+            variation_type: v.variation_type.trim(),
+            variation_value: v.variation_value.trim(),
+            price_adjustment: Number(v.price_adjustment) || 0,
+            stock: Number(v.stock) || 0,
+            is_active: v.is_active,
+          };
+          if (v.id) {
+            await supabase.from('product_variations').update(varPayload).eq('id', v.id);
+          } else {
+            await supabase.from('product_variations').insert(varPayload);
+          }
+        }
       }
     },
     onSuccess: () => {
@@ -549,13 +627,8 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-
     const oversized = files.find(f => f.size > 5 * 1024 * 1024);
-    if (oversized) {
-      toast({ title: 'حجم الصورة كبير جداً (الحد الأقصى 5MB)', variant: 'destructive' });
-      return;
-    }
-
+    if (oversized) { toast({ title: 'حجم الصورة كبير جداً (الحد الأقصى 5MB)', variant: 'destructive' }); return; }
     setUploading(true);
     try {
       const newUrls: string[] = [];
@@ -620,7 +693,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
 
         {images.length > 0 ? (
           <>
-            <p className="font-cairo text-xs text-muted-foreground">انقر على النجمة لاختيار الصورة الرئيسية التي ستظهر في الصفحة الرئيسية وقائمة المنتجات</p>
+            <p className="font-cairo text-xs text-muted-foreground">انقر على النجمة لاختيار الصورة الرئيسية</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {images.map((url, idx) => (
                 <div key={idx} className={`relative group rounded-xl overflow-hidden border-2 transition-all ${idx === mainImageIndex ? 'border-primary shadow-md' : 'border-transparent hover:border-muted-foreground/20'}`}>
@@ -701,6 +774,82 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ─── Variations Section ─── */}
+      <div className="bg-card border rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
+              <Tag className="w-4 h-4 text-secondary" />
+            </div>
+            المتغيرات (ألوان، مقاسات...)
+          </h3>
+          <Button variant="outline" size="sm" onClick={addVariation} className="font-cairo gap-1.5">
+            <Plus className="w-4 h-4" /> إضافة متغير
+          </Button>
+        </div>
+
+        {variations.length === 0 ? (
+          <div className="border-2 border-dashed border-muted-foreground/20 rounded-xl py-8 text-center">
+            <Tag className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="font-cairo text-muted-foreground text-sm">لا توجد متغيرات — أضف ألوان أو مقاسات أو أنواع</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {variations.map((v, idx) => (
+              <div key={idx} className="border rounded-xl p-4 space-y-3 bg-muted/20">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="font-cairo text-xs">النوع (مثل: اللون، المقاس)</Label>
+                    <Input
+                      value={v.variation_type}
+                      onChange={e => updateVariation(idx, 'variation_type', e.target.value)}
+                      placeholder="اللون"
+                      className="font-cairo mt-1 h-9 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="font-cairo text-xs">القيمة (مثل: أحمر، XL)</Label>
+                    <Input
+                      value={v.variation_value}
+                      onChange={e => updateVariation(idx, 'variation_value', e.target.value)}
+                      placeholder="أحمر"
+                      className="font-cairo mt-1 h-9 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="font-cairo text-xs">فرق السعر (دج)</Label>
+                    <Input
+                      type="number"
+                      value={v.price_adjustment}
+                      onChange={e => updateVariation(idx, 'price_adjustment', e.target.value)}
+                      placeholder="0"
+                      className="font-roboto mt-1 h-9 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="font-cairo text-xs">المخزون</Label>
+                    <Input
+                      type="number"
+                      value={v.stock}
+                      onChange={e => updateVariation(idx, 'stock', e.target.value)}
+                      placeholder="0"
+                      className="font-roboto mt-1 h-9 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeVariation(idx)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Actions */}

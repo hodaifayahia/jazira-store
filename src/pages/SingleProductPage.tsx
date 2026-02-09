@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCart } from '@/contexts/CartContext';
+import { useCart, type CartItemVariation } from '@/contexts/CartContext';
 import { formatPrice, formatDate } from '@/lib/format';
 import { calculateShippingForOrder } from '@/lib/shipping';
 import { useToast } from '@/hooks/use-toast';
@@ -92,6 +92,34 @@ export default function SingleProductPage() {
     },
   });
 
+  const { data: variations } = useQuery({
+    queryKey: ['product-variations', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_variations')
+        .select('*')
+        .eq('product_id', id!)
+        .eq('is_active', true)
+        .order('variation_type');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Group variations by type
+  const variationGroups = useMemo(() => {
+    if (!variations || variations.length === 0) return {};
+    const groups: Record<string, typeof variations> = {};
+    variations.forEach(v => {
+      if (!groups[v.variation_type]) groups[v.variation_type] = [];
+      groups[v.variation_type].push(v);
+    });
+    return groups;
+  }, [variations]);
+
+  const [selectedVariations, setSelectedVariations] = useState<Record<string, string>>({});
+
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
@@ -158,9 +186,35 @@ export default function SingleProductPage() {
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : 0;
 
+  // Build selected variation for cart
+  const selectedVariationForCart: CartItemVariation | undefined = (() => {
+    const types = Object.keys(variationGroups);
+    if (types.length === 0) return undefined;
+    // Use the first selected variation only (simplification)
+    for (const type of types) {
+      const value = selectedVariations[type];
+      if (value) {
+        const v = variationGroups[type]?.find(vr => vr.variation_value === value);
+        if (v) return { type: v.variation_type, value: v.variation_value, priceAdjustment: Number(v.price_adjustment) || 0 };
+      }
+    }
+    return undefined;
+  })();
+
+  const priceAdjustment = selectedVariationForCart?.priceAdjustment || 0;
+  const effectivePrice = Number(product.price) + priceAdjustment;
+
   const handleAdd = () => {
     for (let i = 0; i < qty; i++) {
-      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: Number(product.price),
+        image: images[0] || '',
+        stock: product.stock ?? 0,
+        shippingPrice: Number(product.shipping_price) || 0,
+        variation: selectedVariationForCart,
+      });
     }
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
@@ -174,7 +228,7 @@ export default function SingleProductPage() {
   const productShippingRate = Number(product.shipping_price) || 0;
   const shippingRate = productShippingRate > 0 ? productShippingRate : wilayaBaseRate;
   const shippingCost = shippingRate * qty;
-  const itemSubtotal = Number(product.price) * qty;
+  const itemSubtotal = effectivePrice * qty;
   const orderTotal = itemSubtotal + shippingCost;
 
   const baridimobEnabled = settings?.baridimob_enabled === 'true';
@@ -341,12 +395,53 @@ export default function SingleProductPage() {
               </div>
             )}
 
-            <p className="font-roboto font-bold text-3xl text-primary">{formatPrice(Number(product.price))}</p>
+            <p className="font-roboto font-bold text-3xl text-primary">
+              {formatPrice(effectivePrice)}
+              {priceAdjustment !== 0 && (
+                <span className="text-base text-muted-foreground line-through mr-2">{formatPrice(Number(product.price))}</span>
+              )}
+            </p>
 
             {outOfStock ? (
               <Badge variant="destructive" className="font-cairo">غير متوفر حالياً</Badge>
             ) : (
               <p className="font-cairo text-sm text-primary">متوفر في المخزون ({product.stock} قطعة)</p>
+            )}
+
+            {/* Variation Selector */}
+            {Object.keys(variationGroups).length > 0 && (
+              <div className="space-y-3 pt-2">
+                {Object.entries(variationGroups).map(([type, vars]) => (
+                  <div key={type}>
+                    <Label className="font-cairo font-semibold text-sm mb-2 block">{type}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {vars.map(v => {
+                        const isSelected = selectedVariations[type] === v.variation_value;
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => setSelectedVariations(prev => ({ ...prev, [type]: isSelected ? '' : v.variation_value }))}
+                            className={`px-4 py-2 rounded-xl border text-sm font-cairo font-medium transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border hover:border-primary/30 text-foreground'
+                            } ${(v.stock ?? 0) <= 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            disabled={(v.stock ?? 0) <= 0}
+                          >
+                            {v.variation_value}
+                            {Number(v.price_adjustment) > 0 && (
+                              <span className="font-roboto text-xs text-muted-foreground mr-1">(+{formatPrice(Number(v.price_adjustment))})</span>
+                            )}
+                            {Number(v.price_adjustment) < 0 && (
+                              <span className="font-roboto text-xs text-primary mr-1">({formatPrice(Number(v.price_adjustment))})</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {product.description && (
