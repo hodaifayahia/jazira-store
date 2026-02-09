@@ -37,7 +37,7 @@ export default function ProductCard({ id, name, price, image, category, stock, s
     e.stopPropagation();
     setCheckoutIntent({
       type: 'direct',
-      items: [{ id, name, price, image, stock, quantity: 1 }],
+      items: [{ id, name, price, image, stock, quantity: 1, shippingPrice }],
     });
     navigate('/checkout');
   };
