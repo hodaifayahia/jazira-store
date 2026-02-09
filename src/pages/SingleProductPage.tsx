@@ -180,7 +180,10 @@ export default function SingleProductPage() {
     );
   }
 
-  const images = product.images || [];
+  const productImages = product.images || [];
+  // Merge variation images into gallery (deduplicated)
+  const variationImages = (variations || []).map(v => v.image_url).filter((url): url is string => !!url);
+  const images = [...productImages, ...variationImages.filter(url => !productImages.includes(url))];
   const outOfStock = (product.stock ?? 0) <= 0;
   const avgRating = reviews && reviews.length > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
