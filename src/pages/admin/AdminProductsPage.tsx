@@ -660,7 +660,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             price_adjustment: Number(variationPriceAdj[o.id] || 0),
             stock: Number(variationStock[o.id] || 0),
             is_active: true,
-            image_url: null,
+            image_url: variationImages[o.id] || null,
           }));
           const { error } = await supabase.from('product_variations').insert(inserts);
           if (error) throw error;
