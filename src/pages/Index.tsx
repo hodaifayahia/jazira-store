@@ -94,8 +94,8 @@ export default function IndexPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-transparent" />
         </div>
 
-        <div className="container relative z-10 py-20 md:py-28 lg:py-36">
-          <div className="max-w-xl space-y-6">
+        <div className="container relative z-10 py-20 md:py-28 lg:py-36 flex justify-center">
+          <div className="max-w-2xl text-center space-y-6">
             <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/20 backdrop-blur-sm rounded-full px-4 py-1.5 animate-fade-in">
               🇩🇿 أفضل المنتجات في الجزائر
             </span>
@@ -103,12 +103,12 @@ export default function IndexPage() {
               تسوّق بثقة مع{' '}
               <span className="text-primary">DZ Store</span>
             </h1>
-            <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
               أفضل المنتجات المنزلية، الزينة والإكسسوارات بأسعار مناسبة مع التوصيل لجميع الولايات.
             </p>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex gap-2 max-w-md animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            <form onSubmit={handleSearch} className="flex gap-2 max-w-md mx-auto animate-fade-in" style={{ animationDelay: '0.3s' }}>
               <div className="relative flex-1 group">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
                 <Input
@@ -123,7 +123,7 @@ export default function IndexPage() {
               </Button>
             </form>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
               <Link to="/products">
                 <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg hover:scale-[1.02] transition-all">
                   تسوّق الآن
