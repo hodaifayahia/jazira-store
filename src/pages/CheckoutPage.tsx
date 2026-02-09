@@ -70,7 +70,24 @@ export default function CheckoutPage() {
       toast({ title: 'خطأ', description: 'كود الخصم منتهي الصلاحية', variant: 'destructive' });
       return;
     }
-    const discountVal = data.discount_type === 'percentage' ? subtotal * Number(data.discount_value) / 100 : Number(data.discount_value);
+
+    // Check if coupon is limited to specific products
+    const { data: couponProds } = await supabase
+      .from('coupon_products')
+      .select('product_id')
+      .eq('coupon_id', data.id);
+
+    let eligibleSubtotal = subtotal;
+    if (couponProds && couponProds.length > 0) {
+      const eligibleIds = new Set((couponProds as { product_id: string }[]).map(cp => cp.product_id));
+      eligibleSubtotal = items
+        .filter(item => eligibleIds.has(item.id))
+        .reduce((sum, item) => sum + item.price * item.quantity, 0);
+    }
+
+    const discountVal = data.discount_type === 'percentage'
+      ? eligibleSubtotal * Number(data.discount_value) / 100
+      : Math.min(Number(data.discount_value), eligibleSubtotal);
     setDiscount(discountVal);
     setCouponApplied(true);
     toast({ title: 'تم تطبيق الخصم', description: `خصم ${formatPrice(discountVal)}` });
