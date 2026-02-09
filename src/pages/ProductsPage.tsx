@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ShoppingBag, Zap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import ProductCard from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/LoadingSkeleton';
 import { useCategories } from '@/hooks/useCategories';
 import { formatPrice } from '@/lib/format';
+import { useCart } from '@/contexts/CartContext';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'الأحدث' },
@@ -33,6 +34,7 @@ export default function ProductsPage() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const { items, subtotal } = useCart();
 
   const { data: categoriesData } = useCategories();
   const categoryNames = categoriesData?.map(c => c.name) || [];
@@ -178,7 +180,7 @@ export default function ProductsPage() {
   );
 
   return (
-    <div className="container py-8">
+    <div className="container py-8 pb-24">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-cairo font-bold text-3xl">المنتجات</h1>
         {/* Mobile filter trigger */}
@@ -275,6 +277,34 @@ export default function ProductsPage() {
           )}
         </div>
       </div>
+
+      {/* ─── Floating Cart Bar ─── */}
+      {items.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+          <div className="container flex items-center gap-3 py-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <ShoppingBag className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-cairo font-semibold text-sm">{items.length} منتج في السلة</p>
+                <p className="font-roboto font-bold text-primary text-sm">{formatPrice(subtotal)}</p>
+              </div>
+            </div>
+            <Link to="/cart">
+              <Button variant="outline" className="font-cairo text-sm rounded-xl h-10 shrink-0">
+                عرض السلة
+              </Button>
+            </Link>
+            <Link to="/checkout">
+              <Button className="font-cairo font-semibold text-sm gap-1.5 rounded-xl h-10 shrink-0">
+                <Zap className="w-4 h-4" />
+                إتمام الطلب
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

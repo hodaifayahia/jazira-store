@@ -1,8 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useState } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ArrowRight, Zap, Star, Send, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Zap, Star, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,9 @@ export default function SingleProductPage() {
   const qc = useQueryClient();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const actionAreaRef = useRef<HTMLDivElement>(null);
 
   // Review form state
   const [reviewName, setReviewName] = useState('');
@@ -67,6 +70,17 @@ export default function SingleProductPage() {
     },
     enabled: !!id,
   });
+
+  // Sticky bar observer
+  useEffect(() => {
+    if (!actionAreaRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(actionAreaRef.current);
+    return () => observer.disconnect();
+  }, [product]);
 
   const submitReview = useMutation({
     mutationFn: async () => {
@@ -131,8 +145,18 @@ export default function SingleProductPage() {
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
 
+  const handleDirectOrder = () => {
+    for (let i = 0; i < qty; i++) {
+      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
+    }
+    navigate('/checkout');
+  };
+
+  const goToPrevImage = () => setSelectedImage(i => (i === 0 ? images.length - 1 : i - 1));
+  const goToNextImage = () => setSelectedImage(i => (i === images.length - 1 ? 0 : i + 1));
+
   return (
-    <div className="container py-8">
+    <div className="container py-8 pb-28">
       {/* Back link */}
       <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowRight className="w-4 h-4" />
@@ -149,60 +173,106 @@ export default function SingleProductPage() {
       </nav>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Images */}
-        <div>
-          <div className="aspect-square rounded-2xl overflow-hidden bg-muted mb-3">
-            {images[selectedImage] ? (
-              <img src={images[selectedImage]} alt={product.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                <ShoppingCart className="w-16 h-16" />
-              </div>
-            )}
-          </div>
+        {/* Images - Enhanced Gallery */}
+        <div className="flex flex-col-reverse md:flex-row gap-3">
+          {/* Thumbnails - vertical on desktop, horizontal on mobile */}
           {images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[500px] md:w-20 shrink-0">
               {images.map((img, i) => (
-                <button key={i} onClick={() => setSelectedImage(i)} className={`w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-colors ${i === selectedImage ? 'border-primary' : 'border-transparent hover:border-muted-foreground/30'}`}>
+                <button
+                  key={i}
+                  onClick={() => setSelectedImage(i)}
+                  className={`w-16 h-16 md:w-full md:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
+                    i === selectedImage ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-muted-foreground/30'
+                  }`}
+                >
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
           )}
+
+          {/* Main image with zoom & arrows */}
+          <div className="flex-1 relative group">
+            <div
+              className="aspect-square rounded-2xl overflow-hidden bg-muted cursor-zoom-in"
+              onMouseEnter={() => setIsZoomed(true)}
+              onMouseLeave={() => setIsZoomed(false)}
+            >
+              {images[selectedImage] ? (
+                <img
+                  src={images[selectedImage]}
+                  alt={product.name}
+                  className={`w-full h-full object-cover transition-transform duration-500 ${isZoomed ? 'scale-150' : 'scale-100'}`}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                  <ShoppingCart className="w-16 h-16" />
+                </div>
+              )}
+            </div>
+
+            {/* Image counter */}
+            {images.length > 1 && (
+              <span className="absolute top-3 left-3 bg-foreground/60 backdrop-blur-sm text-background text-xs font-roboto font-bold rounded-full px-2.5 py-1">
+                {selectedImage + 1}/{images.length}
+              </span>
+            )}
+
+            {/* Navigation arrows */}
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={goToNextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-background"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={goToPrevImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-background"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Info */}
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {(Array.isArray(product.category) ? product.category : [product.category]).map((c: string) => (
-              <Badge key={c} className="font-cairo bg-secondary text-secondary-foreground">{c}</Badge>
-            ))}
-          </div>
-          <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
-
-          {/* Rating summary */}
-          {reviews && reviews.length > 0 && (
-            <div className="flex items-center gap-2">
-              <StarRating value={Math.round(avgRating)} readonly />
-              <span className="font-roboto font-bold text-sm">{avgRating.toFixed(1)}</span>
-              <span className="font-cairo text-sm text-muted-foreground">({reviews.length} تقييم)</span>
+          <div className="bg-card border rounded-2xl p-6 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {(Array.isArray(product.category) ? product.category : [product.category]).map((c: string) => (
+                <Badge key={c} className="font-cairo bg-secondary text-secondary-foreground">{c}</Badge>
+              ))}
             </div>
-          )}
+            <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
 
-          <p className="font-roboto font-bold text-3xl text-primary">{formatPrice(Number(product.price))}</p>
+            {/* Rating summary */}
+            {reviews && reviews.length > 0 && (
+              <div className="flex items-center gap-2">
+                <StarRating value={Math.round(avgRating)} readonly />
+                <span className="font-roboto font-bold text-sm">{avgRating.toFixed(1)}</span>
+                <span className="font-cairo text-sm text-muted-foreground">({reviews.length} تقييم)</span>
+              </div>
+            )}
 
-          {outOfStock ? (
-            <Badge variant="destructive" className="font-cairo">غير متوفر حالياً</Badge>
-          ) : (
-            <p className="font-cairo text-sm text-primary">متوفر في المخزون ({product.stock} قطعة)</p>
-          )}
+            <p className="font-roboto font-bold text-3xl text-primary">{formatPrice(Number(product.price))}</p>
 
-          {product.description && (
-            <p className="font-cairo text-muted-foreground leading-relaxed">{product.description}</p>
-          )}
+            {outOfStock ? (
+              <Badge variant="destructive" className="font-cairo">غير متوفر حالياً</Badge>
+            ) : (
+              <p className="font-cairo text-sm text-primary">متوفر في المخزون ({product.stock} قطعة)</p>
+            )}
+
+            {product.description && (
+              <p className="font-cairo text-muted-foreground leading-relaxed">{product.description}</p>
+            )}
+          </div>
 
           {!outOfStock && (
-            <div className="space-y-3 pt-4">
+            <div ref={actionAreaRef} className="bg-card border rounded-2xl p-6 space-y-3">
               <div className="flex items-center gap-4">
                 <div className="flex items-center border rounded-xl">
                   <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))} className="rounded-xl"><Minus className="w-4 h-4" /></Button>
@@ -215,12 +285,7 @@ export default function SingleProductPage() {
                 </Button>
               </div>
               <Button
-                onClick={() => {
-                  for (let i = 0; i < qty; i++) {
-                    addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
-                  }
-                  navigate('/checkout');
-                }}
+                onClick={handleDirectOrder}
                 className="w-full font-cairo font-semibold gap-2 rounded-xl"
               >
                 <Zap className="w-4 h-4" />
@@ -231,31 +296,15 @@ export default function SingleProductPage() {
         </div>
       </div>
 
-      {/* ─── Rich Product Details ─── */}
+      {/* ─── Rich Product Details - Masonry Grid ─── */}
       {product.description && images.length > 1 && (
         <section className="mt-16">
-          <h2 className="font-cairo font-bold text-2xl mb-8 text-foreground">تفاصيل المنتج</h2>
-          <div className="space-y-12">
+          <h2 className="font-cairo font-bold text-2xl mb-4 text-foreground">تفاصيل المنتج</h2>
+          <p className="font-cairo text-muted-foreground leading-relaxed mb-6 max-w-2xl">{product.description}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {images.map((img, i) => (
-              <div key={i} className={`flex flex-col md:flex-row gap-8 items-center ${i % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
-                <div className="w-full md:w-1/2">
-                  <img src={img} alt={`${product.name} - ${i + 1}`} className="rounded-2xl w-full aspect-[4/3] object-cover" />
-                </div>
-                <div className="w-full md:w-1/2">
-                  {i === 0 && (
-                    <div>
-                      <h3 className="font-cairo font-bold text-xl mb-3">{product.name}</h3>
-                      <p className="font-cairo text-muted-foreground leading-relaxed">{product.description}</p>
-                    </div>
-                  )}
-                  {i > 0 && (
-                    <div className="bg-muted/50 rounded-2xl p-6">
-                      <p className="font-cairo text-muted-foreground leading-relaxed">
-                        صورة توضيحية {i + 1} للمنتج
-                      </p>
-                    </div>
-                  )}
-                </div>
+              <div key={i} className={`rounded-2xl overflow-hidden shadow-sm border ${i === 0 ? 'md:col-span-2' : ''}`}>
+                <img src={img} alt={`${product.name} - ${i + 1}`} className="w-full aspect-[4/3] object-cover hover:scale-105 transition-transform duration-500" />
               </div>
             ))}
           </div>
@@ -340,6 +389,35 @@ export default function SingleProductPage() {
           </div>
         )}
       </section>
+
+      {/* ─── Sticky Bottom Bar ─── */}
+      {!outOfStock && showStickyBar && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+          <div className="container flex items-center gap-3 py-3">
+            <div className="flex-1 min-w-0 hidden sm:block">
+              <p className="font-cairo font-semibold text-sm truncate">{product.name}</p>
+              <p className="font-roboto font-bold text-primary text-sm">{formatPrice(Number(product.price))}</p>
+            </div>
+            <div className="flex items-center border rounded-xl shrink-0">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setQty(q => Math.max(1, q - 1))}>
+                <Minus className="w-3.5 h-3.5" />
+              </Button>
+              <span className="w-8 text-center font-roboto font-bold text-sm">{qty}</span>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))}>
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+            <Button onClick={handleAdd} variant="outline" className="font-cairo text-sm gap-1.5 rounded-xl h-10 shrink-0">
+              <ShoppingCart className="w-4 h-4" />
+              <span className="hidden sm:inline">سلة</span>
+            </Button>
+            <Button onClick={handleDirectOrder} className="font-cairo font-semibold text-sm gap-1.5 rounded-xl h-10 flex-1 sm:flex-none sm:px-6">
+              <Zap className="w-4 h-4" />
+              اطلب الآن
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
