@@ -14,6 +14,8 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
+import AuthPage from "./pages/AuthPage";
+import CustomerDashboardPage from "./pages/CustomerDashboardPage";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
@@ -53,6 +55,8 @@ const App = () => (
             <Route path="/checkout" element={<PublicLayout><CheckoutPage /></PublicLayout>} />
             <Route path="/order-confirmation/:orderNumber" element={<PublicLayout><OrderConfirmationPage /></PublicLayout>} />
             <Route path="/track" element={<PublicLayout><TrackOrderPage /></PublicLayout>} />
+            <Route path="/auth" element={<PublicLayout><AuthPage /></PublicLayout>} />
+            <Route path="/dashboard" element={<PublicLayout><CustomerDashboardPage /></PublicLayout>} />
 
             {/* Admin */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
