@@ -92,6 +92,34 @@ export default function SingleProductPage() {
     },
   });
 
+  const { data: variations } = useQuery({
+    queryKey: ['product-variations', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_variations')
+        .select('*')
+        .eq('product_id', id!)
+        .eq('is_active', true)
+        .order('variation_type');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Group variations by type
+  const variationGroups = useMemo(() => {
+    if (!variations || variations.length === 0) return {};
+    const groups: Record<string, typeof variations> = {};
+    variations.forEach(v => {
+      if (!groups[v.variation_type]) groups[v.variation_type] = [];
+      groups[v.variation_type].push(v);
+    });
+    return groups;
+  }, [variations]);
+
+  const [selectedVariations, setSelectedVariations] = useState<Record<string, string>>({});
+
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
