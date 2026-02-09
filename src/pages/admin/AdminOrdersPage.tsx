@@ -424,7 +424,7 @@ export default function AdminOrdersPage() {
                   <div><span className="text-muted-foreground">الاسم:</span> {selectedOrder.customer_name}</div>
                   <div><span className="text-muted-foreground">الهاتف:</span> <span className="font-roboto">{selectedOrder.customer_phone}</span></div>
                   <div><span className="text-muted-foreground">الولاية:</span> {(selectedOrder as any).wilayas?.name}</div>
-                  <div><span className="text-muted-foreground">الدفع:</span> {selectedOrder.payment_method === 'baridimob' ? 'بريدي موب' : 'فليكسي'}</div>
+                  <div><span className="text-muted-foreground">الدفع:</span> {selectedOrder.payment_method === 'baridimob' ? 'بريدي موب' : selectedOrder.payment_method === 'flexy' ? 'فليكسي' : selectedOrder.payment_method === 'cod' ? 'الدفع عند التسليم' : selectedOrder.payment_method}</div>
                 </div>
                 {selectedOrder.address && <div className="font-cairo"><span className="text-muted-foreground">العنوان:</span> {selectedOrder.address}</div>}
                 {selectedOrder.payment_receipt_url && (
