@@ -1,24 +1,39 @@
 
 
-## Single Product Page Improvements
+## Checkout Page Enhancements
 
-The page at `/product/:id` already exists with most functionality. Here are the specific changes needed to fully match your requirements:
+The checkout page at `/checkout` already exists with most core functionality. This plan covers the gaps between the current implementation and your requirements.
 
-### Changes to `src/pages/SingleProductPage.tsx`
+### Changes (all in `src/pages/CheckoutPage.tsx`)
 
-1. **Fix data fetching**: Replace `.single()` with `.maybeSingle()` to gracefully handle missing products instead of throwing an error.
+**1. Inline Form Validation**
+- Add error state variables for each field (nameError, phoneError, wilayaError, paymentError)
+- Show red error text below each field when validation fails
+- Validate name minimum 3 characters with message "الاسم يجب أن يكون 3 أحرف على الأقل"
+- Validate phone with regex, show "رقم الهاتف غير صحيح" inline
+- Clear errors on field change
 
-2. **Add back link**: Add a "العودة إلى المنتجات" link with an arrow icon at the top of the page (above the breadcrumb).
+**2. Remove Coupon Button**
+- Add an "x" button next to the discount line in the order summary
+- Clicking it resets discount to 0, couponApplied to false, and clears couponCode
 
-3. **Update toast message**: Change the success toast to show "تمت الإضافة إلى السلة" with a checkmark emoji.
+**3. File Upload Improvements**
+- Validate file size (max 5MB) on selection, show error toast if exceeded
+- Restrict accepted file types to `.jpg,.png,.pdf` for baridimob and `.jpg,.png` for flexy
+- Show a file preview after upload: image thumbnail for images, filename for PDFs
 
-4. **Improve 404 state**: Add a link back to `/products` in the "product not found" message so users can navigate back easily.
+**4. Flexy Step-by-Step Instructions**
+- Add numbered Arabic instructions below the flexy details explaining how to send a Flexy recharge
 
-5. **Fix add-to-cart logic**: Currently calls `addItem` in a loop (once per quantity). Will simplify to pass the full quantity properly via the cart context.
+**5. Minor UI Polish**
+- Change shipping display from "—" to "اختر الولاية" when no wilaya selected
+- Update copy toast to "تم النسخ ✅"
+- Add a Loader2 spinner icon to the submit button during submission
 
 ### Technical Details
 
-- Only `src/pages/SingleProductPage.tsx` will be modified
-- No changes to the cart context, home page, products page, or any other files
-- All existing features (image gallery with thumbnails, quantity selector, category badge, stock indicator, loading skeleton, breadcrumb) are preserved
-
+- Only `src/pages/CheckoutPage.tsx` is modified
+- No changes to CartContext, App.tsx, or any other pages
+- Import `Loader2` and `X` from lucide-react for spinner and remove button icons
+- All validation is client-side with inline Arabic error messages
+- File preview uses `URL.createObjectURL` for image files
