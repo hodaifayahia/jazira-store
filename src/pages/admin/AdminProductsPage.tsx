@@ -618,7 +618,28 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
     });
   };
 
-  const saveMutation = useMutation({
+  const handleVariationImageUpload = async (optionId: string, file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'حجم الصورة كبير جداً (الحد الأقصى 5MB)', variant: 'destructive' });
+      return;
+    }
+    setUploadingVariationImage(optionId);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `variations/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('products').upload(path, file);
+      if (error) throw error;
+      const { data } = supabase.storage.from('products').getPublicUrl(path);
+      setVariationImages(prev => ({ ...prev, [optionId]: data.publicUrl }));
+      toast({ title: 'تم رفع صورة المتغير ✅' });
+    } catch {
+      toast({ title: 'فشل رفع الصورة', variant: 'destructive' });
+    } finally {
+      setUploadingVariationImage(null);
+    }
+  };
+
+
     mutationFn: async () => {
       if (!name.trim()) throw new Error('اسم المنتج مطلوب');
       if (!price || Number(price) <= 0) throw new Error('السعر مطلوب');
