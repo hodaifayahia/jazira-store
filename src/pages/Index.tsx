@@ -123,7 +123,7 @@ export default function IndexPage() {
               </Button>
             </form>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
               <Link to="/products">
                 <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg hover:scale-[1.02] transition-all">
                   تسوّق الآن
