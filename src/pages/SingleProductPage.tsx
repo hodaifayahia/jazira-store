@@ -62,10 +62,12 @@ export default function SingleProductPage() {
 
   const images = product.images || [];
   const outOfStock = (product.stock ?? 0) <= 0;
+  const mainIdx = product.main_image_index ?? 0;
+  const categories = Array.isArray(product.category) ? product.category : [product.category];
 
   const handleAdd = () => {
     for (let i = 0; i < qty; i++) {
-      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
+      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[mainIdx] || images[0] || '', stock: product.stock ?? 0, shippingPrice: Number(product.shipping_price ?? 0) });
     }
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
