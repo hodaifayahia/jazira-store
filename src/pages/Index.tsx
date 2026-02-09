@@ -62,14 +62,18 @@ export default function IndexPage() {
       <section className="container py-12">
         <h2 className="font-cairo font-bold text-2xl text-foreground mb-6">تصفح حسب الفئة</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {categories.map(cat => (
-            <Link key={cat.name} to={`/products?category=${encodeURIComponent(cat.name)}`}>
-              <div className={`rounded-lg p-6 ${cat.color} hover:shadow-md transition-all duration-200 text-center group`}>
-                <cat.icon className="w-10 h-10 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="font-cairo font-bold text-lg">{cat.name}</h3>
-              </div>
-            </Link>
-          ))}
+          {(categoriesData || []).map((cat, i) => {
+            const Icon = ICON_MAP[cat.icon] || Home;
+            const color = COLOR_CLASSES[i % COLOR_CLASSES.length];
+            return (
+              <Link key={cat.name} to={`/products?category=${encodeURIComponent(cat.name)}`}>
+                <div className={`rounded-lg p-6 ${color} hover:shadow-md transition-all duration-200 text-center group`}>
+                  <Icon className="w-10 h-10 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+                  <h3 className="font-cairo font-bold text-lg">{cat.name}</h3>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
