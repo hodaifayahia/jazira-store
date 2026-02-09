@@ -926,6 +926,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                         <thead className="bg-muted/50">
                           <tr>
                             <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المتغير</th>
+                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">الصورة</th>
                             <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">فرق السعر (دج)</th>
                             <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المخزون</th>
                             <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-10"></th>
@@ -940,6 +941,43 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                                     <div className="w-6 h-6 rounded-full border border-muted-foreground/30 shrink-0" style={{ backgroundColor: o.color_code }} />
                                   )}
                                   <span className="font-cairo font-medium">{o.variation_value}</span>
+                                </div>
+                              </td>
+                              <td className="p-2.5">
+                                <div className="flex items-center gap-2">
+                                  {variationImages[o.id] ? (
+                                    <div className="relative group/img">
+                                      <img src={variationImages[o.id]} alt="" className="w-10 h-10 rounded-lg object-cover border" />
+                                      <button
+                                        type="button"
+                                        onClick={() => setVariationImages(prev => { const n = { ...prev }; delete n[o.id]; return n; })}
+                                        className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <label className="cursor-pointer">
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={e => {
+                                          const file = e.target.files?.[0];
+                                          if (file) handleVariationImageUpload(o.id, file);
+                                          e.target.value = '';
+                                        }}
+                                        disabled={uploadingVariationImage === o.id}
+                                      />
+                                      <div className="w-10 h-10 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors">
+                                        {uploadingVariationImage === o.id ? (
+                                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                        ) : (
+                                          <Upload className="w-3.5 h-3.5 text-muted-foreground/50" />
+                                        )}
+                                      </div>
+                                    </label>
+                                  )}
                                 </div>
                               </td>
                               <td className="p-2.5">
