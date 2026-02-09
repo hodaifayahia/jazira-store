@@ -18,7 +18,7 @@ export default function SingleProductPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -62,10 +62,12 @@ export default function SingleProductPage() {
 
   const images = product.images || [];
   const outOfStock = (product.stock ?? 0) <= 0;
+  const mainIdx = product.main_image_index ?? 0;
+  const categories = Array.isArray(product.category) ? product.category : [product.category];
 
   const handleAdd = () => {
     for (let i = 0; i < qty; i++) {
-      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
+      addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[mainIdx] || images[0] || '', stock: product.stock ?? 0, shippingPrice: Number(product.shipping_price ?? 0) });
     }
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
@@ -77,9 +79,10 @@ export default function SingleProductPage() {
         id: product.id,
         name: product.name,
         price: Number(product.price),
-        image: images[0] || '',
+        image: images[mainIdx] || images[0] || '',
         stock: product.stock ?? 0,
         quantity: qty,
+        shippingPrice: Number(product.shipping_price ?? 0),
       }],
     });
     navigate('/checkout');
@@ -103,8 +106,8 @@ export default function SingleProductPage() {
       <div className="grid md:grid-cols-2 gap-8">
         <div>
           <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3">
-            {images[selectedImage] ? (
-              <img src={images[selectedImage]} alt={product.name} className="w-full h-full object-cover" />
+            {images[(selectedImage ?? mainIdx)] ? (
+              <img src={images[(selectedImage ?? mainIdx)]} alt={product.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 <ShoppingCart className="w-16 h-16" />
@@ -114,7 +117,7 @@ export default function SingleProductPage() {
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
               {images.map((img, i) => (
-                <button key={i} onClick={() => setSelectedImage(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 shrink-0 ${i === selectedImage ? 'border-primary' : 'border-transparent'}`}>
+                <button key={i} onClick={() => setSelectedImage(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 shrink-0 ${i === (selectedImage ?? mainIdx) ? 'border-primary' : 'border-transparent'}`}>
                   <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                 </button>
               ))}
@@ -123,7 +126,11 @@ export default function SingleProductPage() {
         </div>
 
         <div className="space-y-4">
-          <Badge className="font-cairo bg-secondary text-secondary-foreground">{product.category}</Badge>
+          <div className="flex flex-wrap gap-1 mb-1">
+            {categories.map(cat => (
+              <Badge key={cat} className="font-cairo bg-secondary text-secondary-foreground">{cat}</Badge>
+            ))}
+          </div>
           <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
           <p className="font-roboto font-bold text-2xl text-primary">{formatPrice(Number(product.price))}</p>
           

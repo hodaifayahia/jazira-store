@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Loader2, ImageIcon, Package, Star } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { TableSkeleton } from '@/components/LoadingSkeleton';
 import { useCategories } from '@/hooks/useCategories';
@@ -24,7 +24,7 @@ export default function AdminProductsPage() {
   const categoryNames = categoriesSettings?.map(c => c.name) || [];
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', description: '', price: '', category: '', stock: '0', is_active: true });
+  const [form, setForm] = useState({ name: '', description: '', price: '', categories: [] as string[], stock: '0', is_active: true, shippingPrice: '0', mainImageIndex: 0 });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -60,10 +60,12 @@ export default function AdminProductsPage() {
         name: form.name,
         description: form.description,
         price: Number(form.price),
-        category: form.category,
+        category: form.categories,
         stock: Number(form.stock),
         is_active: form.is_active,
         images: imageUrls,
+        shipping_price: Number(form.shippingPrice),
+        main_image_index: form.mainImageIndex,
       };
       if (editing) {
         const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
@@ -111,7 +113,7 @@ export default function AdminProductsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', description: '', price: '', category: categoryNames[0] || '', stock: '0', is_active: true });
+    setForm({ name: '', description: '', price: '', categories: [], stock: '0', is_active: true, shippingPrice: '0', mainImageIndex: 0 });
     setImageFiles([]);
     setImagePreviews([]);
     setExistingImages([]);
@@ -120,7 +122,17 @@ export default function AdminProductsPage() {
 
   const openEdit = (p: any) => {
     setEditing(p);
-    setForm({ name: p.name, description: p.description || '', price: String(p.price), category: p.category, stock: String(p.stock ?? 0), is_active: p.is_active !== false });
+    const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
+    setForm({
+      name: p.name,
+      description: p.description || '',
+      price: String(p.price),
+      categories: cats,
+      stock: String(p.stock ?? 0),
+      is_active: p.is_active !== false,
+      shippingPrice: String(p.shipping_price ?? 0),
+      mainImageIndex: p.main_image_index ?? 0,
+    });
     setImageFiles([]);
     setImagePreviews([]);
     setExistingImages(p.images || []);
@@ -135,6 +147,15 @@ export default function AdminProductsPage() {
   };
 
   const removeNewImage = (index: number) => {
+    // Adjust mainImageIndex if needed
+    const totalExisting = existingImages.length;
+    const globalIndex = totalExisting + index;
+    setForm(f => {
+      let newMain = f.mainImageIndex;
+      if (f.mainImageIndex === globalIndex) newMain = 0;
+      else if (f.mainImageIndex > globalIndex) newMain = f.mainImageIndex - 1;
+      return { ...f, mainImageIndex: newMain };
+    });
     setImageFiles(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => {
       URL.revokeObjectURL(prev[index]);
@@ -143,8 +164,25 @@ export default function AdminProductsPage() {
   };
 
   const removeExistingImage = (index: number) => {
+    setForm(f => {
+      let newMain = f.mainImageIndex;
+      if (f.mainImageIndex === index) newMain = 0;
+      else if (f.mainImageIndex > index) newMain = f.mainImageIndex - 1;
+      return { ...f, mainImageIndex: newMain };
+    });
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
+
+  const toggleCategory = (cat: string) => {
+    setForm(f => ({
+      ...f,
+      categories: f.categories.includes(cat)
+        ? f.categories.filter(c => c !== cat)
+        : [...f.categories, cat],
+    }));
+  };
+
+  const allImages = [...existingImages, ...imagePreviews];
 
   return (
     <div className="space-y-4">
@@ -173,33 +211,37 @@ export default function AdminProductsPage() {
             </tr>
           </thead>
           <tbody>
-            {paginated.map(p => (
-              <tr key={p.id} className="border-b hover:bg-muted/50">
-                <td className="p-3">
-                  {p.images && p.images.length > 0 ? (
-                    <img src={p.images[0]} alt={p.name} className="w-10 h-10 rounded object-cover" />
-                  ) : (
-                    <div className="w-10 h-10 rounded bg-muted flex items-center justify-center"><ImageIcon className="w-4 h-4 text-muted-foreground" /></div>
-                  )}
-                </td>
-                <td className="p-3 font-cairo font-medium">{p.name}</td>
-                <td className="p-3 font-roboto">{formatPrice(Number(p.price))}</td>
-                <td className="p-3 font-cairo text-xs">{p.category}</td>
-                <td className="p-3 font-roboto">{p.stock}</td>
-                <td className="p-3">
-                  <Switch
-                    checked={p.is_active !== false}
-                    onCheckedChange={v => toggleActive.mutate({ id: p.id, is_active: v })}
-                  />
-                </td>
-                <td className="p-3">
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {paginated.map(p => {
+              const mainIdx = p.main_image_index ?? 0;
+              const cats = Array.isArray(p.category) ? p.category : [p.category];
+              return (
+                <tr key={p.id} className="border-b hover:bg-muted/50">
+                  <td className="p-3">
+                    {p.images && p.images.length > 0 ? (
+                      <img src={p.images[mainIdx] || p.images[0]} alt={p.name} className="w-10 h-10 rounded object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center"><ImageIcon className="w-4 h-4 text-muted-foreground" /></div>
+                    )}
+                  </td>
+                  <td className="p-3 font-cairo font-medium">{p.name}</td>
+                  <td className="p-3 font-roboto">{formatPrice(Number(p.price))}</td>
+                  <td className="p-3 font-cairo text-xs">{cats.join('، ')}</td>
+                  <td className="p-3 font-roboto">{p.stock}</td>
+                  <td className="p-3">
+                    <Switch
+                      checked={p.is_active !== false}
+                      onCheckedChange={v => toggleActive.mutate({ id: p.id, is_active: v })}
+                    />
+                  </td>
+                  <td className="p-3">
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {paginated.length === 0 && (
               <tr><td colSpan={7} className="p-8 text-center font-cairo text-muted-foreground">
                 <Package className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
@@ -245,40 +287,63 @@ export default function AdminProductsPage() {
               </div>
             </div>
             <div>
-              <Label className="font-cairo">التصنيف</Label>
-              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-                <SelectTrigger className="font-cairo mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}</SelectContent>
-              </Select>
+              <Label className="font-cairo">سعر التوصيل (دج)</Label>
+              <Input type="number" min="0" value={form.shippingPrice} onChange={e => setForm(f => ({ ...f, shippingPrice: e.target.value }))} className="font-roboto mt-1" placeholder="0 = سعر الولاية الافتراضي" />
+              <p className="text-xs text-muted-foreground font-cairo mt-1">اتركه 0 لاستخدام سعر التوصيل الافتراضي للولاية</p>
+            </div>
+            <div>
+              <Label className="font-cairo mb-2 block">التصنيفات</Label>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                {categoryNames.map(cat => (
+                  <label key={cat} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={form.categories.includes(cat)}
+                      onCheckedChange={() => toggleCategory(cat)}
+                    />
+                    <span className="font-cairo text-sm">{cat}</span>
+                  </label>
+                ))}
+                {categoryNames.length === 0 && (
+                  <p className="font-cairo text-xs text-muted-foreground col-span-2">لا توجد تصنيفات بعد</p>
+                )}
+              </div>
             </div>
             <div>
               <Label className="font-cairo">رفع الصور</Label>
               <Input type="file" multiple accept="image/*" onChange={handleFileChange} className="mt-1" />
-              {/* Existing images */}
-              {existingImages.length > 0 && (
+              {/* All images grid with main selector */}
+              {allImages.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {existingImages.map((url, i) => (
-                    <div key={url} className="relative group">
-                      <img src={url} alt="" className="w-16 h-16 rounded object-cover border" />
-                      <button onClick={() => removeExistingImage(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+                  {allImages.map((url, i) => {
+                    const isMain = i === form.mainImageIndex;
+                    const isExisting = i < existingImages.length;
+                    return (
+                      <div key={url} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => setForm(f => ({ ...f, mainImageIndex: i }))}
+                          className={`w-16 h-16 rounded object-cover border-2 overflow-hidden block ${isMain ? 'border-primary ring-2 ring-primary/30' : isExisting ? 'border-border' : 'border-primary/30'}`}
+                        >
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </button>
+                        {isMain && (
+                          <div className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                            <Star className="w-3 h-3 fill-current" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => isExisting ? removeExistingImage(i) : removeNewImage(i - existingImages.length)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-              {/* New image previews */}
-              {imagePreviews.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {imagePreviews.map((url, i) => (
-                    <div key={url} className="relative group">
-                      <img src={url} alt="" className="w-16 h-16 rounded object-cover border border-primary/30" />
-                      <button onClick={() => removeNewImage(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+              {allImages.length > 0 && (
+                <p className="text-xs text-muted-foreground font-cairo mt-1">اضغط على الصورة لتعيينها كصورة رئيسية ⭐</p>
               )}
             </div>
             <div className="flex items-center gap-2">

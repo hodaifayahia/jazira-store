@@ -15,9 +15,10 @@ interface ProductCardProps {
   image: string;
   category: string;
   stock: number;
+  shippingPrice: number;
 }
 
-export default function ProductCard({ id, name, price, image, category, stock }: ProductCardProps) {
+export default function ProductCard({ id, name, price, image, category, stock, shippingPrice }: ProductCardProps) {
   const { addItem, setCheckoutIntent } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function ProductCard({ id, name, price, image, category, stock }:
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({ id, name, price, image, stock });
+    addItem({ id, name, price, image, stock, shippingPrice });
     toast({ title: 'تمت الإضافة', description: `تمت إضافة "${name}" إلى السلة` });
   };
 
@@ -36,7 +37,7 @@ export default function ProductCard({ id, name, price, image, category, stock }:
     e.stopPropagation();
     setCheckoutIntent({
       type: 'direct',
-      items: [{ id, name, price, image, stock, quantity: 1 }],
+      items: [{ id, name, price, image, stock, quantity: 1, shippingPrice }],
     });
     navigate('/checkout');
   };
@@ -64,7 +65,7 @@ export default function ProductCard({ id, name, price, image, category, stock }:
                 <Badge variant="destructive" className="font-cairo text-sm px-3 py-1">غير متوفر</Badge>
               </div>
             )}
-            <Badge className="absolute top-2 right-2 font-cairo bg-secondary text-secondary-foreground">{category}</Badge>
+            <Badge className="absolute top-2 right-2 font-cairo bg-secondary text-secondary-foreground">{typeof category === 'string' ? category : (category as string[]).join('، ')}</Badge>
             {/* Quick view button */}
             <button
               onClick={handleQuickView}

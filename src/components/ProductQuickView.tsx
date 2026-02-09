@@ -39,10 +39,11 @@ export default function ProductQuickView({ productId, open, onOpenChange }: Prod
 
   const images = product?.images || [];
   const outOfStock = (product?.stock ?? 0) <= 0;
+  const mainIdx = product?.main_image_index ?? 0;
 
   const handleAdd = () => {
     if (!product) return;
-    addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0 });
+    addItem({ id: product.id, name: product.name, price: Number(product.price), image: images[mainIdx] || images[0] || '', stock: product.stock ?? 0, shippingPrice: Number(product.shipping_price ?? 0) });
     toast({ title: 'تمت الإضافة', description: `تمت إضافة "${product.name}" إلى السلة` });
   };
 
@@ -50,7 +51,7 @@ export default function ProductQuickView({ productId, open, onOpenChange }: Prod
     if (!product) return;
     setCheckoutIntent({
       type: 'direct',
-      items: [{ id: product.id, name: product.name, price: Number(product.price), image: images[0] || '', stock: product.stock ?? 0, quantity: 1 }],
+      items: [{ id: product.id, name: product.name, price: Number(product.price), image: images[mainIdx] || images[0] || '', stock: product.stock ?? 0, quantity: 1, shippingPrice: Number(product.shipping_price ?? 0) }],
     });
     onOpenChange(false);
     navigate('/checkout');
@@ -107,7 +108,11 @@ export default function ProductQuickView({ productId, open, onOpenChange }: Prod
 
             {/* Details */}
             <div className="w-full md:w-1/2 p-5 flex flex-col">
-              <Badge className="self-start font-cairo bg-secondary text-secondary-foreground mb-2">{product.category}</Badge>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {(Array.isArray(product.category) ? product.category : [product.category]).map((cat: string) => (
+                  <Badge key={cat} className="font-cairo bg-secondary text-secondary-foreground">{cat}</Badge>
+                ))}
+              </div>
               <h2 className="font-cairo font-bold text-xl text-foreground mb-2">{product.name}</h2>
               <span className="font-roboto font-bold text-primary text-2xl mb-3">{formatPrice(Number(product.price))}</span>
 

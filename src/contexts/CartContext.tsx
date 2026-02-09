@@ -7,6 +7,7 @@ export interface CartItem {
   image: string;
   quantity: number;
   stock: number;
+  shippingPrice: number;
 }
 
 export type CheckoutIntent =
