@@ -26,7 +26,8 @@ const SORT_OPTIONS = [
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || '';
-  const [search, setSearch] = useState('');
+  const initialSearch = searchParams.get('search') || '';
+  const [search, setSearch] = useState(initialSearch);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
   const [sort, setSort] = useState('newest');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
