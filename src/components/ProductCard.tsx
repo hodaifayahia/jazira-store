@@ -65,7 +65,7 @@ export default function ProductCard({ id, name, price, image, category, stock, s
                 <Badge variant="destructive" className="font-cairo text-sm px-3 py-1">غير متوفر</Badge>
               </div>
             )}
-            <Badge className="absolute top-2 right-2 font-cairo bg-secondary text-secondary-foreground">{category}</Badge>
+            <Badge className="absolute top-2 right-2 font-cairo bg-secondary text-secondary-foreground">{typeof category === 'string' ? category : (category as string[]).join('، ')}</Badge>
             {/* Quick view button */}
             <button
               onClick={handleQuickView}
