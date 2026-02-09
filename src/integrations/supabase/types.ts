@@ -208,6 +208,50 @@ export type Database = {
           },
         ]
       }
+      product_variations: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          price_adjustment: number | null
+          product_id: string
+          stock: number | null
+          variation_type: string
+          variation_value: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          price_adjustment?: number | null
+          product_id: string
+          stock?: number | null
+          variation_type: string
+          variation_value: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          price_adjustment?: number | null
+          product_id?: string
+          stock?: number | null
+          variation_type?: string
+          variation_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string[]
