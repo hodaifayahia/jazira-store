@@ -77,53 +77,62 @@ export default function AdminProductsPage() {
       {isLoading ? (
         <div className="text-center py-12 font-cairo text-muted-foreground">جاري التحميل...</div>
       ) : products && products.length > 0 ? (
-        <div className="grid gap-3">
-          {products.map(p => {
-            const mainIdx = p.main_image_index ?? 0;
-            const mainImage = p.images?.[mainIdx] || p.images?.[0];
-            return (
-              <div key={p.id} className="bg-card border rounded-xl p-4 flex items-center gap-4 hover:shadow-sm transition-shadow group">
-                {/* Thumbnail */}
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
-                  {mainImage ? (
-                    <img src={mainImage} alt={p.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Package className="w-6 h-6 text-muted-foreground/40" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-cairo font-semibold text-foreground truncate">{p.name}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-cairo shrink-0 ${p.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                      {p.is_active ? 'نشط' : 'معطّل'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="font-roboto font-bold text-primary text-sm">{formatPrice(Number(p.price))}</span>
-                    <span className="font-cairo text-xs text-muted-foreground">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</span>
-                    <span className="font-roboto text-xs text-muted-foreground">المخزون: {p.stock}</span>
-                    {p.images && p.images.length > 0 && (
-                      <span className="font-roboto text-xs text-muted-foreground">{p.images.length} صور</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+        <div className="bg-card border rounded-xl overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b">
+              <tr>
+                <th className="p-3 text-right font-cairo font-semibold">الصورة</th>
+                <th className="p-3 text-right font-cairo font-semibold">المنتج</th>
+                <th className="p-3 text-right font-cairo font-semibold">السعر</th>
+                <th className="p-3 text-right font-cairo font-semibold">الفئة</th>
+                <th className="p-3 text-right font-cairo font-semibold">المخزون</th>
+                <th className="p-3 text-right font-cairo font-semibold">الصور</th>
+                <th className="p-3 text-right font-cairo font-semibold">الحالة</th>
+                <th className="p-3 text-right font-cairo font-semibold">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {products.map(p => {
+                const mainIdx = p.main_image_index ?? 0;
+                const mainImage = p.images?.[mainIdx] || p.images?.[0];
+                return (
+                  <tr key={p.id} className="hover:bg-muted/30 transition-colors group">
+                    <td className="p-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
+                        {mainImage ? (
+                          <img src={mainImage} alt={p.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="w-5 h-5 text-muted-foreground/40" />
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 font-cairo font-medium text-foreground max-w-[200px] truncate">{p.name}</td>
+                    <td className="p-3 font-roboto font-bold text-primary">{formatPrice(Number(p.price))}</td>
+                    <td className="p-3 font-cairo text-xs text-muted-foreground">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</td>
+                    <td className="p-3 font-roboto">{p.stock}</td>
+                    <td className="p-3 font-roboto text-muted-foreground">{p.images?.length || 0}</td>
+                    <td className="p-3">
+                      <span className={`text-xs px-2 py-1 rounded-full font-cairo ${p.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                        {p.is_active ? 'نشط' : 'معطّل'}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="text-center py-16 bg-card border rounded-xl">
