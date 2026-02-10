@@ -148,8 +148,8 @@ export default function ProductCard({ id, name, price, image, images, mainImageI
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-2">
-            <div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <span className="font-roboto font-bold text-primary text-lg tracking-tight">
                 {formatPrice(price)}
               </span>
@@ -159,11 +159,11 @@ export default function ProductCard({ id, name, price, image, images, mainImageI
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-1.5">
-              <Button size="sm" variant="outline" disabled={outOfStock} onClick={handleAdd} className="font-cairo text-xs gap-1 rounded-xl h-8 px-2.5">
+            <div className="flex items-center gap-1.5 w-full">
+              <Button size="sm" variant="outline" disabled={outOfStock} onClick={handleAdd} className="font-cairo text-xs gap-1 rounded-xl h-8 px-2.5 shrink-0">
                 <ShoppingCart className="w-3.5 h-3.5" />
               </Button>
-              <Button size="sm" disabled={outOfStock} onClick={handleDirectOrder} className="font-cairo text-xs gap-1 rounded-xl h-8 px-3 shadow-sm hover:shadow transition-shadow">
+              <Button size="sm" disabled={outOfStock} onClick={handleDirectOrder} className="font-cairo text-xs gap-1 rounded-xl h-8 flex-1 shadow-sm hover:shadow transition-shadow">
                 <Zap className="w-3.5 h-3.5" />
                 اطلب
               </Button>
