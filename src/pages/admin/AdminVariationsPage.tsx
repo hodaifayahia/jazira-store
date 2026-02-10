@@ -196,7 +196,7 @@ export default function AdminVariationsPage() {
                       {o.is_active ? 'نشط' : 'معطّل'}
                     </span>
 
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(o)}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>

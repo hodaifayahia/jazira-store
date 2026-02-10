@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, Upload, CheckCircle, LogIn, Truck, Banknote } from 'lucide-react';
+import { Copy, Upload, CheckCircle, LogIn, Truck, Building2, Home, X } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
@@ -23,12 +23,15 @@ export default function CheckoutPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [wilayaId, setWilayaId] = useState('');
+  const [baladiyaName, setBaladiyaName] = useState('');
+  const [deliveryType, setDeliveryType] = useState('');
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -47,7 +50,26 @@ export default function CheckoutPage() {
   };
   const handleWilayaChange = (v: string) => {
     setWilayaId(v);
+    setBaladiyaName('');
+    setDeliveryType('');
     setErrors(e => ({ ...e, wilaya: '' }));
+  };
+
+  // Receipt file preview
+  const handleReceiptFile = (file: File | null) => {
+    setReceiptFile(file);
+    if (file && file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setReceiptPreview(url);
+    } else {
+      setReceiptPreview(null);
+    }
+  };
+
+  const removeReceipt = () => {
+    setReceiptFile(null);
+    if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+    setReceiptPreview(null);
   };
 
   useEffect(() => {
@@ -62,6 +84,15 @@ export default function CheckoutPage() {
     },
   });
 
+  const { data: baladiyat } = useQuery({
+    queryKey: ['baladiyat', wilayaId],
+    queryFn: async () => {
+      const { data } = await supabase.from('baladiyat').select('*').eq('wilaya_id', wilayaId).eq('is_active', true).order('name');
+      return data || [];
+    },
+    enabled: !!wilayaId,
+  });
+
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
@@ -72,7 +103,6 @@ export default function CheckoutPage() {
     },
   });
 
-  // Fetch per-product shipping prices
   const { data: productShippingMap } = useQuery({
     queryKey: ['product-shipping', items.map(i => i.id)],
     queryFn: async () => {
@@ -90,11 +120,12 @@ export default function CheckoutPage() {
 
   const selectedWilaya = wilayas?.find(w => w.id === wilayaId);
   const wilayaBaseRate = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
+  const wilayaHomeRate = selectedWilaya ? Number(selectedWilaya.shipping_price_home) : 0;
   const shippingCost = productShippingMap
-    ? calculateShippingForOrder(items, productShippingMap, wilayaBaseRate)
+    ? calculateShippingForOrder(items, productShippingMap, wilayaBaseRate, wilayaHomeRate, deliveryType)
     : 0;
   const shippingBreakdown = productShippingMap
-    ? getShippingBreakdown(items, productShippingMap, wilayaBaseRate)
+    ? getShippingBreakdown(items, productShippingMap, wilayaBaseRate, wilayaHomeRate, deliveryType)
     : [];
   const total = subtotal - discount + shippingCost;
 
@@ -142,13 +173,13 @@ export default function CheckoutPage() {
     if (!phone.trim() || !validatePhone(phone)) newErrors.phone = 'رقم الهاتف يجب أن يبدأ بـ 05/06/07 ويتكون من 10 أرقام';
     if (!wilayaId) newErrors.wilaya = 'يرجى اختيار الولاية';
     if (!paymentMethod) newErrors.payment = 'يرجى اختيار طريقة الدفع';
+    if (!deliveryType && wilayaId) newErrors.deliveryType = 'يرجى اختيار نوع التوصيل';
     if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
       toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة بشكل صحيح', variant: 'destructive' });
       return;
     }
 
-    // Receipt required for baridimob/flexy
     if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) {
       toast({ title: 'خطأ', description: 'يرجى إرفاق إيصال الدفع', variant: 'destructive' });
       return;
@@ -171,6 +202,8 @@ export default function CheckoutPage() {
         customer_name: name,
         customer_phone: phone,
         wilaya_id: wilayaId,
+        baladiya: baladiyaName || null,
+        delivery_type: deliveryType || null,
         address: address || null,
         subtotal,
         shipping_cost: shippingCost,
@@ -191,7 +224,6 @@ export default function CheckoutPage() {
       }));
       await supabase.from('order_items').insert(orderItems);
 
-      // Fire-and-forget Telegram notification
       supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
 
       clearCart();
@@ -244,13 +276,57 @@ export default function CheckoutPage() {
                 <SelectContent>
                   {wilayas?.map(w => (
                     <SelectItem key={w.id} value={w.id} className="font-cairo">
-                      {w.name} — {formatPrice(Number(w.shipping_price))}
+                      {w.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {errors.wilaya && <p className="text-destructive text-xs font-cairo mt-1">{errors.wilaya}</p>}
             </div>
+
+            {/* Baladiya */}
+            {wilayaId && baladiyat && baladiyat.length > 0 && (
+              <div>
+                <Label className="font-cairo">البلدية</Label>
+                <Select value={baladiyaName} onValueChange={setBaladiyaName}>
+                  <SelectTrigger className="font-cairo mt-1"><SelectValue placeholder="اختر البلدية" /></SelectTrigger>
+                  <SelectContent>
+                    {baladiyat.map(b => (
+                      <SelectItem key={b.id} value={b.name} className="font-cairo">{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Delivery Type */}
+            {wilayaId && selectedWilaya && (
+              <div>
+                <Label className="font-cairo">نوع التوصيل *</Label>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setDeliveryType('office'); setErrors(e => ({ ...e, deliveryType: '' })); }}
+                    className={`flex flex-col items-center gap-2 p-4 border-2 rounded-xl transition-all ${deliveryType === 'office' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+                  >
+                    <Building2 className={`w-6 h-6 ${deliveryType === 'office' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="font-cairo font-semibold text-sm">إلى المكتب</span>
+                    <span className="font-roboto font-bold text-primary text-sm">{formatPrice(Number(selectedWilaya.shipping_price))}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDeliveryType('home'); setErrors(e => ({ ...e, deliveryType: '' })); }}
+                    className={`flex flex-col items-center gap-2 p-4 border-2 rounded-xl transition-all ${deliveryType === 'home' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+                  >
+                    <Home className={`w-6 h-6 ${deliveryType === 'home' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="font-cairo font-semibold text-sm">إلى المنزل</span>
+                    <span className="font-roboto font-bold text-primary text-sm">{formatPrice(Number(selectedWilaya.shipping_price_home))}</span>
+                  </button>
+                </div>
+                {errors.deliveryType && <p className="text-destructive text-xs font-cairo mt-1">{errors.deliveryType}</p>}
+              </div>
+            )}
+
             <div>
               <Label className="font-cairo">العنوان التفصيلي</Label>
               <Textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="اختياري" className="font-cairo mt-1" />
@@ -272,22 +348,6 @@ export default function CheckoutPage() {
           <div className="bg-card border rounded-lg p-6 space-y-4">
             <h2 className="font-cairo font-bold text-xl">طريقة الدفع</h2>
             <div className="space-y-3">
-              {/* Cash on Delivery - always available */}
-              <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'cod' ? 'border-primary bg-accent' : ''}`}>
-                <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
-                <div className="flex-1">
-                  <p className="font-cairo font-semibold flex items-center gap-2">
-                    <Banknote className="w-4 h-4" />
-                    الدفع عند التسليم
-                  </p>
-                  {paymentMethod === 'cod' && (
-                    <p className="mt-2 text-sm font-cairo text-muted-foreground">
-                      ستدفع المبلغ الكامل ({formatPrice(total)}) عند استلام الطلب.
-                    </p>
-                  )}
-                </div>
-              </label>
-
               {baridimobEnabled && (
                 <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'baridimob' ? 'border-primary bg-accent' : ''}`}>
                   <input type="radio" name="payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
@@ -304,7 +364,19 @@ export default function CheckoutPage() {
                         <p className="font-cairo">المبلغ: <span className="font-roboto font-bold">{formatPrice(total)}</span></p>
                         <div className="mt-2">
                           <Label className="font-cairo text-xs">أرفق إيصال الدفع *</Label>
-                          <Input type="file" accept="image/*,.pdf" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          <Input type="file" accept="image/*,.pdf" onChange={e => handleReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          {receiptPreview && (
+                            <div className="relative mt-2 inline-block">
+                              <img src={receiptPreview} alt="إيصال الدفع" className="w-32 h-32 object-cover rounded-lg border" />
+                              <button onClick={removeReceipt} className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
+                            </div>
+                          )}
+                          {receiptFile && !receiptPreview && (
+                            <div className="flex items-center gap-2 mt-2 text-sm font-cairo text-muted-foreground">
+                              <Upload className="w-4 h-4" /> {receiptFile.name}
+                              <button onClick={removeReceipt} className="text-destructive"><X className="w-3 h-3" /></button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -326,7 +398,19 @@ export default function CheckoutPage() {
                         <p className="font-cairo">المبلغ المتبقي عند التسليم: <span className="font-roboto font-bold">{formatPrice(total - Number(settings.flexy_deposit_amount || 500))}</span></p>
                         <div className="mt-2">
                           <Label className="font-cairo text-xs">أرفق لقطة شاشة للتعبئة *</Label>
-                          <Input type="file" accept="image/*" onChange={e => setReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          <Input type="file" accept="image/*" onChange={e => handleReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          {receiptPreview && (
+                            <div className="relative mt-2 inline-block">
+                              <img src={receiptPreview} alt="لقطة الشاشة" className="w-32 h-32 object-cover rounded-lg border" />
+                              <button onClick={removeReceipt} className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
+                            </div>
+                          )}
+                          {receiptFile && !receiptPreview && (
+                            <div className="flex items-center gap-2 mt-2 text-sm font-cairo text-muted-foreground">
+                              <Upload className="w-4 h-4" /> {receiptFile.name}
+                              <button onClick={removeReceipt} className="text-destructive"><X className="w-3 h-3" /></button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -363,7 +447,7 @@ export default function CheckoutPage() {
             {/* Shipping breakdown */}
             <div className="space-y-1">
               <div className="flex justify-between font-cairo text-sm">
-                <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> التوصيل</span>
+                <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> التوصيل {deliveryType === 'home' ? '(منزل)' : deliveryType === 'office' ? '(مكتب)' : ''}</span>
                 <span className="font-roboto font-bold">{shippingCost > 0 ? formatPrice(shippingCost) : '—'}</span>
               </div>
               {shippingBreakdown.length > 1 && shippingCost > 0 && (

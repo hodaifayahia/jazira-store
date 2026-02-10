@@ -6,10 +6,13 @@ import { Button } from '@/components/ui/button';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
 import { useAuth } from '@/hooks/useAuth';
 
+import { Info } from 'lucide-react';
+
 const NAV_LINKS = [
   { to: '/', label: 'الرئيسية', icon: Home },
   { to: '/products', label: 'المنتجات', icon: Package },
   { to: '/track', label: 'تتبع الطلب', icon: MapPin },
+  { to: '/about', label: 'من نحن', icon: Info },
 ];
 
 export default function Navbar() {

@@ -26,6 +26,7 @@ import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminLeadsPage from "./pages/admin/AdminLeadsPage";
 import AdminVariationsPage from "./pages/admin/AdminVariationsPage";
+import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/track" element={<PublicLayout><TrackOrderPage /></PublicLayout>} />
             <Route path="/auth" element={<PublicLayout><AuthPage /></PublicLayout>} />
             <Route path="/dashboard" element={<PublicLayout><CustomerDashboardPage /></PublicLayout>} />
+            <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
 
             {/* Admin */}
             <Route path="/admin/login" element={<AdminLoginPage />} />

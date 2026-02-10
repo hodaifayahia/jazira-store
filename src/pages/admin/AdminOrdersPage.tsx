@@ -428,9 +428,12 @@ export default function AdminOrdersPage() {
                 </div>
                 {selectedOrder.address && <div className="font-cairo"><span className="text-muted-foreground">العنوان:</span> {selectedOrder.address}</div>}
                 {selectedOrder.payment_receipt_url && (
-                  <a href={selectedOrder.payment_receipt_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary font-cairo hover:underline">
-                    <ExternalLink className="w-3 h-3" /> عرض إيصال الدفع
-                  </a>
+                  <div className="space-y-2">
+                    <a href={selectedOrder.payment_receipt_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary font-cairo hover:underline">
+                      <ExternalLink className="w-3 h-3" /> عرض إيصال الدفع
+                    </a>
+                    <img src={selectedOrder.payment_receipt_url} alt="إيصال الدفع" className="max-w-full max-h-48 rounded-lg border object-contain" />
+                  </div>
                 )}
                 <div className="border rounded-lg p-3">
                   <h3 className="font-cairo font-bold mb-2">المنتجات</h3>
