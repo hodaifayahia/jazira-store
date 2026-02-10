@@ -292,13 +292,12 @@ export default function AdminProductsPage() {
         <div className="text-center py-12 font-cairo text-muted-foreground">جاري التحميل...</div>
       ) : filteredProducts.length > 0 ? (
         <>
-          <div className="bg-card border rounded-xl overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-card border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>
-                  <th className="p-3 text-right">
-                    <Checkbox checked={allPageSelected} onCheckedChange={toggleSelectAll} />
-                  </th>
+                  <th className="p-3 text-right"><Checkbox checked={allPageSelected} onCheckedChange={toggleSelectAll} /></th>
                   <th className="p-3 text-right font-cairo font-semibold">الصورة</th>
                   <th className="p-3 text-right font-cairo font-semibold">المنتج</th>
                   <th className="p-3 text-right font-cairo font-semibold">السعر</th>
@@ -315,18 +314,10 @@ export default function AdminProductsPage() {
                   const mainImage = p.images?.[mainIdx] || p.images?.[0];
                   return (
                     <tr key={p.id} className={`hover:bg-muted/30 transition-colors group ${selectedIds.has(p.id) ? 'bg-primary/5' : ''}`}>
-                      <td className="p-3">
-                        <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
-                      </td>
+                      <td className="p-3"><Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} /></td>
                       <td className="p-3">
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
-                          {mainImage ? (
-                            <img src={mainImage} alt={p.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="w-5 h-5 text-muted-foreground/40" />
-                            </div>
-                          )}
+                          {mainImage ? <img src={mainImage} alt={p.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Package className="w-5 h-5 text-muted-foreground/40" /></div>}
                         </div>
                       </td>
                       <td className="p-3 font-cairo font-medium text-foreground max-w-[200px] truncate">{p.name}</td>
@@ -335,25 +326,15 @@ export default function AdminProductsPage() {
                       <td className="p-3 font-roboto">{p.stock}</td>
                       <td className="p-3 font-roboto text-muted-foreground">{p.images?.length || 0}</td>
                       <td className="p-3">
-                        <button
-                          onClick={() => toggleStatusMutation.mutate({ id: p.id, is_active: !p.is_active })}
-                          disabled={toggleStatusMutation.isPending}
-                          className={`text-xs px-2.5 py-1 rounded-full font-cairo cursor-pointer transition-all hover:scale-105 active:scale-95 ${p.is_active ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-muted text-muted-foreground hover:bg-muted-foreground/10'}`}
-                        >
+                        <button onClick={() => toggleStatusMutation.mutate({ id: p.id, is_active: !p.is_active })} disabled={toggleStatusMutation.isPending} className={`text-xs px-2.5 py-1 rounded-full font-cairo cursor-pointer transition-all hover:scale-105 active:scale-95 ${p.is_active ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-muted text-muted-foreground hover:bg-muted-foreground/10'}`}>
                           {p.is_active ? 'نشط' : 'معطّل'}
                         </button>
                       </td>
                       <td className="p-3">
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)} title="تعديل">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-secondary/10 hover:text-secondary" onClick={() => duplicateMutation.mutate(p)} title="نسخ">
-                            <Copy className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)} title="حذف">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)} title="تعديل"><Pencil className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-secondary/10 hover:text-secondary" onClick={() => duplicateMutation.mutate(p)} title="نسخ"><Copy className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)} title="حذف"><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
                       </td>
                     </tr>
@@ -361,6 +342,39 @@ export default function AdminProductsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {paginatedProducts.map(p => {
+              const mainIdx = p.main_image_index ?? 0;
+              const mainImage = p.images?.[mainIdx] || p.images?.[0];
+              return (
+                <div key={p.id} className="bg-card border rounded-xl p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
+                      {mainImage ? <img src={mainImage} alt={p.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Package className="w-6 h-6 text-muted-foreground/40" /></div>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-cairo font-medium text-sm truncate">{p.name}</h4>
+                      <p className="font-roboto font-bold text-primary text-sm mt-0.5">{formatPrice(Number(p.price))}</p>
+                      <p className="font-cairo text-xs text-muted-foreground mt-0.5">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</p>
+                    </div>
+                    <button onClick={() => toggleStatusMutation.mutate({ id: p.id, is_active: !p.is_active })} className={`text-xs px-2 py-0.5 rounded-full font-cairo shrink-0 ${p.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                      {p.is_active ? 'نشط' : 'معطّل'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="font-cairo text-xs text-muted-foreground">المخزون: <span className="font-roboto font-bold">{p.stock}</span></span>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => duplicateMutation.mutate(p)}><Copy className="w-3.5 h-3.5" /></Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Pagination */}

@@ -226,18 +226,12 @@ export default function AdminCategoriesPage() {
           إضافة فئة جديدة
         </h3>
         <div className="flex flex-col gap-3">
-          <div className="flex gap-3 items-end">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="flex-1 w-full">
               <Label className="font-cairo text-xs text-muted-foreground">اسم الفئة</Label>
-              <Input
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                placeholder="مثال: ملابس، أحذية، إلكترونيات..."
-                className="font-cairo mt-1.5 h-11"
-                onKeyDown={e => e.key === 'Enter' && addCategory()}
-              />
+              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="مثال: ملابس، أحذية، إلكترونيات..." className="font-cairo mt-1.5 h-11" onKeyDown={e => e.key === 'Enter' && addCategory()} />
             </div>
-            <div className="w-40">
+            <div className="w-full sm:w-40">
               <Label className="font-cairo text-xs text-muted-foreground">الأيقونة</Label>
               <Select value={newIcon} onValueChange={setNewIcon}>
                 <SelectTrigger className="mt-1.5 h-11">
@@ -249,16 +243,13 @@ export default function AdminCategoriesPage() {
                 <SelectContent className="max-h-60">
                   {AVAILABLE_ICONS.map(ic => (
                     <SelectItem key={ic.value} value={ic.value}>
-                      <div className="flex items-center gap-2">
-                        <ic.Icon className="w-4 h-4" />
-                        <span className="font-cairo">{ic.label}</span>
-                      </div>
+                      <div className="flex items-center gap-2"><ic.Icon className="w-4 h-4" /><span className="font-cairo">{ic.label}</span></div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={addCategory} disabled={saveMutation.isPending || !newName.trim()} className="font-cairo gap-1.5 h-11 px-6">
+            <Button onClick={addCategory} disabled={saveMutation.isPending || !newName.trim()} className="font-cairo gap-1.5 h-11 px-6 w-full sm:w-auto">
               <Plus className="w-4 h-4" /> إضافة
             </Button>
           </div>
@@ -383,21 +374,11 @@ export default function AdminCategoriesPage() {
                       {AVAILABLE_ICONS.find(i => i.value === cat.icon)?.label || cat.icon}
                     </span>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                      onClick={() => startEdit(index)}
-                    >
+                  <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => startEdit(index)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteDialog(index)}
-                    >
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteDialog(index)}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>

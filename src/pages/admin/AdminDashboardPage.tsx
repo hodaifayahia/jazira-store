@@ -332,7 +332,8 @@ export default function AdminDashboardPage() {
         <div className="p-4 border-b">
           <h2 className="font-cairo font-bold text-lg">آخر الطلبات</h2>
         </div>
-        <div className="overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
@@ -357,9 +358,7 @@ export default function AdminDashboardPage() {
                       o.status === 'تم التسليم' ? 'bg-primary/10 text-primary' :
                       o.status === 'ملغي' ? 'bg-destructive/10 text-destructive' :
                       'bg-muted text-muted-foreground'
-                    }`}>
-                      {o.status}
-                    </span>
+                    }`}>{o.status}</span>
                   </td>
                   <td className="p-3 font-cairo text-muted-foreground text-xs">{formatDate(o.created_at!)}</td>
                 </tr>
@@ -369,6 +368,29 @@ export default function AdminDashboardPage() {
               )}
             </tbody>
           </table>
+        </div>
+        {/* Mobile Cards */}
+        <div className="md:hidden p-3 space-y-3">
+          {(orders || []).slice(0, 10).map(o => (
+            <div key={o.id} className="border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-roboto font-bold text-primary text-sm">{o.order_number}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-cairo ${
+                  o.status === 'جديد' ? 'bg-secondary/10 text-secondary' :
+                  o.status === 'تم التسليم' ? 'bg-primary/10 text-primary' :
+                  o.status === 'ملغي' ? 'bg-destructive/10 text-destructive' :
+                  'bg-muted text-muted-foreground'
+                }`}>{o.status}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs font-cairo text-muted-foreground">
+                <span>{o.customer_name}</span>
+                <span className="font-roboto font-bold text-foreground">{formatPrice(Number(o.total_amount))}</span>
+              </div>
+            </div>
+          ))}
+          {(!orders || orders.length === 0) && (
+            <p className="text-center font-cairo text-muted-foreground py-4">لا توجد طلبات بعد</p>
+          )}
         </div>
       </div>
     </div>
