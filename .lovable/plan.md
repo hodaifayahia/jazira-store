@@ -1,76 +1,89 @@
 
 
-## Plan: WooCommerce-Style Variations System
+## Plan: Make Admin Dashboard Fully Responsive
 
-Apply WooCommerce's proven variation patterns to both admin and customer-facing sides.
-
----
-
-### What WooCommerce Does (and what we'll apply)
-
-WooCommerce uses a two-level system:
-1. **Global Attributes** (e.g., "Color" with values Red, Blue, Green) -- managed centrally
-2. **Product Variations** -- each product picks from global attributes, and each combination gets its own price, stock, and image
-
-Key UX patterns:
-- **Color swatches**: Round circles showing actual colors (not text buttons)
-- **Size buttons**: Clean bordered buttons for non-color attributes
-- **Selected state**: Bold ring/border around selected swatch
-- **Out-of-stock variations**: Crossed out or grayed with strikethrough
-- **Image switching**: Clicking a color swatch changes the product gallery image
-- **Price update**: Price updates dynamically when a variation is selected
+All admin pages currently use desktop-oriented table layouts that are difficult to use on mobile devices. This plan converts them to card-based layouts on small screens while keeping tables on desktop.
 
 ---
 
-### Changes
+### Key Problems
 
-#### 1. Customer-Facing Product Page (`SingleProductPage.tsx`)
-
-**Current state:** Variations show as text buttons with optional small image thumbnails. Color swatches are NOT shown even though `color_code` exists in the `variation_options` table.
-
-**WooCommerce-style changes:**
-- Fetch `variation_options` data alongside `product_variations` to get `color_code` for each variation
-- For **color-type variations**: Render as round color circles (w-8 h-8 rounded-full) with the actual color from `color_code`. Selected state shows a ring around the circle. Tooltip/label shows the color name on hover.
-- For **non-color variations** (size, material, etc.): Render as clean bordered rectangular buttons (like WooCommerce size selectors)
-- Out-of-stock variations: Show with reduced opacity and a diagonal line through the swatch
-- When selecting a color, if it has an `image_url` on `product_variations`, switch the gallery to that image (already partially implemented)
-
-#### 2. Admin Variations Page (`AdminVariationsPage.tsx`)
-
-**Current state:** Works well as an abstract template manager. Minor improvements:
-- Show color swatch circles inline in the list (larger, more prominent) -- already done
-- No structural changes needed, this page is already WooCommerce-like (global attributes)
-
-#### 3. Admin Product Form (`AdminProductsPage.tsx` -- ProductForm)
-
-**Current state:** Variation picker uses checkboxes with small color dots. Price/stock per variation is shown in a sub-panel.
-
-**WooCommerce-style changes:**
-- For color-type variations: Show actual color circles instead of small dots in checkbox buttons
-- Add an image upload per selected variation (WooCommerce lets you set a gallery image per variation). Store in `product_variations.image_url`
-- Better layout: Show selected variations in a table-like layout (Value | Color Preview | Price Adjustment | Stock | Image) instead of inline inputs
+1. **Tables with many columns** are unreadable on mobile (Orders: 9 columns, Products: 9 columns, Leads: 7 columns, Coupons: 7 columns)
+2. **Hover-only action buttons** (`opacity-0 group-hover:opacity-100`) are invisible on touch devices
+3. **Categories "Add" form** has a horizontal layout that breaks on narrow screens
+4. **Bulk action bars** don't wrap well on mobile
+5. **Wilayas page** table doesn't adapt to small screens
 
 ---
 
-### Technical Details
+### Solution: Mobile Card Layout Pattern
 
-**Files to modify:**
+For each admin page, on screens below `md` (768px), replace the table with a stacked card list. On `md+`, keep the existing table. Action buttons will always be visible on mobile.
+
+---
+
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/SingleProductPage.tsx` | Fetch `variation_options` to get `color_code`, render color swatches as circles, size as bordered buttons, handle out-of-stock with strikethrough |
-| `src/pages/admin/AdminProductsPage.tsx` | Improve variation picker with larger color circles, add image upload per variation, table layout for selected variations |
+| `src/pages/admin/AdminOrdersPage.tsx` | Add mobile card view for orders list; always show actions on mobile; wrap bulk actions |
+| `src/pages/admin/AdminProductsPage.tsx` | Add mobile card view for products list; always show actions; fix bulk action bar wrapping |
+| `src/pages/admin/AdminLeadsPage.tsx` | Add mobile card view for leads; always show actions |
+| `src/pages/admin/AdminCouponsPage.tsx` | Add mobile card view for coupons; always show actions |
+| `src/pages/admin/AdminWilayasPage.tsx` | Add mobile card view for wilayas; fix two-price display |
+| `src/pages/admin/AdminVariationsPage.tsx` | Always show action buttons (remove hover-only); minor spacing fixes |
+| `src/pages/admin/AdminCategoriesPage.tsx` | Stack "add category" form vertically on mobile; fix edit row layout |
+| `src/pages/admin/AdminDashboardPage.tsx` | Fix pie chart layout on mobile (stack vertically instead of side-by-side); ensure latest orders table has a mobile card fallback |
 
-**No database changes needed** -- `variation_options.color_code` and `product_variations.image_url` already exist.
+---
 
-**SingleProductPage variation rendering logic:**
-- Join `product_variations` with `variation_options` by matching `variation_type` + `variation_value` to get `color_code`
-- Render color types: `<button className="w-9 h-9 rounded-full border-2 ring-2 ring-offset-2" style={{ backgroundColor: colorCode }} />`
-- Render non-color types: `<button className="px-4 py-2 rounded-lg border-2 font-medium">{value}</button>`
-- Selected state: `ring-primary` for colors, `border-primary bg-primary/10` for text buttons
-- Disabled state: `opacity-30 cursor-not-allowed relative` with a diagonal CSS line
+### Technical Approach
 
-**ProductForm variation section:**
-- Replace inline inputs with a clean card for each selected variation showing: color preview (if color), value name, price adjustment input, stock input, image upload button
-- Image upload uses the existing `products` storage bucket
+Each page will use a pattern like:
+
+```text
+<!-- Hidden on mobile, shown on md+ -->
+<div className="hidden md:block">
+  <table>...</table>
+</div>
+
+<!-- Shown on mobile, hidden on md+ -->
+<div className="md:hidden space-y-3">
+  {items.map(item => (
+    <div className="bg-card border rounded-xl p-4">
+      <!-- Card layout with key info -->
+    </div>
+  ))}
+</div>
+```
+
+Action buttons will use `flex` without hover-hiding on mobile cards, so they're always tappable.
+
+### Specific Changes Per Page
+
+**AdminOrdersPage:**
+- Mobile card: order number + status badge on top row, customer name + phone, wilaya, total, date, and action dropdown always visible
+
+**AdminProductsPage:**
+- Mobile card: product image + name + price on top, category + stock + status, action buttons row
+
+**AdminLeadsPage:**
+- Mobile card: name + status badge, phone, source, date, action buttons
+
+**AdminCouponsPage:**
+- Mobile card: code + type + value, product count badge, expiry, status, actions
+
+**AdminWilayasPage:**
+- Mobile card: wilaya name + status, office price + home price, action buttons
+
+**AdminCategoriesPage:**
+- Stack the "add new" form inputs vertically on mobile (name, icon selector, add button each on own row)
+- Fix edit row to stack on mobile
+
+**AdminDashboardPage:**
+- Pie chart section: stack chart and legend vertically on mobile instead of 50/50 side-by-side
+- Latest orders: add mobile card fallback
+
+**AdminVariationsPage:**
+- Change `opacity-0 group-hover:opacity-100` to always visible on mobile (use `opacity-100 md:opacity-0 md:group-hover:opacity-100`)
 
