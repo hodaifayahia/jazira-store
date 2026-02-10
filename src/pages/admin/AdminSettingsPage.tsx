@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Upload, X, ImageIcon, Bot, Plus, Send, Webhook } from 'lucide-react';
+import { Save, Upload, X, ImageIcon, Bot, Plus, Send, Webhook, Key, Shield, UserPlus, Trash2, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import AdminUserManagement from '@/components/admin/AdminUserManagement';
 
 export default function AdminSettingsPage() {
   const qc = useQueryClient();
@@ -19,6 +20,14 @@ export default function AdminSettingsPage() {
   const [newChatId, setNewChatId] = useState('');
   const [testingSend, setTestingSend] = useState(false);
   const [settingWebhook, setSettingWebhook] = useState(false);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-settings'],
@@ -384,6 +393,68 @@ export default function AdminSettingsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Password Change */}
+      <div className="bg-card border rounded-lg p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Key className="w-5 h-5 text-primary" />
+          <h2 className="font-cairo font-bold text-xl">تغيير كلمة المرور</h2>
+        </div>
+        <div>
+          <Label className="font-cairo">كلمة المرور الحالية</Label>
+          <Input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="font-roboto mt-1" dir="ltr" />
+        </div>
+        <div>
+          <Label className="font-cairo">كلمة المرور الجديدة</Label>
+          <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="font-roboto mt-1" dir="ltr" />
+        </div>
+        <div>
+          <Label className="font-cairo">تأكيد كلمة المرور الجديدة</Label>
+          <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="font-roboto mt-1" dir="ltr" />
+        </div>
+        <Button
+          disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+          className="font-cairo font-semibold gap-2"
+          onClick={async () => {
+            if (newPassword !== confirmPassword) {
+              toast({ title: 'كلمة المرور الجديدة غير متطابقة', variant: 'destructive' });
+              return;
+            }
+            if (newPassword.length < 6) {
+              toast({ title: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل', variant: 'destructive' });
+              return;
+            }
+            setChangingPassword(true);
+            // Verify current password by re-signing in
+            const { data: { user } } = await supabase.auth.getUser();
+            const { error: signInErr } = await supabase.auth.signInWithPassword({
+              email: user?.email || '',
+              password: currentPassword,
+            });
+            if (signInErr) {
+              toast({ title: 'كلمة المرور الحالية غير صحيحة', variant: 'destructive' });
+              setChangingPassword(false);
+              return;
+            }
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+            setChangingPassword(false);
+            if (error) {
+              toast({ title: 'فشل تغيير كلمة المرور', description: error.message, variant: 'destructive' });
+            } else {
+              toast({ title: 'تم تغيير كلمة المرور بنجاح ✅' });
+              setCurrentPassword('');
+              setNewPassword('');
+              setConfirmPassword('');
+            }
+          }}
+        >
+          <Shield className="w-4 h-4" />
+          {changingPassword ? 'جاري التغيير...' : 'تغيير كلمة المرور'}
+        </Button>
+      </div>
+
+      {/* Admin User Management */}
+      <AdminUserManagement toast={toast} />
 
       <Button onClick={handleSave} disabled={updateSetting.isPending || Object.keys(form).length === 0} className="font-cairo font-semibold gap-2">
         <Save className="w-4 h-4" />
