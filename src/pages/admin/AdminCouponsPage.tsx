@@ -129,7 +129,8 @@ export default function AdminCouponsPage() {
         <h2 className="font-cairo font-bold text-xl">كوبونات الخصم</h2>
         <Button onClick={openNewDialog} className="font-cairo gap-1"><Plus className="w-4 h-4" /> إضافة كوبون</Button>
       </div>
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -152,10 +153,7 @@ export default function AdminCouponsPage() {
                   <td className="p-3 font-roboto">{c.discount_type === 'percentage' ? `${c.discount_value}%` : `${c.discount_value} دج`}</td>
                   <td className="p-3">
                     {productCount > 0 ? (
-                      <Badge variant="secondary" className="font-cairo gap-1">
-                        <Package className="w-3 h-3" />
-                        {productCount} منتج
-                      </Badge>
+                      <Badge variant="secondary" className="font-cairo gap-1"><Package className="w-3 h-3" />{productCount} منتج</Badge>
                     ) : (
                       <span className="text-muted-foreground font-cairo text-xs">الكل</span>
                     )}
@@ -171,6 +169,31 @@ export default function AdminCouponsPage() {
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {coupons?.map(c => {
+          const productCount = getCouponProductCount(c.id);
+          return (
+            <div key={c.id} className="bg-card border rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-roboto font-bold text-sm">{c.code}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-cairo ${c.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>{c.is_active ? 'نشط' : 'معطّل'}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1 text-xs font-cairo text-muted-foreground">
+                <div>النوع: {c.discount_type === 'percentage' ? 'نسبة مئوية' : 'مبلغ ثابت'}</div>
+                <div>القيمة: <span className="font-roboto font-bold">{c.discount_type === 'percentage' ? `${c.discount_value}%` : `${c.discount_value} دج`}</span></div>
+                <div>المنتجات: {productCount > 0 ? `${productCount} منتج` : 'الكل'}</div>
+                <div>الصلاحية: {c.expiry_date ? formatDate(c.expiry_date) : '—'}</div>
+              </div>
+              <div className="flex justify-end gap-1 pt-2 border-t">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEditDialog(c)}><Pencil className="w-3.5 h-3.5" /></Button>
+                <Button variant="outline" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm('حذف؟')) deleteMutation.mutate(c.id); }}><Trash2 className="w-3.5 h-3.5" /></Button>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

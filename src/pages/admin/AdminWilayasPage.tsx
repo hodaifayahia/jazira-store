@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, BarChart3 } from 'lucide-react';
+import { Plus, Pencil, Trash2, BarChart3, Upload, Loader2 } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
+import { ALGERIA_WILAYAS } from '@/data/algeria-wilayas';
 
 export default function AdminWilayasPage() {
   const qc = useQueryClient();
@@ -70,13 +71,49 @@ export default function AdminWilayasPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-wilayas'] }); toast({ title: 'تم الحذف' }); },
   });
 
+  const bulkImportMutation = useMutation({
+    mutationFn: async () => {
+      for (const w of ALGERIA_WILAYAS) {
+        // Check if wilaya already exists
+        const { data: existing } = await supabase.from('wilayas').select('id').eq('name', w.name).maybeSingle();
+        let wilayaId: string;
+        if (existing) {
+          wilayaId = existing.id;
+        } else {
+          const { data: inserted, error } = await supabase.from('wilayas').insert({ name: w.name, shipping_price: 0, shipping_price_home: 0, is_active: true }).select('id').single();
+          if (error || !inserted) continue;
+          wilayaId = inserted.id;
+        }
+        // Insert baladiyat (skip duplicates)
+        for (const b of w.baladiyat) {
+          const { data: bExists } = await supabase.from('baladiyat').select('id').eq('name', b).eq('wilaya_id', wilayaId).maybeSingle();
+          if (!bExists) {
+            await supabase.from('baladiyat').insert({ name: b, wilaya_id: wilayaId, is_active: true });
+          }
+        }
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-wilayas'] });
+      toast({ title: `تم استيراد ${ALGERIA_WILAYAS.length} ولاية مع بلدياتها ✅` });
+    },
+    onError: () => toast({ title: 'حدث خطأ أثناء الاستيراد', variant: 'destructive' }),
+  });
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-2">
         <h2 className="font-cairo font-bold text-xl">الولايات ({wilayas?.length || 0})</h2>
-        <Button onClick={() => { setEditing(null); setForm({ name: '', shipping_price: '', shipping_price_home: '', is_active: true }); setDialogOpen(true); }} className="font-cairo gap-1"><Plus className="w-4 h-4" /> إضافة ولاية</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { if (confirm('استيراد كل الولايات والبلديات؟')) bulkImportMutation.mutate(); }} disabled={bulkImportMutation.isPending} className="font-cairo gap-1" size="sm">
+            {bulkImportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            استيراد الكل ({ALGERIA_WILAYAS.length})
+          </Button>
+          <Button onClick={() => { setEditing(null); setForm({ name: '', shipping_price: '', shipping_price_home: '', is_active: true }); setDialogOpen(true); }} className="font-cairo gap-1" size="sm"><Plus className="w-4 h-4" /> إضافة ولاية</Button>
+        </div>
       </div>
-      <div className="bg-card border rounded-lg overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -105,6 +142,27 @@ export default function AdminWilayasPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {wilayas?.map(w => (
+          <div key={w.id} className="bg-card border rounded-xl p-4 space-y-2" onClick={() => { setStatsWilaya(w); setStatsOpen(true); }}>
+            <div className="flex items-center justify-between">
+              <span className="font-cairo font-medium text-sm">{w.name}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-cairo ${w.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>{w.is_active ? 'نشط' : 'معطّل'}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1 text-xs font-cairo text-muted-foreground">
+              <div>مكتب: <span className="font-roboto font-bold text-foreground">{formatPrice(Number(w.shipping_price))}</span></div>
+              <div>منزل: <span className="font-roboto font-bold text-foreground">{formatPrice(Number(w.shipping_price_home))}</span></div>
+            </div>
+            <div className="flex justify-end gap-1 pt-2 border-t" onClick={e => e.stopPropagation()}>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setStatsWilaya(w); setStatsOpen(true); }}><BarChart3 className="w-3.5 h-3.5" /></Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setEditing(w); setForm({ name: w.name, shipping_price: String(w.shipping_price), shipping_price_home: String(w.shipping_price_home), is_active: w.is_active ?? true }); setDialogOpen(true); }}><Pencil className="w-3.5 h-3.5" /></Button>
+              <Button variant="outline" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm('حذف؟')) deleteMutation.mutate(w.id); }}><Trash2 className="w-3.5 h-3.5" /></Button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Edit/Add Dialog */}

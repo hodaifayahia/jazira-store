@@ -294,13 +294,12 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
-        <div className="bg-card border rounded-lg overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="hidden md:block bg-card border rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr>
-                <th className="p-3 text-right">
-                  <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
-                </th>
+                <th className="p-3 text-right"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></th>
                 <th className="p-3 text-right font-cairo">رقم الطلب</th>
                 <th className="p-3 text-right font-cairo">العميل</th>
                 <th className="p-3 text-right font-cairo">الهاتف</th>
@@ -319,9 +318,7 @@ export default function AdminOrdersPage() {
                 const StatusIcon = statusCfg.icon;
                 return (
                   <tr key={o.id} className={`border-b hover:bg-muted/50 ${selectedIds.has(o.id) ? 'bg-primary/5' : ''}`}>
-                    <td className="p-3">
-                      <Checkbox checked={selectedIds.has(o.id)} onCheckedChange={() => toggleSelect(o.id)} />
-                    </td>
+                    <td className="p-3"><Checkbox checked={selectedIds.has(o.id)} onCheckedChange={() => toggleSelect(o.id)} /></td>
                     <td className="p-3 font-roboto font-bold text-primary">{o.order_number}</td>
                     <td className="p-3 font-cairo">{o.customer_name}</td>
                     <td className="p-3 font-roboto text-xs">{o.customer_phone}</td>
@@ -329,14 +326,7 @@ export default function AdminOrdersPage() {
                       <span className="flex items-center gap-1">
                         {wilayaName}
                         {cancelRate !== undefined && (
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
-                            </TooltipTrigger>
-                            <TooltipContent className="font-cairo">
-                              نسبة إلغاء مرتفعة ({cancelRate}%)
-                            </TooltipContent>
-                          </Tooltip>
+                          <Tooltip><TooltipTrigger><AlertTriangle className="w-3.5 h-3.5 text-destructive" /></TooltipTrigger><TooltipContent className="font-cairo">نسبة إلغاء مرتفعة ({cancelRate}%)</TooltipContent></Tooltip>
                         )}
                       </span>
                     </td>
@@ -345,27 +335,15 @@ export default function AdminOrdersPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-cairo cursor-pointer hover:opacity-80 transition-opacity ${statusCfg.bg} ${statusCfg.color}`}>
-                            <StatusIcon className="w-3.5 h-3.5" />
-                            {o.status}
+                            <StatusIcon className="w-3.5 h-3.5" /> {o.status}
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="bg-popover border z-50 min-w-[160px]">
-                          {STATUSES.map(s => {
-                            const cfg = STATUS_CONFIG[s];
-                            const Icon = cfg.icon;
-                            const isActive = o.status === s;
-                            return (
-                              <DropdownMenuItem
-                                key={s}
-                                onClick={() => !isActive && handleQuickStatus(o.id, s)}
-                                className={`font-cairo gap-2 cursor-pointer ${isActive ? 'bg-muted font-bold' : ''}`}
-                              >
-                                <Icon className={`w-4 h-4 ${cfg.color}`} />
-                                {s}
-                                {isActive && <CheckCircle className="w-3.5 h-3.5 text-primary mr-auto" />}
-                              </DropdownMenuItem>
-                            );
-                          })}
+                          {STATUSES.map(s => { const cfg = STATUS_CONFIG[s]; const Icon = cfg.icon; const isActive = o.status === s; return (
+                            <DropdownMenuItem key={s} onClick={() => !isActive && handleQuickStatus(o.id, s)} className={`font-cairo gap-2 cursor-pointer ${isActive ? 'bg-muted font-bold' : ''}`}>
+                              <Icon className={`w-4 h-4 ${cfg.color}`} /> {s} {isActive && <CheckCircle className="w-3.5 h-3.5 text-primary mr-auto" />}
+                            </DropdownMenuItem>
+                          ); })}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -373,37 +351,16 @@ export default function AdminOrdersPage() {
                     <td className="p-3">
                       <div className="flex items-center gap-1">
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedOrder(o); setNewStatus(o.status || 'جديد'); }}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
+                          <TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedOrder(o); setNewStatus(o.status || 'جديد'); }}><Eye className="w-4 h-4" /></Button></TooltipTrigger>
                           <TooltipContent className="font-cairo">عرض التفاصيل</TooltipContent>
                         </Tooltip>
-
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover border z-50 min-w-[160px]">
-                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'قيد المعالجة')} className="font-cairo gap-2 cursor-pointer">
-                              <PackageOpen className="w-4 h-4 text-orange-500" />
-                              قيد المعالجة
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'تم الشحن')} className="font-cairo gap-2 cursor-pointer">
-                              <Truck className="w-4 h-4 text-blue-500" />
-                              تم الشحن
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'تم التسليم')} className="font-cairo gap-2 cursor-pointer">
-                              <PackageCheck className="w-4 h-4 text-primary" />
-                              تم التسليم
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'ملغي')} className="font-cairo gap-2 cursor-pointer text-destructive">
-                              <Ban className="w-4 h-4" />
-                              إلغاء الطلب
-                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'قيد المعالجة')} className="font-cairo gap-2 cursor-pointer"><PackageOpen className="w-4 h-4 text-orange-500" /> قيد المعالجة</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'تم الشحن')} className="font-cairo gap-2 cursor-pointer"><Truck className="w-4 h-4 text-blue-500" /> تم الشحن</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'تم التسليم')} className="font-cairo gap-2 cursor-pointer"><PackageCheck className="w-4 h-4 text-primary" /> تم التسليم</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'ملغي')} className="font-cairo gap-2 cursor-pointer text-destructive"><Ban className="w-4 h-4" /> إلغاء الطلب</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -413,6 +370,47 @@ export default function AdminOrdersPage() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-3">
+          {filtered.map(o => {
+            const wilayaName = (o as any).wilayas?.name;
+            const statusCfg = STATUS_CONFIG[o.status || 'جديد'] || STATUS_CONFIG['جديد'];
+            const StatusIcon = statusCfg.icon;
+            return (
+              <div key={o.id} className="bg-card border rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-roboto font-bold text-primary text-sm">{o.order_number}</span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-cairo ${statusCfg.bg} ${statusCfg.color}`}>
+                    <StatusIcon className="w-3 h-3" /> {o.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs font-cairo">
+                  <div><span className="text-muted-foreground">العميل:</span> {o.customer_name}</div>
+                  <div><span className="text-muted-foreground">الهاتف:</span> <span className="font-roboto">{o.customer_phone}</span></div>
+                  <div><span className="text-muted-foreground">الولاية:</span> {wilayaName || '—'}</div>
+                  <div><span className="text-muted-foreground">التاريخ:</span> {formatDate(o.created_at!)}</div>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t">
+                  <span className="font-roboto font-bold text-sm">{formatPrice(Number(o.total_amount))}</span>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" className="h-8 font-cairo text-xs" onClick={() => { setSelectedOrder(o); setNewStatus(o.status || 'جديد'); }}>
+                      <Eye className="w-3.5 h-3.5 ml-1" /> تفاصيل
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-popover border z-50">
+                        {STATUSES.map(s => { const cfg = STATUS_CONFIG[s]; const Icon = cfg.icon; return (
+                          <DropdownMenuItem key={s} onClick={() => handleQuickStatus(o.id, s)} className={`font-cairo gap-2 cursor-pointer ${cfg.color}`}><Icon className="w-4 h-4" /> {s}</DropdownMenuItem>
+                        ); })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <Dialog open={!!selectedOrder} onOpenChange={open => !open && setSelectedOrder(null)}>

@@ -128,52 +128,72 @@ export default function AdminLeadsPage() {
         </Select>
       </div>
 
-      {/* Table */}
       {isLoading ? (
         <div className="text-center py-12 font-cairo text-muted-foreground">جاري التحميل...</div>
       ) : filteredLeads.length > 0 ? (
-        <div className="bg-card border rounded-xl overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 border-b">
-              <tr>
-                <th className="p-3 text-right font-cairo font-semibold">الاسم</th>
-                <th className="p-3 text-right font-cairo font-semibold">الهاتف</th>
-                <th className="p-3 text-right font-cairo font-semibold">المصدر</th>
-                <th className="p-3 text-right font-cairo font-semibold">الحالة</th>
-                <th className="p-3 text-right font-cairo font-semibold">الملاحظات</th>
-                <th className="p-3 text-right font-cairo font-semibold">التاريخ</th>
-                <th className="p-3 text-right font-cairo font-semibold">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredLeads.map(l => {
-                const statusStyle = STATUS_OPTIONS.find(s => s.value === l.status)?.color || 'bg-muted text-muted-foreground';
-                return (
-                  <tr key={l.id} className="hover:bg-muted/30 transition-colors group">
-                    <td className="p-3 font-cairo font-medium text-foreground">{l.name}</td>
-                    <td className="p-3 font-roboto text-muted-foreground" dir="ltr">{l.phone}</td>
-                    <td className="p-3 font-cairo text-xs text-muted-foreground">{l.source}</td>
-                    <td className="p-3">
-                      <span className={`text-xs px-2 py-1 rounded-full font-cairo ${statusStyle}`}>{l.status}</span>
-                    </td>
-                    <td className="p-3 font-cairo text-xs text-muted-foreground max-w-[150px] truncate">{l.notes || '—'}</td>
-                    <td className="p-3 font-cairo text-xs text-muted-foreground">{formatDate(l.created_at)}</td>
-                    <td className="p-3">
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(l)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(l.id)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="hidden md:block bg-card border rounded-xl overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b">
+                <tr>
+                  <th className="p-3 text-right font-cairo font-semibold">الاسم</th>
+                  <th className="p-3 text-right font-cairo font-semibold">الهاتف</th>
+                  <th className="p-3 text-right font-cairo font-semibold">المصدر</th>
+                  <th className="p-3 text-right font-cairo font-semibold">الحالة</th>
+                  <th className="p-3 text-right font-cairo font-semibold">الملاحظات</th>
+                  <th className="p-3 text-right font-cairo font-semibold">التاريخ</th>
+                  <th className="p-3 text-right font-cairo font-semibold">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredLeads.map(l => {
+                  const statusStyle = STATUS_OPTIONS.find(s => s.value === l.status)?.color || 'bg-muted text-muted-foreground';
+                  return (
+                    <tr key={l.id} className="hover:bg-muted/30 transition-colors group">
+                      <td className="p-3 font-cairo font-medium text-foreground">{l.name}</td>
+                      <td className="p-3 font-roboto text-muted-foreground" dir="ltr">{l.phone}</td>
+                      <td className="p-3 font-cairo text-xs text-muted-foreground">{l.source}</td>
+                      <td className="p-3"><span className={`text-xs px-2 py-1 rounded-full font-cairo ${statusStyle}`}>{l.status}</span></td>
+                      <td className="p-3 font-cairo text-xs text-muted-foreground max-w-[150px] truncate">{l.notes || '—'}</td>
+                      <td className="p-3 font-cairo text-xs text-muted-foreground">{formatDate(l.created_at)}</td>
+                      <td className="p-3">
+                        <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(l)}><Pencil className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(l.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="md:hidden space-y-3">
+            {filteredLeads.map(l => {
+              const statusStyle = STATUS_OPTIONS.find(s => s.value === l.status)?.color || 'bg-muted text-muted-foreground';
+              return (
+                <div key={l.id} className="bg-card border rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-cairo font-medium text-sm">{l.name}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-cairo ${statusStyle}`}>{l.status}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-xs font-cairo text-muted-foreground">
+                    <div>الهاتف: <span className="font-roboto">{l.phone}</span></div>
+                    <div>المصدر: {l.source}</div>
+                    <div className="col-span-2 truncate">ملاحظات: {l.notes || '—'}</div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="font-cairo text-xs text-muted-foreground">{formatDate(l.created_at)}</span>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEdit(l)}><Pencil className="w-3.5 h-3.5" /></Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog(l.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       ) : (
         <div className="text-center py-16 bg-card border rounded-xl">
           <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
