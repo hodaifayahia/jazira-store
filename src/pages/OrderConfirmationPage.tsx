@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +31,8 @@ export default function OrderConfirmationPage() {
     </div>
   );
 
+  const paymentLabel = order.payment_method === 'baridimob' ? 'بريدي موب' : order.payment_method === 'flexy' ? 'فليكسي' : order.payment_method;
+
   return (
     <div className="container py-16 max-w-lg mx-auto text-center">
       <div className="bg-card border rounded-lg p-8 animate-fade-in">
@@ -56,9 +58,21 @@ export default function OrderConfirmationPage() {
             <span className="text-muted-foreground">الولاية</span>
             <span>{(order as any).wilayas?.name}</span>
           </div>
+          {order.baladiya && (
+            <div className="flex justify-between font-cairo text-sm">
+              <span className="text-muted-foreground">البلدية</span>
+              <span>{order.baladiya}</span>
+            </div>
+          )}
+          {order.delivery_type && (
+            <div className="flex justify-between font-cairo text-sm">
+              <span className="text-muted-foreground">نوع التوصيل</span>
+              <span>{order.delivery_type === 'home' ? 'إلى المنزل' : 'إلى المكتب'}</span>
+            </div>
+          )}
           <div className="flex justify-between font-cairo text-sm">
             <span className="text-muted-foreground">طريقة الدفع</span>
-            <span>{order.payment_method === 'baridimob' ? 'بريدي موب' : 'فليكسي'}</span>
+            <span>{paymentLabel}</span>
           </div>
           <hr />
           <div className="flex justify-between font-cairo font-bold">
@@ -67,9 +81,17 @@ export default function OrderConfirmationPage() {
           </div>
         </div>
 
-        <Link to="/">
-          <Button className="w-full font-cairo font-semibold">العودة إلى المتجر</Button>
-        </Link>
+        <div className="flex flex-col gap-3">
+          <Link to={`/track?order=${order.order_number}`}>
+            <Button variant="outline" className="w-full font-cairo font-semibold gap-2">
+              <Search className="w-4 h-4" />
+              تتبع الطلب
+            </Button>
+          </Link>
+          <Link to="/">
+            <Button className="w-full font-cairo font-semibold">العودة إلى المتجر</Button>
+          </Link>
+        </div>
       </div>
     </div>
   );

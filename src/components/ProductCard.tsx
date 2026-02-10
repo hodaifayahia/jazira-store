@@ -49,6 +49,10 @@ export default function ProductCard({ id, name, price, image, images, mainImageI
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (variationTypes && Object.keys(variationTypes).length > 0) {
+      navigate(`/product/${id}`);
+      return;
+    }
     addItem({ id, name, price, image: allImages[0] || '', stock, shippingPrice });
     toast({ title: 'تمت الإضافة', description: `تمت إضافة "${name}" إلى السلة` });
   };
@@ -56,6 +60,10 @@ export default function ProductCard({ id, name, price, image, images, mainImageI
   const handleDirectOrder = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (variationTypes && Object.keys(variationTypes).length > 0) {
+      navigate(`/product/${id}`);
+      return;
+    }
     addItem({ id, name, price, image: allImages[0] || '', stock, shippingPrice });
     navigate('/checkout');
   };

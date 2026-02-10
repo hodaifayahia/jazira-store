@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      baladiyat: {
+        Row: {
+          id: string
+          is_active: boolean | null
+          name: string
+          wilaya_id: string
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean | null
+          name: string
+          wilaya_id: string
+        }
+        Update: {
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          wilaya_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "baladiyat_wilaya_id_fkey"
+            columns: ["wilaya_id"]
+            isOneToOne: false
+            referencedRelation: "wilayas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_products: {
         Row: {
           coupon_id: string
@@ -146,10 +175,12 @@ export type Database = {
       orders: {
         Row: {
           address: string | null
+          baladiya: string | null
           coupon_code: string | null
           created_at: string | null
           customer_name: string
           customer_phone: string
+          delivery_type: string | null
           discount_amount: number | null
           id: string
           order_number: string
@@ -164,10 +195,12 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          baladiya?: string | null
           coupon_code?: string | null
           created_at?: string | null
           customer_name: string
           customer_phone: string
+          delivery_type?: string | null
           discount_amount?: number | null
           id?: string
           order_number: string
@@ -182,10 +215,12 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          baladiya?: string | null
           coupon_code?: string | null
           created_at?: string | null
           customer_name?: string
           customer_phone?: string
+          delivery_type?: string | null
           discount_amount?: number | null
           id?: string
           order_number?: string
@@ -443,18 +478,21 @@ export type Database = {
           is_active: boolean | null
           name: string
           shipping_price: number
+          shipping_price_home: number
         }
         Insert: {
           id?: string
           is_active?: boolean | null
           name: string
           shipping_price: number
+          shipping_price_home?: number
         }
         Update: {
           id?: string
           is_active?: boolean | null
           name?: string
           shipping_price?: number
+          shipping_price_home?: number
         }
         Relationships: []
       }

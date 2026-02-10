@@ -30,6 +30,7 @@ export default function Footer() {
     { to: '/products', label: 'المنتجات' },
     { to: '/track', label: 'تتبع الطلب' },
     { to: '/cart', label: 'السلة' },
+    { to: '/about', label: 'من نحن' },
   ];
 
   return (

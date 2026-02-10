@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard, Building2, Home, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCart, type CartItemVariation } from '@/contexts/CartContext';
 import { formatPrice, formatDate } from '@/lib/format';
-import { calculateShippingForOrder } from '@/lib/shipping';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,13 +19,8 @@ function StarRating({ value, onChange, readonly = false }: { value: number; onCh
   return (
     <div className="flex gap-1" dir="ltr">
       {[1, 2, 3, 4, 5].map(i => (
-        <button
-          key={i}
-          type="button"
-          disabled={readonly}
-          onClick={() => onChange?.(i)}
-          className={`transition-colors ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'}`}
-        >
+        <button key={i} type="button" disabled={readonly} onClick={() => onChange?.(i)}
+          className={`transition-colors ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'}`}>
           <Star className={`w-5 h-5 ${i <= value ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/30'}`} />
         </button>
       ))}
@@ -45,20 +39,36 @@ export default function SingleProductPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
 
-  // Review form state
   const [reviewName, setReviewName] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
 
-  // Inline order form state
   const [orderName, setOrderName] = useState('');
   const [orderPhone, setOrderPhone] = useState('');
   const [orderWilayaId, setOrderWilayaId] = useState('');
+  const [orderBaladiya, setOrderBaladiya] = useState('');
+  const [orderDeliveryType, setOrderDeliveryType] = useState('');
   const [orderAddress, setOrderAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleReceiptFile = (file: File | null) => {
+    setReceiptFile(file);
+    if (file && file.type.startsWith('image/')) {
+      setReceiptPreview(URL.createObjectURL(file));
+    } else {
+      setReceiptPreview(null);
+    }
+  };
+
+  const removeReceipt = () => {
+    setReceiptFile(null);
+    if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+    setReceiptPreview(null);
+  };
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -73,11 +83,7 @@ export default function SingleProductPage() {
   const { data: reviews } = useQuery({
     queryKey: ['reviews', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('product_id', id!)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('reviews').select('*').eq('product_id', id!).order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -92,22 +98,25 @@ export default function SingleProductPage() {
     },
   });
 
+  const { data: baladiyat } = useQuery({
+    queryKey: ['baladiyat', orderWilayaId],
+    queryFn: async () => {
+      const { data } = await supabase.from('baladiyat').select('*').eq('wilaya_id', orderWilayaId).eq('is_active', true).order('name');
+      return data || [];
+    },
+    enabled: !!orderWilayaId,
+  });
+
   const { data: variations } = useQuery({
     queryKey: ['product-variations', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_variations')
-        .select('*')
-        .eq('product_id', id!)
-        .eq('is_active', true)
-        .order('variation_type');
+      const { data, error } = await supabase.from('product_variations').select('*').eq('product_id', id!).eq('is_active', true).order('variation_type');
       if (error) throw error;
       return data || [];
     },
     enabled: !!id,
   });
 
-  // Fetch variation_options to get color_code
   const { data: variationOptions } = useQuery({
     queryKey: ['variation-options'],
     queryFn: async () => {
@@ -116,7 +125,6 @@ export default function SingleProductPage() {
     },
   });
 
-  // Map variation to its color_code from variation_options
   const getColorCode = (type: string, value: string) => {
     if (!variationOptions) return null;
     const opt = variationOptions.find(o => o.variation_type === type && o.variation_value === value);
@@ -128,7 +136,6 @@ export default function SingleProductPage() {
     return t.includes('لون') || t.includes('color') || t.includes('colour');
   };
 
-  // Group variations by type
   const variationGroups = useMemo(() => {
     if (!variations || variations.length === 0) return {};
     const groups: Record<string, typeof variations> = {};
@@ -163,14 +170,10 @@ export default function SingleProductPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reviews', id] });
-      setReviewName('');
-      setReviewRating(5);
-      setReviewComment('');
+      setReviewName(''); setReviewRating(5); setReviewComment('');
       toast({ title: 'شكراً لتقييمك! ⭐' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ، حاول مرة أخرى', variant: 'destructive' });
-    },
+    onError: () => { toast({ title: 'حدث خطأ، حاول مرة أخرى', variant: 'destructive' }); },
   });
 
   if (isLoading) {
@@ -178,12 +181,7 @@ export default function SingleProductPage() {
       <div className="container py-8">
         <div className="grid md:grid-cols-2 gap-8">
           <Skeleton className="aspect-square rounded-lg" />
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-10 w-40" />
-          </div>
+          <div className="space-y-4"><Skeleton className="h-8 w-3/4" /><Skeleton className="h-6 w-32" /><Skeleton className="h-24 w-full" /><Skeleton className="h-10 w-40" /></div>
         </div>
       </div>
     );
@@ -193,28 +191,22 @@ export default function SingleProductPage() {
     return (
       <div className="container py-16 text-center space-y-4">
         <p className="font-cairo text-xl text-muted-foreground">المنتج غير موجود</p>
-        <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-primary hover:underline">
-          <ArrowRight className="w-4 h-4" />
-          العودة إلى المنتجات
-        </Link>
+        <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-primary hover:underline"><ArrowRight className="w-4 h-4" />العودة إلى المنتجات</Link>
       </div>
     );
   }
 
   const productImages = product.images || [];
-  // Merge variation images into gallery (deduplicated)
   const variationImages = (variations || []).map(v => v.image_url).filter((url): url is string => !!url);
   const images = [...productImages, ...variationImages.filter(url => !productImages.includes(url))];
   const outOfStock = (product.stock ?? 0) <= 0;
-  const avgRating = reviews && reviews.length > 0
-    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-    : 0;
+  const avgRating = reviews && reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
-  // Build selected variation for cart
+  const hasVariations = Object.keys(variationGroups).length > 0;
+
   const selectedVariationForCart: CartItemVariation | undefined = (() => {
     const types = Object.keys(variationGroups);
     if (types.length === 0) return undefined;
-    // Use the first selected variation only (simplification)
     for (const type of types) {
       const value = selectedVariations[type];
       if (value) {
@@ -228,16 +220,22 @@ export default function SingleProductPage() {
   const priceAdjustment = selectedVariationForCart?.priceAdjustment || 0;
   const effectivePrice = Number(product.price) + priceAdjustment;
 
+  const allVariationsSelected = () => {
+    const types = Object.keys(variationGroups);
+    if (types.length === 0) return true;
+    return types.every(type => selectedVariations[type] && selectedVariations[type] !== '');
+  };
+
   const handleAdd = () => {
+    if (hasVariations && !allVariationsSelected()) {
+      toast({ title: 'يرجى اختيار جميع المتغيرات أولاً', variant: 'destructive' });
+      return;
+    }
     for (let i = 0; i < qty; i++) {
       addItem({
-        id: product.id,
-        name: product.name,
-        price: Number(product.price),
-        image: images[0] || '',
-        stock: product.stock ?? 0,
-        shippingPrice: Number(product.shipping_price) || 0,
-        variation: selectedVariationForCart,
+        id: product.id, name: product.name, price: Number(product.price),
+        image: images[0] || '', stock: product.stock ?? 0,
+        shippingPrice: Number(product.shipping_price) || 0, variation: selectedVariationForCart,
       });
     }
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
@@ -249,8 +247,10 @@ export default function SingleProductPage() {
   // Inline order calculations
   const selectedWilaya = wilayas?.find(w => w.id === orderWilayaId);
   const wilayaBaseRate = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
+  const wilayaHomeRate = selectedWilaya ? Number(selectedWilaya.shipping_price_home) : 0;
   const productShippingRate = Number(product.shipping_price) || 0;
-  const shippingRate = productShippingRate > 0 ? productShippingRate : wilayaBaseRate;
+  const baseRate = orderDeliveryType === 'home' ? wilayaHomeRate : wilayaBaseRate;
+  const shippingRate = productShippingRate > 0 ? productShippingRate : baseRate;
   const shippingCost = shippingRate * qty;
   const itemSubtotal = effectivePrice * qty;
   const orderTotal = itemSubtotal + shippingCost;
@@ -264,11 +264,17 @@ export default function SingleProductPage() {
   };
 
   const handleDirectOrder = async () => {
+    if (hasVariations && !allVariationsSelected()) {
+      toast({ title: 'يرجى اختيار جميع المتغيرات أولاً', variant: 'destructive' });
+      return;
+    }
+
     const newErrors: Record<string, string> = {};
     if (!orderName.trim()) newErrors.orderName = 'يرجى إدخال الاسم الكامل';
     if (!orderPhone.trim()) newErrors.orderPhone = 'يرجى إدخال رقم الهاتف';
     else if (!/^0[567]\d{8}$/.test(orderPhone)) newErrors.orderPhone = 'رقم الهاتف غير صالح (مثال: 05XXXXXXXX)';
     if (!orderWilayaId) newErrors.orderWilayaId = 'يرجى اختيار الولاية';
+    if (!orderDeliveryType) newErrors.orderDeliveryType = 'يرجى اختيار نوع التوصيل';
     if (!paymentMethod) newErrors.paymentMethod = 'يرجى اختيار طريقة الدفع';
     if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) newErrors.receiptFile = 'يرجى إرفاق إيصال الدفع';
     setErrors(newErrors);
@@ -288,25 +294,21 @@ export default function SingleProductPage() {
 
       const { data: order, error } = await supabase.from('orders').insert({
         order_number: '',
-        customer_name: orderName,
-        customer_phone: orderPhone,
-        wilaya_id: orderWilayaId,
+        customer_name: orderName, customer_phone: orderPhone,
+        wilaya_id: orderWilayaId, baladiya: orderBaladiya || null,
+        delivery_type: orderDeliveryType || null,
         address: orderAddress || null,
-        subtotal: itemSubtotal,
-        shipping_cost: shippingCost,
-        total_amount: orderTotal,
-        payment_method: paymentMethod,
-        payment_receipt_url: receiptUrl || null,
+        subtotal: itemSubtotal, shipping_cost: shippingCost, total_amount: orderTotal,
+        payment_method: paymentMethod, payment_receipt_url: receiptUrl || null,
         user_id: user?.id || null,
       }).select().single();
       if (error) throw error;
 
       await supabase.from('order_items').insert({
-        order_id: order.id,
-        product_id: product.id,
-        quantity: qty,
-        unit_price: Number(product.price),
+        order_id: order.id, product_id: product.id, quantity: qty, unit_price: Number(product.price),
       });
+
+      supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
 
       navigate(`/order-confirmation/${order.order_number}`);
     } catch (err) {
@@ -318,13 +320,10 @@ export default function SingleProductPage() {
 
   return (
     <div className="container py-8">
-      {/* Back link */}
       <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowRight className="w-4 h-4" />
-        العودة إلى المنتجات
+        <ArrowRight className="w-4 h-4" />العودة إلى المنتجات
       </Link>
 
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 font-cairo">
         <Link to="/" className="hover:text-foreground">الرئيسية</Link>
         <ChevronRight className="w-3 h-3 rotate-180" />
@@ -334,67 +333,31 @@ export default function SingleProductPage() {
       </nav>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Images - Enhanced Gallery */}
+        {/* Images */}
         <div className="flex flex-col-reverse md:flex-row gap-3">
-          {/* Thumbnails - vertical on desktop, horizontal on mobile */}
           {images.length > 1 && (
             <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[500px] md:w-20 shrink-0">
               {images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  className={`w-16 h-16 md:w-full md:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
-                    i === selectedImage ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-muted-foreground/30'
-                  }`}
-                >
+                <button key={i} onClick={() => setSelectedImage(i)}
+                  className={`w-16 h-16 md:w-full md:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${i === selectedImage ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-muted-foreground/30'}`}>
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
           )}
-
-          {/* Main image with zoom & arrows */}
           <div className="flex-1 relative group">
-            <div
-              className="aspect-square rounded-2xl overflow-hidden bg-muted cursor-zoom-in"
-              onMouseEnter={() => setIsZoomed(true)}
-              onMouseLeave={() => setIsZoomed(false)}
-            >
+            <div className="aspect-square rounded-2xl overflow-hidden bg-muted cursor-zoom-in" onMouseEnter={() => setIsZoomed(true)} onMouseLeave={() => setIsZoomed(false)}>
               {images[selectedImage] ? (
-                <img
-                  src={images[selectedImage]}
-                  alt={product.name}
-                  className={`w-full h-full object-cover transition-transform duration-500 ${isZoomed ? 'scale-150' : 'scale-100'}`}
-                />
+                <img src={images[selectedImage]} alt={product.name} className={`w-full h-full object-cover transition-transform duration-500 ${isZoomed ? 'scale-150' : 'scale-100'}`} />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  <ShoppingCart className="w-16 h-16" />
-                </div>
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground"><ShoppingCart className="w-16 h-16" /></div>
               )}
             </div>
-
-            {/* Image counter */}
-            {images.length > 1 && (
-              <span className="absolute top-3 left-3 bg-foreground/60 backdrop-blur-sm text-background text-xs font-roboto font-bold rounded-full px-2.5 py-1">
-                {selectedImage + 1}/{images.length}
-              </span>
-            )}
-
-            {/* Navigation arrows */}
             {images.length > 1 && (
               <>
-                <button
-                  onClick={goToNextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-background"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={goToPrevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-background"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
+                <span className="absolute top-3 left-3 bg-foreground/60 backdrop-blur-sm text-background text-xs font-roboto font-bold rounded-full px-2.5 py-1">{selectedImage + 1}/{images.length}</span>
+                <button onClick={goToNextImage} className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-background"><ChevronRight className="w-5 h-5" /></button>
+                <button onClick={goToPrevImage} className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-background"><ChevronLeft className="w-5 h-5" /></button>
               </>
             )}
           </div>
@@ -410,7 +373,6 @@ export default function SingleProductPage() {
             </div>
             <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
 
-            {/* Rating summary */}
             {reviews && reviews.length > 0 && (
               <div className="flex items-center gap-2">
                 <StarRating value={Math.round(avgRating)} readonly />
@@ -432,15 +394,15 @@ export default function SingleProductPage() {
               <p className="font-cairo text-sm text-primary">متوفر في المخزون ({product.stock} قطعة)</p>
             )}
 
-            {/* Variation Selector - WooCommerce Style */}
-            {Object.keys(variationGroups).length > 0 && (
+            {/* Variation Selector */}
+            {hasVariations && (
               <div className="space-y-4 pt-2">
                 {Object.entries(variationGroups).map(([type, vars]) => {
                   const isColor = isColorType(type);
                   return (
                     <div key={type}>
                       <Label className="font-cairo font-semibold text-sm mb-2 block">
-                        {type}
+                        {type} <span className="text-destructive">*</span>
                         {selectedVariations[type] && (
                           <span className="font-normal text-muted-foreground mr-2">: {selectedVariations[type]}</span>
                         )}
@@ -450,7 +412,6 @@ export default function SingleProductPage() {
                           const isSelected = selectedVariations[type] === v.variation_value;
                           const colorCode = getColorCode(type, v.variation_value);
                           const isOutOfStock = (v.stock ?? 0) <= 0;
-
                           const handleClick = () => {
                             setSelectedVariations(prev => ({ ...prev, [type]: isSelected ? '' : v.variation_value }));
                             if (!isSelected && v.image_url) {
@@ -458,50 +419,22 @@ export default function SingleProductPage() {
                               if (idx >= 0) setSelectedImage(idx);
                             }
                           };
-
-                          // Color swatch (round circle)
                           if (isColor && colorCode) {
                             return (
-                              <button
-                                key={v.id}
-                                onClick={handleClick}
-                                disabled={isOutOfStock}
+                              <button key={v.id} onClick={handleClick} disabled={isOutOfStock}
                                 title={`${v.variation_value}${Number(v.price_adjustment) > 0 ? ` (+${formatPrice(Number(v.price_adjustment))})` : ''}`}
-                                className={`relative w-9 h-9 rounded-full border-2 transition-all ring-2 ring-offset-2 ${
-                                  isSelected ? 'ring-primary border-primary' : 'ring-transparent border-muted-foreground/30 hover:border-muted-foreground/50'
-                                } ${isOutOfStock ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
-                                style={{ backgroundColor: colorCode }}
-                              >
-                                {isOutOfStock && (
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-full h-0.5 bg-destructive rotate-45 rounded-full" />
-                                  </div>
-                                )}
+                                className={`relative w-9 h-9 rounded-full border-2 transition-all ring-2 ring-offset-2 ${isSelected ? 'ring-primary border-primary' : 'ring-transparent border-muted-foreground/30 hover:border-muted-foreground/50'} ${isOutOfStock ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                style={{ backgroundColor: colorCode }}>
+                                {isOutOfStock && <div className="absolute inset-0 flex items-center justify-center"><div className="w-full h-0.5 bg-destructive rotate-45 rounded-full" /></div>}
                               </button>
                             );
                           }
-
-                          // Non-color: bordered button (size, material, etc.)
                           return (
-                            <button
-                              key={v.id}
-                              onClick={handleClick}
-                              disabled={isOutOfStock}
-                              className={`relative px-4 py-2 rounded-lg border-2 text-sm font-cairo font-medium transition-all ${
-                                isSelected
-                                  ? 'border-primary bg-primary/10 text-primary'
-                                  : 'border-border hover:border-primary/30 text-foreground'
-                              } ${isOutOfStock ? 'opacity-30 cursor-not-allowed' : ''}`}
-                            >
+                            <button key={v.id} onClick={handleClick} disabled={isOutOfStock}
+                              className={`relative px-4 py-2 rounded-lg border-2 text-sm font-cairo font-medium transition-all ${isSelected ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/30 text-foreground'} ${isOutOfStock ? 'opacity-30 cursor-not-allowed' : ''}`}>
                               {v.variation_value}
-                              {Number(v.price_adjustment) > 0 && (
-                                <span className="font-roboto text-xs text-muted-foreground mr-1">(+{formatPrice(Number(v.price_adjustment))})</span>
-                              )}
-                              {isOutOfStock && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <div className="w-full h-0.5 bg-destructive/50 rotate-45 rounded-full" />
-                                </div>
-                              )}
+                              {Number(v.price_adjustment) > 0 && <span className="font-roboto text-xs text-muted-foreground mr-1">(+{formatPrice(Number(v.price_adjustment))})</span>}
+                              {isOutOfStock && <div className="absolute inset-0 flex items-center justify-center"><div className="w-full h-0.5 bg-destructive/50 rotate-45 rounded-full" /></div>}
                             </button>
                           );
                         })}
@@ -531,6 +464,11 @@ export default function SingleProductPage() {
                   إضافة إلى السلة
                 </Button>
               </div>
+              {/* Total price display */}
+              <div className="flex justify-between items-center font-cairo text-sm bg-muted/50 rounded-xl px-4 py-2.5">
+                <span className="text-muted-foreground">الإجمالي ({qty} قطعة)</span>
+                <span className="font-roboto font-bold text-primary text-lg">{formatPrice(effectivePrice * qty)}</span>
+              </div>
             </div>
           )}
 
@@ -552,23 +490,14 @@ export default function SingleProductPage() {
                 </div>
                 <div>
                   <Label className="font-cairo text-sm">الاسم الكامل *</Label>
-                  <Input
-                    value={orderName}
-                    onChange={e => { setOrderName(e.target.value); setErrors(prev => ({ ...prev, orderName: '' })); }}
-                    placeholder="أدخل اسمك الكامل"
-                    className={`font-cairo mt-1 ${errors.orderName ? 'border-destructive' : ''}`}
-                  />
+                  <Input value={orderName} onChange={e => { setOrderName(e.target.value); setErrors(prev => ({ ...prev, orderName: '' })); }}
+                    placeholder="أدخل اسمك الكامل" className={`font-cairo mt-1 ${errors.orderName ? 'border-destructive' : ''}`} />
                   {errors.orderName && <p className="text-destructive text-xs font-cairo mt-1">{errors.orderName}</p>}
                 </div>
                 <div>
                   <Label className="font-cairo text-sm">رقم الهاتف *</Label>
-                  <Input
-                    value={orderPhone}
-                    onChange={e => { setOrderPhone(e.target.value); setErrors(prev => ({ ...prev, orderPhone: '' })); }}
-                    placeholder="05XXXXXXXX"
-                    className={`font-roboto mt-1 ${errors.orderPhone ? 'border-destructive' : ''}`}
-                    dir="ltr"
-                  />
+                  <Input value={orderPhone} onChange={e => { setOrderPhone(e.target.value); setErrors(prev => ({ ...prev, orderPhone: '' })); }}
+                    placeholder="05XXXXXXXX" className={`font-roboto mt-1 ${errors.orderPhone ? 'border-destructive' : ''}`} dir="ltr" />
                   {errors.orderPhone && <p className="text-destructive text-xs font-cairo mt-1">{errors.orderPhone}</p>}
                 </div>
               </div>
@@ -584,18 +513,54 @@ export default function SingleProductPage() {
                 </div>
                 <div>
                   <Label className="font-cairo text-sm">الولاية *</Label>
-                  <Select value={orderWilayaId} onValueChange={v => { setOrderWilayaId(v); setErrors(prev => ({ ...prev, orderWilayaId: '' })); }}>
+                  <Select value={orderWilayaId} onValueChange={v => { setOrderWilayaId(v); setOrderBaladiya(''); setOrderDeliveryType(''); setErrors(prev => ({ ...prev, orderWilayaId: '', orderDeliveryType: '' })); }}>
                     <SelectTrigger className={`font-cairo mt-1 ${errors.orderWilayaId ? 'border-destructive' : ''}`}><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
                     <SelectContent>
                       {wilayas?.map(w => (
-                        <SelectItem key={w.id} value={w.id} className="font-cairo">
-                          {w.name} — {formatPrice(Number(w.shipping_price))}
-                        </SelectItem>
+                        <SelectItem key={w.id} value={w.id} className="font-cairo">{w.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {errors.orderWilayaId && <p className="text-destructive text-xs font-cairo mt-1">{errors.orderWilayaId}</p>}
                 </div>
+
+                {/* Baladiya */}
+                {orderWilayaId && baladiyat && baladiyat.length > 0 && (
+                  <div>
+                    <Label className="font-cairo text-sm">البلدية</Label>
+                    <Select value={orderBaladiya} onValueChange={setOrderBaladiya}>
+                      <SelectTrigger className="font-cairo mt-1"><SelectValue placeholder="اختر البلدية" /></SelectTrigger>
+                      <SelectContent>
+                        {baladiyat.map(b => (
+                          <SelectItem key={b.id} value={b.name} className="font-cairo">{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Delivery Type */}
+                {orderWilayaId && selectedWilaya && (
+                  <div>
+                    <Label className="font-cairo text-sm">نوع التوصيل *</Label>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <button type="button" onClick={() => { setOrderDeliveryType('office'); setErrors(e => ({ ...e, orderDeliveryType: '' })); }}
+                        className={`flex flex-col items-center gap-1.5 p-3 border-2 rounded-xl transition-all text-sm ${orderDeliveryType === 'office' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                        <Building2 className={`w-5 h-5 ${orderDeliveryType === 'office' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <span className="font-cairo font-semibold">المكتب</span>
+                        <span className="font-roboto font-bold text-primary">{formatPrice(Number(selectedWilaya.shipping_price))}</span>
+                      </button>
+                      <button type="button" onClick={() => { setOrderDeliveryType('home'); setErrors(e => ({ ...e, orderDeliveryType: '' })); }}
+                        className={`flex flex-col items-center gap-1.5 p-3 border-2 rounded-xl transition-all text-sm ${orderDeliveryType === 'home' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                        <Home className={`w-5 h-5 ${orderDeliveryType === 'home' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <span className="font-cairo font-semibold">المنزل</span>
+                        <span className="font-roboto font-bold text-primary">{formatPrice(Number(selectedWilaya.shipping_price_home))}</span>
+                      </button>
+                    </div>
+                    {errors.orderDeliveryType && <p className="text-destructive text-xs font-cairo mt-1">{errors.orderDeliveryType}</p>}
+                  </div>
+                )}
+
                 <div>
                   <Label className="font-cairo text-sm">العنوان التفصيلي</Label>
                   <Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} placeholder="اختياري" className="font-cairo mt-1" />
@@ -627,7 +592,19 @@ export default function SingleProductPage() {
                             <p className="font-cairo">الاسم: {settings.ccp_name}</p>
                             <div className="mt-1.5">
                               <Label className="font-cairo text-[11px]">أرفق الإيصال *</Label>
-                              <Input type="file" accept="image/*,.pdf" onChange={e => { setReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              <Input type="file" accept="image/*,.pdf" onChange={e => { handleReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              {receiptPreview && (
+                                <div className="relative mt-2 inline-block">
+                                  <img src={receiptPreview} alt="إيصال" className="w-24 h-24 object-cover rounded-lg border" />
+                                  <button onClick={removeReceipt} className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                              {receiptFile && !receiptPreview && (
+                                <div className="flex items-center gap-2 mt-1 text-xs font-cairo text-muted-foreground">
+                                  <Upload className="w-3 h-3" /> {receiptFile.name}
+                                  <button onClick={removeReceipt} className="text-destructive"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
                               {errors.receiptFile && <p className="text-destructive text-xs font-cairo mt-1">{errors.receiptFile}</p>}
                             </div>
                           </div>
@@ -650,7 +627,19 @@ export default function SingleProductPage() {
                             </div>
                             <div className="mt-1.5">
                               <Label className="font-cairo text-[11px]">أرفق لقطة الشاشة *</Label>
-                              <Input type="file" accept="image/*" onChange={e => { setReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              <Input type="file" accept="image/*" onChange={e => { handleReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              {receiptPreview && (
+                                <div className="relative mt-2 inline-block">
+                                  <img src={receiptPreview} alt="لقطة شاشة" className="w-24 h-24 object-cover rounded-lg border" />
+                                  <button onClick={removeReceipt} className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                              {receiptFile && !receiptPreview && (
+                                <div className="flex items-center gap-2 mt-1 text-xs font-cairo text-muted-foreground">
+                                  <Upload className="w-3 h-3" /> {receiptFile.name}
+                                  <button onClick={removeReceipt} className="text-destructive"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
                               {errors.receiptFile && <p className="text-destructive text-xs font-cairo mt-1">{errors.receiptFile}</p>}
                             </div>
                           </div>
@@ -663,14 +652,14 @@ export default function SingleProductPage() {
               </div>
 
               {/* Order Summary */}
-              {orderWilayaId && (
+              {orderWilayaId && orderDeliveryType && (
                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5 text-sm font-cairo">
                   <div className="flex justify-between">
                     <span>المنتج (×{qty})</span>
                     <span className="font-roboto font-bold">{formatPrice(itemSubtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>التوصيل</span>
+                    <span>التوصيل ({orderDeliveryType === 'home' ? 'منزل' : 'مكتب'})</span>
                     <span className="font-roboto font-bold">{formatPrice(shippingCost)}</span>
                   </div>
                   <hr className="my-1 border-primary/20" />
@@ -681,11 +670,8 @@ export default function SingleProductPage() {
                 </div>
               )}
 
-              <Button
-                onClick={handleDirectOrder}
-                disabled={submittingOrder}
-                className="w-full font-cairo font-bold text-base gap-2 rounded-xl h-12 bg-gradient-to-l from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground"
-              >
+              <Button onClick={handleDirectOrder} disabled={submittingOrder}
+                className="w-full font-cairo font-bold text-base gap-2 rounded-xl h-12 bg-gradient-to-l from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground">
                 {submittingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
                 {submittingOrder ? 'جاري الإرسال...' : 'تأكيد الطلب'}
               </Button>
@@ -694,7 +680,7 @@ export default function SingleProductPage() {
         </div>
       </div>
 
-      {/* ─── Rich Product Details - Masonry Grid ─── */}
+      {/* Rich Product Details */}
       {product.description && images.length > 1 && (
         <section className="mt-16">
           <h2 className="font-cairo font-bold text-2xl mb-4 text-foreground">تفاصيل المنتج</h2>
@@ -709,56 +695,32 @@ export default function SingleProductPage() {
         </section>
       )}
 
-      {/* ─── Reviews Section ─── */}
+      {/* Reviews Section */}
       <section className="mt-16 mb-8">
         <h2 className="font-cairo font-bold text-2xl mb-6 text-foreground flex items-center gap-2">
           <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
           التقييمات ({reviews?.length || 0})
         </h2>
-
-        {/* Add Review Form */}
         <div className="bg-card border rounded-2xl p-6 mb-8">
           <h3 className="font-cairo font-bold text-lg mb-4">أضف تقييمك</h3>
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <Input
-                  value={reviewName}
-                  onChange={e => setReviewName(e.target.value)}
-                  placeholder="اسمك"
-                  className="font-cairo"
-                />
+                <Input value={reviewName} onChange={e => setReviewName(e.target.value)} placeholder="اسمك" className="font-cairo" />
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-cairo text-sm text-muted-foreground">تقييمك:</span>
                 <StarRating value={reviewRating} onChange={setReviewRating} />
               </div>
             </div>
-            <Textarea
-              value={reviewComment}
-              onChange={e => setReviewComment(e.target.value)}
-              placeholder="اكتب تعليقك هنا... (اختياري)"
-              className="font-cairo"
-              rows={3}
-            />
-            <Button
-              onClick={() => {
-                if (!reviewName.trim()) {
-                  toast({ title: 'يرجى إدخال اسمك', variant: 'destructive' });
-                  return;
-                }
-                submitReview.mutate();
-              }}
-              disabled={submitReview.isPending}
-              className="font-cairo font-semibold gap-2 rounded-xl"
-            >
+            <Textarea value={reviewComment} onChange={e => setReviewComment(e.target.value)} placeholder="اكتب تعليقك هنا... (اختياري)" className="font-cairo" rows={3} />
+            <Button onClick={() => { if (!reviewName.trim()) { toast({ title: 'يرجى إدخال اسمك', variant: 'destructive' }); return; } submitReview.mutate(); }}
+              disabled={submitReview.isPending} className="font-cairo font-semibold gap-2 rounded-xl">
               {submitReview.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               إرسال التقييم
             </Button>
           </div>
         </div>
-
-        {/* Reviews list */}
         {reviews && reviews.length > 0 ? (
           <div className="space-y-4">
             {reviews.map(review => (
@@ -775,9 +737,7 @@ export default function SingleProductPage() {
                   </div>
                   <StarRating value={review.rating} readonly />
                 </div>
-                {review.comment && (
-                  <p className="font-cairo text-sm text-muted-foreground leading-relaxed mt-2">{review.comment}</p>
-                )}
+                {review.comment && <p className="font-cairo text-sm text-muted-foreground leading-relaxed mt-2">{review.comment}</p>}
               </div>
             ))}
           </div>
