@@ -16,6 +16,7 @@ import {
   Wrench, Gamepad2, Crown, Flower2, Bike, Briefcase, Stethoscope
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
 const AVAILABLE_ICONS: { value: string; label: string; Icon: LucideIcon }[] = [
   { value: 'Home', label: 'منزل', Icon: Home },
@@ -60,6 +61,7 @@ const AVAILABLE_ICONS: { value: string; label: string; Icon: LucideIcon }[] = [
 type Category = { name: string; icon: string; image?: string };
 
 export default function AdminCategoriesPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { toast } = useToast();
   const { data: categoriesData } = useCategories();
@@ -96,15 +98,15 @@ export default function AdminCategoriesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-settings'] });
       qc.invalidateQueries({ queryKey: ['categories'] });
-      toast({ title: 'تم الحفظ بنجاح ✅' });
+      toast({ title: t('common.savedSuccess') });
     },
     onError: () => {
-      toast({ title: 'حدث خطأ أثناء الحفظ', variant: 'destructive' });
+      toast({ title: t('common.errorOccurred'), variant: 'destructive' });
     },
   });
 
   const uploadImage = async (file: File): Promise<string> => {
-    if (file.size > 5 * 1024 * 1024) throw new Error('حجم الصورة كبير جداً (الحد الأقصى 5MB)');
+    if (file.size > 5 * 1024 * 1024) throw new Error(t('categories.imageTooLarge'));
     const ext = file.name.split('.').pop();
     const path = `categories/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage.from('store').upload(path, file);
@@ -120,9 +122,9 @@ export default function AdminCategoriesPage() {
     try {
       const url = await uploadImage(file);
       setNewImage(url);
-      toast({ title: 'تم رفع الصورة ✅' });
+      toast({ title: t('categories.imageUploaded') });
     } catch (err: any) {
-      toast({ title: err.message || 'فشل رفع الصورة', variant: 'destructive' });
+      toast({ title: err.message || t('categories.imageFailed'), variant: 'destructive' });
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -136,9 +138,9 @@ export default function AdminCategoriesPage() {
     try {
       const url = await uploadImage(file);
       setEditImage(url);
-      toast({ title: 'تم رفع الصورة ✅' });
+      toast({ title: t('categories.imageUploaded') });
     } catch (err: any) {
-      toast({ title: err.message || 'فشل رفع الصورة', variant: 'destructive' });
+      toast({ title: err.message || t('categories.imageFailed'), variant: 'destructive' });
     } finally {
       setEditUploading(false);
       e.target.value = '';
@@ -149,7 +151,7 @@ export default function AdminCategoriesPage() {
     const trimmed = newName.trim();
     if (!trimmed) return;
     if (currentCategories.some(c => c.name === trimmed)) {
-      toast({ title: 'هذه الفئة موجودة بالفعل', variant: 'destructive' });
+      toast({ title: t('categories.alreadyExists'), variant: 'destructive' });
       return;
     }
     const updated = [...currentCategories, { name: trimmed, icon: newIcon, image: newImage }];
@@ -186,7 +188,7 @@ export default function AdminCategoriesPage() {
     const trimmed = editName.trim();
     if (!trimmed) return;
     if (currentCategories.some((c, i) => c.name === trimmed && i !== editIndex)) {
-      toast({ title: 'هذه الفئة موجودة بالفعل', variant: 'destructive' });
+      toast({ title: t('categories.alreadyExists'), variant: 'destructive' });
       return;
     }
     const updated = currentCategories.map((c, i) =>
@@ -208,12 +210,12 @@ export default function AdminCategoriesPage() {
             <Layers className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-cairo font-bold text-2xl text-foreground">إدارة الفئات</h2>
-            <p className="font-cairo text-sm text-muted-foreground">أضف، عدّل، أو احذف فئات المنتجات</p>
+            <h2 className="font-cairo font-bold text-2xl text-foreground">{t('categories.title')}</h2>
+            <p className="font-cairo text-sm text-muted-foreground">{t('categories.subtitle')}</p>
           </div>
         </div>
         <div className="bg-primary/10 text-primary font-cairo font-bold text-sm px-4 py-2 rounded-full">
-          {currentCategories.length} فئة
+          {t('categories.count').replace('{n}', String(currentCategories.length))}
         </div>
       </div>
 
@@ -223,16 +225,16 @@ export default function AdminCategoriesPage() {
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Plus className="w-4 h-4 text-primary" />
           </div>
-          إضافة فئة جديدة
+          {t('categories.addNew')}
         </h3>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row gap-3 items-end">
             <div className="flex-1 w-full">
-              <Label className="font-cairo text-xs text-muted-foreground">اسم الفئة</Label>
-              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="مثال: ملابس، أحذية، إلكترونيات..." className="font-cairo mt-1.5 h-11" onKeyDown={e => e.key === 'Enter' && addCategory()} />
+              <Label className="font-cairo text-xs text-muted-foreground">{t('categories.categoryName')}</Label>
+              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder={t('categories.namePlaceholder')} className="font-cairo mt-1.5 h-11" onKeyDown={e => e.key === 'Enter' && addCategory()} />
             </div>
             <div className="w-full sm:w-40">
-              <Label className="font-cairo text-xs text-muted-foreground">الأيقونة</Label>
+              <Label className="font-cairo text-xs text-muted-foreground">{t('categories.icon')}</Label>
               <Select value={newIcon} onValueChange={setNewIcon}>
                 <SelectTrigger className="mt-1.5 h-11">
                   <div className="flex items-center gap-2">
@@ -250,12 +252,12 @@ export default function AdminCategoriesPage() {
               </Select>
             </div>
             <Button onClick={addCategory} disabled={saveMutation.isPending || !newName.trim()} className="font-cairo gap-1.5 h-11 px-6 w-full sm:w-auto">
-              <Plus className="w-4 h-4" /> إضافة
+              <Plus className="w-4 h-4" /> {t('common.add')}
             </Button>
           </div>
           {/* Image upload for new category */}
           <div className="flex items-center gap-3">
-            <Label className="font-cairo text-xs text-muted-foreground shrink-0">صورة الفئة (اختياري)</Label>
+            <Label className="font-cairo text-xs text-muted-foreground shrink-0">{t('categories.categoryImage')}</Label>
             {newImage ? (
               <div className="flex items-center gap-2">
                 <img src={newImage} alt="صورة الفئة" className="w-10 h-10 rounded-lg object-cover border" />
@@ -268,7 +270,7 @@ export default function AdminCategoriesPage() {
                 <input type="file" accept="image/*" className="hidden" onChange={handleNewImageUpload} disabled={uploading} />
                 <Button variant="outline" size="sm" className="font-cairo gap-1.5 pointer-events-none" disabled={uploading}>
                   {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                  {uploading ? 'جاري الرفع...' : 'رفع صورة'}
+                  {uploading ? t('categories.uploading') : t('categories.uploadImage')}
                 </Button>
               </label>
             )}
@@ -279,7 +281,7 @@ export default function AdminCategoriesPage() {
       {/* Categories list */}
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b bg-muted/30 flex items-center justify-between">
-          <h3 className="font-cairo font-semibold text-sm text-muted-foreground">الفئات الحالية</h3>
+          <h3 className="font-cairo font-semibold text-sm text-muted-foreground">{t('categories.currentCategories')}</h3>
         </div>
         {currentCategories.length > 0 ? (
           <div className="divide-y">
@@ -349,7 +351,7 @@ export default function AdminCategoriesPage() {
                           <input type="file" accept="image/*" className="hidden" onChange={handleEditImageUpload} disabled={editUploading} />
                           <Button variant="outline" size="sm" className="font-cairo gap-1 text-xs pointer-events-none h-7" disabled={editUploading}>
                             {editUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-                            {editUploading ? 'جاري الرفع...' : 'رفع صورة'}
+                            {editUploading ? t('categories.uploading') : t('categories.uploadImage')}
                           </Button>
                         </label>
                       )}
@@ -370,15 +372,12 @@ export default function AdminCategoriesPage() {
                       </div>
                     )}
                     <span className="font-cairo font-medium text-foreground">{cat.name}</span>
-                    <span className="font-cairo text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                      {AVAILABLE_ICONS.find(i => i.value === cat.icon)?.label || cat.icon}
-                    </span>
                   </div>
                   <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => startEdit(index)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => startEdit(index)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteDialog(index)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(index)}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -387,46 +386,27 @@ export default function AdminCategoriesPage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-14">
-            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-              <Layers className="w-7 h-7 text-muted-foreground" />
-            </div>
-            <p className="font-cairo text-muted-foreground font-medium">لا توجد فئات بعد</p>
-            <p className="font-cairo text-muted-foreground/60 text-xs mt-1">أضف فئة جديدة من الأعلى للبدء</p>
+          <div className="text-center py-12">
+            <Layers className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="font-cairo text-muted-foreground">{t('common.noData')}</p>
           </div>
         )}
       </div>
 
-      {/* Delete confirmation dialog */}
+      {/* Delete confirmation */}
       <Dialog open={deleteDialog !== null} onOpenChange={() => setDeleteDialog(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-cairo text-center">حذف الفئة</DialogTitle>
+            <DialogTitle className="font-cairo text-center">{t('categories.deleteConfirm')}</DialogTitle>
           </DialogHeader>
           <div className="text-center space-y-4 py-2">
             <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6 text-destructive" />
             </div>
-            <p className="font-cairo text-muted-foreground">
-              هل أنت متأكد من حذف فئة{' '}
-              <span className="font-bold text-foreground">
-                "{deleteDialog !== null ? currentCategories[deleteDialog]?.name : ''}"
-              </span>
-              ؟
-            </p>
-            <p className="font-cairo text-xs text-muted-foreground/70">لا يمكن التراجع عن هذا الإجراء</p>
+            <p className="font-cairo text-muted-foreground">{t('categories.deleteMessage')}</p>
             <div className="flex gap-2 justify-center pt-2">
-              <Button variant="outline" onClick={() => setDeleteDialog(null)} className="font-cairo px-6">
-                إلغاء
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => deleteDialog !== null && removeCategory(deleteDialog)}
-                disabled={saveMutation.isPending}
-                className="font-cairo px-6"
-              >
-                حذف
-              </Button>
+              <Button variant="outline" onClick={() => setDeleteDialog(null)} className="font-cairo px-6">{t('common.cancel')}</Button>
+              <Button variant="destructive" onClick={() => { if (deleteDialog !== null) removeCategory(deleteDialog); }} className="font-cairo px-6">{t('common.delete')}</Button>
             </div>
           </div>
         </DialogContent>

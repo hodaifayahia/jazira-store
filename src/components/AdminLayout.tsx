@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
 import { toast } from 'sonner';
+import { useTranslation, Language } from '@/i18n';
 
 interface Notification {
   id: string;
@@ -34,34 +35,33 @@ function playNotificationSound() {
   } catch {}
 }
 
-const NAV_ITEMS = [
-  { href: '/admin', label: 'لوحة القيادة', icon: LayoutDashboard },
-  { href: '/admin/products', label: 'المنتجات', icon: Package },
-  { href: '/admin/inventory', label: 'إدارة المخزون', icon: Layers },
-  { href: '/admin/variations', label: 'المتغيرات', icon: Palette },
-  { href: '/admin/categories', label: 'الفئات', icon: Layers },
-  { href: '/admin/orders', label: 'الطلبات', icon: ShoppingCart },
-  { href: '/admin/returns', label: 'الاسترجاع', icon: RotateCcw },
-  { href: '/admin/costs', label: 'التكاليف والأرباح', icon: DollarSign },
-  { href: '/admin/leads', label: 'العملاء المحتملون', icon: Users },
-  { href: '/admin/confirmers', label: 'إدارة المؤكدين', icon: UserCheck },
-  { href: '/admin/abandoned', label: 'السلات المتروكة', icon: PackageX },
-  { href: '/admin/wilayas', label: 'الولايات', icon: MapPin },
-  { href: '/admin/coupons', label: 'كوبونات', icon: Tag },
-  { href: '/admin/settings', label: 'الإعدادات', icon: Settings },
+const NAV_KEYS = [
+  { href: '/admin', key: 'sidebar.dashboard', icon: LayoutDashboard },
+  { href: '/admin/products', key: 'sidebar.products', icon: Package },
+  { href: '/admin/inventory', key: 'sidebar.inventory', icon: Layers },
+  { href: '/admin/variations', key: 'sidebar.variations', icon: Palette },
+  { href: '/admin/categories', key: 'sidebar.categories', icon: Layers },
+  { href: '/admin/orders', key: 'sidebar.orders', icon: ShoppingCart },
+  { href: '/admin/returns', key: 'sidebar.returns', icon: RotateCcw },
+  { href: '/admin/costs', key: 'sidebar.costs', icon: DollarSign },
+  { href: '/admin/leads', key: 'sidebar.leads', icon: Users },
+  { href: '/admin/confirmers', key: 'sidebar.confirmers', icon: UserCheck },
+  { href: '/admin/abandoned', key: 'sidebar.abandoned', icon: PackageX },
+  { href: '/admin/wilayas', key: 'sidebar.wilayas', icon: MapPin },
+  { href: '/admin/coupons', key: 'sidebar.coupons', icon: Tag },
+  { href: '/admin/settings', key: 'sidebar.settings', icon: Settings },
 ];
 
-function timeAgo(date: Date) {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return 'الآن';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `منذ ${minutes} د`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `منذ ${hours} س`;
-  return `منذ ${Math.floor(hours / 24)} ي`;
-}
+const LANG_OPTIONS: { value: Language; label: string; flag: string }[] = [
+  { value: 'ar', label: 'العربية', flag: '🇩🇿' },
+  { value: 'fr', label: 'Français', flag: '🇫🇷' },
+  { value: 'en', label: 'English', flag: '🇬🇧' },
+];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const { t, language, setLanguage, dir } = useTranslation();
+  const isRtl = dir === 'rtl';
+
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,6 +71,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: logoUrl } = useStoreLogo();
+
+  function timeAgo(date: Date) {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return t('sidebar.now');
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return t('sidebar.minutesAgo').replace('{n}', String(minutes));
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t('sidebar.hoursAgo').replace('{n}', String(hours));
+    return t('sidebar.daysAgo').replace('{n}', String(Math.floor(hours / 24)));
+  }
 
   // Fetch low stock products on mount
   useEffect(() => {
@@ -84,19 +94,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         const lowStockNotifs: Notification[] = data.map(p => ({
           id: `low_stock_${p.id}`,
           type: 'low_stock',
-          title: `مخزون منخفض: ${p.name}`,
-          description: `${p.stock ?? 0} قطعة متبقية`,
+          title: `${t('sidebar.lowStock')}: ${p.name}`,
+          description: t('sidebar.piecesLeft').replace('{n}', String(p.stock ?? 0)),
           timestamp: new Date(),
           link: '/admin/products',
         }));
         setNotifications(prev => {
-          const existingIds = new Set(prev.filter(n => n.type === 'order').map(n => n.id));
           return [...prev.filter(n => n.type === 'order'), ...lowStockNotifs];
         });
       }
     };
     fetchLowStock();
-  }, []);
+  }, [t]);
 
   // Fetch pending orders count
   useEffect(() => {
@@ -122,7 +131,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           const notif: Notification = {
             id: `order_${order.id}`,
             type: 'order',
-            title: `🛒 طلب جديد #${order.order_number}`,
+            title: `${t('sidebar.newOrder')} #${order.order_number}`,
             description: order.customer_name,
             timestamp: new Date(),
             link: '/admin/orders',
@@ -130,10 +139,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           setNotifications(prev => [notif, ...prev]);
           setPendingOrdersCount(prev => prev + 1);
           playNotificationSound();
-          toast(`🛒 طلب جديد #${order.order_number}`, {
+          toast(`${t('sidebar.newOrder')} #${order.order_number}`, {
             description: order.customer_name,
             action: {
-              label: 'عرض',
+              label: t('sidebar.show'),
               onClick: () => navigate('/admin/orders'),
             },
           });
@@ -143,7 +152,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'orders' },
         () => {
-          // Refresh pending count on any order update
           supabase
             .from('orders')
             .select('*', { count: 'exact', head: true })
@@ -153,7 +161,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [navigate]);
+  }, [navigate, t]);
 
   const handleHeaderSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -169,7 +177,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     const checkAdmin = async (userId: string) => {
       const { data } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
       if (!data) {
-        toast.error('ليس لديك صلاحيات الوصول');
+        toast.error(t('sidebar.noAccess'));
         navigate('/');
         return;
       }
@@ -195,7 +203,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       }
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, t]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -207,10 +215,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Skeleton className="w-32 h-8" /></div>;
   if (!user || !isAdmin) return null;
 
+  const currentPageLabel = NAV_KEYS.find(i => i.href === location.pathname)?.key;
+  const currentLang = LANG_OPTIONS.find(l => l.value === language)!;
+
   return (
-    <div className="min-h-screen flex bg-muted">
+    <div className="min-h-screen flex bg-muted" dir={dir}>
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-card border-l transform transition-transform flex flex-col lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed inset-y-0 z-50 w-64 bg-card transform transition-transform flex flex-col
+        ${isRtl ? 'right-0 border-l' : 'left-0 border-r'}
+        lg:translate-x-0
+        ${sidebarOpen ? 'translate-x-0' : isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         <div className="flex items-center justify-between p-4 border-b">
           <Link to="/admin" className="flex items-center gap-2">
             {logoUrl ? (
@@ -220,14 +235,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <span className="text-primary-foreground font-cairo font-bold text-xs">DZ</span>
               </div>
             )}
-            <span className="font-cairo font-bold text-lg">لوحة التحكم</span>
+            <span className="font-cairo font-bold text-lg">{t('sidebar.controlPanel')}</span>
           </Link>
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </Button>
         </div>
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          {NAV_ITEMS.map(item => (
+          {NAV_KEYS.map(item => (
             <Link
               key={item.href}
               to={item.href}
@@ -237,40 +252,64 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               }`}
             >
               <item.icon className="w-4 h-4" />
-              {item.label}
+              {t(item.key)}
             </Link>
           ))}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t">
+        <div className="p-3 border-t">
           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2 font-cairo text-destructive hover:text-destructive">
             <LogOut className="w-4 h-4" />
-            تسجيل الخروج
+            {t('sidebar.logout')}
           </Button>
         </div>
       </aside>
 
       {/* Main */}
-      <div className="flex-1 lg:mr-64">
+      <div className={`flex-1 ${isRtl ? 'lg:mr-64' : 'lg:ml-64'}`}>
         <header className="sticky top-0 z-40 bg-card border-b h-14 flex items-center px-4 gap-2">
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
           <h1 className="font-cairo font-bold text-lg shrink-0 hidden lg:block">
-            {NAV_ITEMS.find(i => i.href === location.pathname)?.label || 'لوحة التحكم'}
+            {currentPageLabel ? t(currentPageLabel) : t('sidebar.controlPanel')}
           </h1>
 
           {/* Global Order Search */}
-          <form onSubmit={handleHeaderSearch} className="flex-1 max-w-xs hidden lg:flex items-center gap-1 mr-auto">
+          <form onSubmit={handleHeaderSearch} className={`flex-1 max-w-xs hidden lg:flex items-center gap-1 ${isRtl ? 'mr-auto' : 'ml-auto'}`}>
             <div className="relative w-full">
-              <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none ${isRtl ? 'right-2.5' : 'left-2.5'}`} />
               <Input
                 value={headerSearch}
                 onChange={e => setHeaderSearch(e.target.value)}
-                placeholder="البحث عن طلبية..."
-                className="pr-8 h-9 font-cairo text-sm"
+                placeholder={t('sidebar.searchOrder')}
+                className={`h-9 font-cairo text-sm ${isRtl ? 'pr-8' : 'pl-8'}`}
               />
             </div>
           </form>
+
+          {/* Language Switcher */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="shrink-0 gap-1.5 text-xs h-8 px-2">
+                <Globe className="w-4 h-4" />
+                <span className="hidden sm:inline">{currentLang.flag} {currentLang.value.toUpperCase()}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-40 p-1" sideOffset={8}>
+              {LANG_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setLanguage(opt.value)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    language === opt.value ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted'
+                  }`}
+                >
+                  <span>{opt.flag}</span>
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
 
           {/* Pending Orders Badge */}
           {pendingOrdersCount > 0 && (
@@ -281,7 +320,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               onClick={() => navigate('/admin/orders?status=جديد')}
             >
               <ShoppingCart className="w-3.5 h-3.5" />
-              <span>{pendingOrdersCount} طلب جديد</span>
+              <span>{pendingOrdersCount} {t('sidebar.newOrders')}</span>
             </Button>
           )}
 
@@ -299,10 +338,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 p-0 max-h-[420px] overflow-hidden" sideOffset={8}>
               <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-                <h3 className="font-cairo font-bold text-sm">الإشعارات</h3>
+                <h3 className="font-cairo font-bold text-sm">{t('sidebar.notifications')}</h3>
                 {notifications.length > 0 && (
                   <Button variant="ghost" size="sm" onClick={clearNotifications} className="font-cairo text-xs h-7 text-muted-foreground hover:text-foreground">
-                    مسح الكل
+                    {t('sidebar.clearAll')}
                   </Button>
                 )}
               </div>
@@ -310,14 +349,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 {notifications.length === 0 ? (
                   <div className="py-10 text-center">
                     <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="font-cairo text-sm text-muted-foreground">لا توجد إشعارات</p>
+                    <p className="font-cairo text-sm text-muted-foreground">{t('sidebar.noNotifications')}</p>
                   </div>
                 ) : (
                   notifications.map(notif => (
                     <button
                       key={notif.id}
                       onClick={() => navigate(notif.link)}
-                      className="w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-right border-b last:border-b-0"
+                      className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${isRtl ? 'text-right' : 'text-left'}`}
                     >
                       <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5 ${
                         notif.type === 'order' ? 'bg-primary/10' : 'bg-destructive/10'
@@ -363,21 +402,21 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted transition-colors font-cairo text-sm"
               >
                 <ExternalLink className="w-4 h-4" />
-                عرض المتجر
+                {t('sidebar.viewStore')}
               </button>
               <button
                 onClick={() => navigate('/admin/settings')}
                 className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted transition-colors font-cairo text-sm"
               >
                 <Settings className="w-4 h-4" />
-                الإعدادات
+                {t('sidebar.settings')}
               </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted transition-colors font-cairo text-sm text-destructive"
               >
                 <LogOut className="w-4 h-4" />
-                تسجيل الخروج
+                {t('sidebar.logout')}
               </button>
             </PopoverContent>
           </Popover>

@@ -5,6 +5,7 @@ import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, A
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { formatPrice, formatDate } from '@/lib/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useTranslation } from '@/i18n';
 
 function StatCard({ icon: Icon, label, value, color, subtext }: { icon: any; label: string; value: string; color: string; subtext?: string }) {
   return (
@@ -34,6 +35,7 @@ const STATUS_COLORS: Record<string, string> = {
 const PIE_COLORS = ['hsl(var(--secondary))', 'hsl(var(--primary))', 'hsl(30, 80%, 55%)', 'hsl(142, 76%, 36%)', 'hsl(var(--destructive))'];
 
 export default function AdminDashboardPage() {
+  const { t } = useTranslation();
   const { data: orders } = useQuery({
     queryKey: ['admin-orders-all'],
     queryFn: async () => {
@@ -88,7 +90,7 @@ export default function AdminDashboardPage() {
     d.setDate(d.getDate() - (6 - i));
     const dayStr = d.toDateString();
     const dayOrders = (orders || []).filter(o => new Date(o.created_at!).toDateString() === dayStr);
-    const dayNames = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+    const dayNames = t('dashboard.dayNames').split(',');
     return {
       name: dayNames[d.getDay()],
       orders: dayOrders.length,
@@ -143,19 +145,19 @@ export default function AdminDashboardPage() {
       {lowStockProducts.length > 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>تنبيه: مخزون منخفض ({lowStockProducts.length} منتج)</AlertTitle>
+          <AlertTitle>{t('dashboard.lowStockBanner').replace('{n}', String(lowStockProducts.length))}</AlertTitle>
           <AlertDescription>
-            {lowStockProducts.map(p => `${p.name} (${p.stock} متبقي)`).join(' • ')}
+            {lowStockProducts.map(p => `${p.name} (${p.stock} ${t('common.remaining')})`).join(' • ')}
           </AlertDescription>
         </Alert>
       )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={ShoppingCart} label="طلبات اليوم" value={String(today.length)} color="bg-primary/10 text-primary" subtext={`${thisMonth.length} هذا الشهر`} />
-        <StatCard icon={DollarSign} label="إيرادات الشهر" value={formatPrice(revenue)} color="bg-secondary/10 text-secondary" subtext={lastMonthRevenue > 0 ? `الشهر الماضي: ${formatPrice(lastMonthRevenue)}` : undefined} />
-        <StatCard icon={TrendingUp} label="متوسط قيمة الطلب" value={formatPrice(avgOrderValue)} color="bg-accent text-accent-foreground" subtext={`${orders?.length || 0} طلب إجمالي`} />
-        <StatCard icon={Users} label="عملاء محتملون جدد" value={String(newLeads.length)} color="bg-primary/10 text-primary" subtext={`${leads?.length || 0} إجمالي`} />
+        <StatCard icon={ShoppingCart} label={t('dashboard.todayOrders')} value={String(today.length)} color="bg-primary/10 text-primary" subtext={`${thisMonth.length} ${t('dashboard.thisMonth')}`} />
+        <StatCard icon={DollarSign} label={t('dashboard.monthRevenue')} value={formatPrice(revenue)} color="bg-secondary/10 text-secondary" subtext={lastMonthRevenue > 0 ? `${t('dashboard.lastMonth')}: ${formatPrice(lastMonthRevenue)}` : undefined} />
+        <StatCard icon={TrendingUp} label={t('dashboard.avgOrderValue')} value={formatPrice(avgOrderValue)} color="bg-accent text-accent-foreground" subtext={`${orders?.length || 0} ${t('dashboard.totalOrders')}`} />
+        <StatCard icon={Users} label={t('dashboard.newLeads')} value={String(newLeads.length)} color="bg-primary/10 text-primary" subtext={`${leads?.length || 0} ${t('dashboard.totalLeads')}`} />
       </div>
 
       {/* Secondary Stats */}
@@ -163,19 +165,19 @@ export default function AdminDashboardPage() {
         <div className="bg-card border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <Package className="w-4 h-4 text-primary" />
-            <span className="font-cairo text-sm font-semibold">المنتجات</span>
+            <span className="font-cairo text-sm font-semibold">{t('dashboard.productsSection')}</span>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between font-cairo text-sm">
-              <span className="text-muted-foreground">منتجات نشطة</span>
+              <span className="text-muted-foreground">{t('dashboard.activeProducts')}</span>
               <span className="font-roboto font-bold">{activeProducts.length}</span>
             </div>
             <div className="flex justify-between font-cairo text-sm">
-              <span className="text-muted-foreground">إجمالي المنتجات</span>
+              <span className="text-muted-foreground">{t('dashboard.totalProducts')}</span>
               <span className="font-roboto font-bold">{products?.length || 0}</span>
             </div>
             <div className="flex justify-between font-cairo text-sm">
-              <span className="text-destructive">مخزون منخفض (&le;5)</span>
+              <span className="text-destructive">{t('dashboard.lowStockAlert')}</span>
               <span className="font-roboto font-bold text-destructive">{lowStockProducts.length}</span>
             </div>
           </div>
@@ -184,7 +186,7 @@ export default function AdminDashboardPage() {
         <div className="bg-card border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="w-4 h-4 text-primary" />
-            <span className="font-cairo text-sm font-semibold">حالات الطلبات</span>
+            <span className="font-cairo text-sm font-semibold">{t('dashboard.orderStatuses')}</span>
           </div>
           <div className="space-y-2">
             {Object.entries(statusCounts).slice(0, 4).map(([status, count]) => (
@@ -199,7 +201,7 @@ export default function AdminDashboardPage() {
         <div className="bg-card border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <Eye className="w-4 h-4 text-primary" />
-            <span className="font-cairo text-sm font-semibold">أكثر الولايات طلباً</span>
+            <span className="font-cairo text-sm font-semibold">{t('dashboard.topWilayas')}</span>
           </div>
           <div className="space-y-2">
             {topWilayas.map(([name, count]) => (
@@ -208,7 +210,7 @@ export default function AdminDashboardPage() {
                 <span className="font-roboto font-bold">{count}</span>
               </div>
             ))}
-            {topWilayas.length === 0 && <p className="font-cairo text-xs text-muted-foreground">لا توجد بيانات</p>}
+            {topWilayas.length === 0 && <p className="font-cairo text-xs text-muted-foreground">{t('common.noData')}</p>}
           </div>
         </div>
       </div>
@@ -216,7 +218,7 @@ export default function AdminDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-card border rounded-xl p-5">
-          <h3 className="font-cairo font-semibold text-base mb-4">طلبات آخر 7 أيام</h3>
+          <h3 className="font-cairo font-semibold text-base mb-4">{t('dashboard.last7Days')}</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyData}>
@@ -224,7 +226,7 @@ export default function AdminDashboardPage() {
                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{ fontFamily: 'Cairo', fontSize: 12, borderRadius: 8 }}
-                  formatter={(value: number, name: string) => [name === 'revenue' ? formatPrice(value) : value, name === 'revenue' ? 'الإيرادات' : 'الطلبات']}
+                  formatter={(value: number, name: string) => [name === 'revenue' ? formatPrice(value) : value, name === 'revenue' ? t('dashboard.revenue') : t('dashboard.orders')]}
                 />
                 <Bar dataKey="orders" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -266,7 +268,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-card border rounded-xl">
           <div className="p-4 border-b">
-            <h3 className="font-cairo font-semibold text-base">المنتجات الأكثر مبيعاً</h3>
+            <h3 className="font-cairo font-semibold text-base">{t('dashboard.bestSellers')}</h3>
           </div>
           <div className="p-4 space-y-3">
             {topProducts.length > 0 ? topProducts.map((p, i) => (
@@ -275,26 +277,26 @@ export default function AdminDashboardPage() {
                   <span className="font-roboto text-xs text-muted-foreground w-5 text-center">{i + 1}</span>
                   <span className="font-cairo text-sm font-medium">{p.name}</span>
                 </div>
-                <span className="font-roboto text-sm font-bold text-primary">{p.qty} وحدة</span>
+                <span className="font-roboto text-sm font-bold text-primary">{p.qty} {t('common.unit')}</span>
               </div>
             )) : (
-              <p className="font-cairo text-sm text-muted-foreground text-center py-4">لا توجد بيانات</p>
+              <p className="font-cairo text-sm text-muted-foreground text-center py-4">{t('common.noData')}</p>
             )}
           </div>
         </div>
 
         <div className="bg-card border rounded-xl">
           <div className="p-4 border-b">
-            <h3 className="font-cairo font-semibold text-base text-destructive">⚠ تنبيه المخزون المنخفض</h3>
+            <h3 className="font-cairo font-semibold text-base text-destructive">{t('dashboard.lowStockAlertTitle')}</h3>
           </div>
           <div className="p-4 space-y-3">
             {lowStockProducts.length > 0 ? lowStockProducts.map(p => (
               <div key={p.id} className="flex items-center justify-between">
                 <span className="font-cairo text-sm">{p.name}</span>
-                <span className="font-roboto text-sm font-bold text-destructive">{p.stock} متبقي</span>
+                <span className="font-roboto text-sm font-bold text-destructive">{p.stock} {t('common.remaining')}</span>
               </div>
             )) : (
-              <p className="font-cairo text-sm text-muted-foreground text-center py-4">جميع المنتجات بمخزون كافي ✅</p>
+              <p className="font-cairo text-sm text-muted-foreground text-center py-4">{t('dashboard.allStockOk')}</p>
             )}
           </div>
         </div>
@@ -306,9 +308,9 @@ export default function AdminDashboardPage() {
           <div className="p-4 border-b border-destructive/20">
             <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-destructive" />
-              <span className="text-destructive">ولايات بنسبة إلغاء مرتفعة</span>
+              <span className="text-destructive">{t('dashboard.riskyWilayas')}</span>
             </h3>
-            <p className="font-cairo text-xs text-muted-foreground mt-1">ولايات تجاوزت نسبة الإلغاء فيها 30% (حد أدنى 3 طلبات)</p>
+            <p className="font-cairo text-xs text-muted-foreground mt-1">{t('dashboard.riskyWilayasDesc')}</p>
           </div>
           <div className="p-4 space-y-3">
             {riskyWilayas.map(w => (
@@ -318,7 +320,7 @@ export default function AdminDashboardPage() {
                   <span className="font-cairo text-sm font-medium">{w.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-cairo text-xs text-muted-foreground">{w.cancelled}/{w.total} ملغي</span>
+                  <span className="font-cairo text-xs text-muted-foreground">{w.cancelled}/{w.total} {t('dashboard.cancelled')}</span>
                   <span className="font-roboto text-sm font-bold text-destructive">{w.rate}%</span>
                 </div>
               </div>
@@ -330,19 +332,19 @@ export default function AdminDashboardPage() {
       {/* Latest Orders */}
       <div className="bg-card border rounded-xl">
         <div className="p-4 border-b">
-          <h2 className="font-cairo font-bold text-lg">آخر الطلبات</h2>
+          <h2 className="font-cairo font-bold text-lg">{t('dashboard.latestOrders')}</h2>
         </div>
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="p-3 text-right font-cairo font-semibold">رقم الطلب</th>
-                <th className="p-3 text-right font-cairo font-semibold">العميل</th>
-                <th className="p-3 text-right font-cairo font-semibold">الولاية</th>
-                <th className="p-3 text-right font-cairo font-semibold">الإجمالي</th>
-                <th className="p-3 text-right font-cairo font-semibold">الحالة</th>
-                <th className="p-3 text-right font-cairo font-semibold">التاريخ</th>
+                <th className="p-3 text-right font-cairo font-semibold">{t('dashboard.orderNumber')}</th>
+                <th className="p-3 text-right font-cairo font-semibold">{t('common.customer')}</th>
+                <th className="p-3 text-right font-cairo font-semibold">{t('dashboard.wilaya')}</th>
+                <th className="p-3 text-right font-cairo font-semibold">{t('common.total')}</th>
+                <th className="p-3 text-right font-cairo font-semibold">{t('common.status')}</th>
+                <th className="p-3 text-right font-cairo font-semibold">{t('common.date')}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -364,7 +366,7 @@ export default function AdminDashboardPage() {
                 </tr>
               ))}
               {(!orders || orders.length === 0) && (
-                <tr><td colSpan={6} className="p-8 text-center font-cairo text-muted-foreground">لا توجد طلبات بعد</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center font-cairo text-muted-foreground">{t('common.noData')}</td></tr>
               )}
             </tbody>
           </table>
@@ -389,7 +391,7 @@ export default function AdminDashboardPage() {
             </div>
           ))}
           {(!orders || orders.length === 0) && (
-            <p className="text-center font-cairo text-muted-foreground py-4">لا توجد طلبات بعد</p>
+            <p className="text-center font-cairo text-muted-foreground py-4">{t('common.noData')}</p>
           )}
         </div>
       </div>

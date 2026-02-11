@@ -36,6 +36,7 @@ import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import { useStoreTheme } from "@/hooks/useStoreTheme";
 import { useFavicon } from "@/hooks/useFavicon";
+import { LanguageProvider } from "@/i18n";
 
 const queryClient = new QueryClient();
 
@@ -78,21 +79,21 @@ const App = () => (
             <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
 
             {/* Admin */}
-            <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route path="/admin" element={<AdminLayout><AdminDashboardPage /></AdminLayout>} />
-            <Route path="/admin/products" element={<AdminLayout><AdminProductsPage /></AdminLayout>} />
-            <Route path="/admin/orders" element={<AdminLayout><AdminOrdersPage /></AdminLayout>} />
-            <Route path="/admin/returns" element={<AdminLayout><AdminReturnsPage /></AdminLayout>} />
-            <Route path="/admin/wilayas" element={<AdminLayout><AdminWilayasPage /></AdminLayout>} />
-            <Route path="/admin/coupons" element={<AdminLayout><AdminCouponsPage /></AdminLayout>} />
-            <Route path="/admin/categories" element={<AdminLayout><AdminCategoriesPage /></AdminLayout>} />
-            <Route path="/admin/variations" element={<AdminLayout><AdminVariationsPage /></AdminLayout>} />
-            <Route path="/admin/leads" element={<AdminLayout><AdminLeadsPage /></AdminLayout>} />
-            <Route path="/admin/abandoned" element={<AdminLayout><AdminAbandonedPage /></AdminLayout>} />
-            <Route path="/admin/inventory" element={<AdminLayout><AdminInventoryPage /></AdminLayout>} />
-            <Route path="/admin/confirmers" element={<AdminLayout><AdminConfirmersPage /></AdminLayout>} />
-            <Route path="/admin/costs" element={<AdminLayout><AdminCostsPage /></AdminLayout>} />
-            <Route path="/admin/settings" element={<AdminLayout><AdminSettingsPage /></AdminLayout>} />
+            <Route path="/admin/login" element={<LanguageProvider><AdminLoginPage /></LanguageProvider>} />
+            <Route path="/admin" element={<LanguageProvider><AdminLayout><AdminDashboardPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/products" element={<LanguageProvider><AdminLayout><AdminProductsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/orders" element={<LanguageProvider><AdminLayout><AdminOrdersPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/returns" element={<LanguageProvider><AdminLayout><AdminReturnsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/wilayas" element={<LanguageProvider><AdminLayout><AdminWilayasPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/coupons" element={<LanguageProvider><AdminLayout><AdminCouponsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/categories" element={<LanguageProvider><AdminLayout><AdminCategoriesPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/variations" element={<LanguageProvider><AdminLayout><AdminVariationsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/leads" element={<LanguageProvider><AdminLayout><AdminLeadsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/abandoned" element={<LanguageProvider><AdminLayout><AdminAbandonedPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/inventory" element={<LanguageProvider><AdminLayout><AdminInventoryPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/confirmers" element={<LanguageProvider><AdminLayout><AdminConfirmersPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/costs" element={<LanguageProvider><AdminLayout><AdminCostsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings" element={<LanguageProvider><AdminLayout><AdminSettingsPage /></AdminLayout></LanguageProvider>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
