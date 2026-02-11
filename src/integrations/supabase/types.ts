@@ -99,42 +99,90 @@ export type Database = {
           },
         ]
       }
+      confirmation_settings: {
+        Row: {
+          assignment_mode: string
+          auto_timeout_minutes: number
+          created_at: string
+          enable_confirm_chat: boolean
+          id: string
+          max_call_attempts: number
+          updated_at: string
+          working_hours_end: string
+          working_hours_start: string
+        }
+        Insert: {
+          assignment_mode?: string
+          auto_timeout_minutes?: number
+          created_at?: string
+          enable_confirm_chat?: boolean
+          id?: string
+          max_call_attempts?: number
+          updated_at?: string
+          working_hours_end?: string
+          working_hours_start?: string
+        }
+        Update: {
+          assignment_mode?: string
+          auto_timeout_minutes?: number
+          created_at?: string
+          enable_confirm_chat?: boolean
+          id?: string
+          max_call_attempts?: number
+          updated_at?: string
+          working_hours_end?: string
+          working_hours_start?: string
+        }
+        Relationships: []
+      }
       confirmers: {
         Row: {
           cancellation_price: number | null
           confirmation_price: number | null
           created_at: string | null
+          email: string | null
           id: string
+          monthly_salary: number | null
           name: string
           notes: string | null
+          payment_mode: string
           phone: string
           status: string | null
           type: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           cancellation_price?: number | null
           confirmation_price?: number | null
           created_at?: string | null
+          email?: string | null
           id?: string
+          monthly_salary?: number | null
           name: string
           notes?: string | null
+          payment_mode?: string
           phone: string
           status?: string | null
           type?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           cancellation_price?: number | null
           confirmation_price?: number | null
           created_at?: string | null
+          email?: string | null
           id?: string
+          monthly_salary?: number | null
           name?: string
           notes?: string | null
+          payment_mode?: string
           phone?: string
           status?: string | null
           type?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -821,7 +869,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "confirmer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -949,7 +997,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "confirmer"],
     },
   },
 } as const
