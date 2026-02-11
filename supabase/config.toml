@@ -1,16 +1,1 @@
-project_id = "zaptroywclejtyjfuarr"
-
-[functions.push-notifications]
-verify_jwt = false
-
-[functions.telegram-notify]
-verify_jwt = false
-
-[functions.telegram-bot]
-verify_jwt = false
-
-[functions.telegram-set-webhook]
-verify_jwt = false
-
-[functions.manage-admin]
-verify_jwt = false
+project_id = "dwghdxhzsvyzasqnnukv"
