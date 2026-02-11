@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/format';
@@ -11,10 +11,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   Package, Search, Settings2, ChevronDown, ChevronUp,
-  Check, X, Plus, AlertTriangle, PackageX, DollarSign, Layers,
+  Check, X, Plus, AlertTriangle, PackageX, DollarSign,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n';
 
 // ── Types ──
 interface Product {
@@ -39,12 +40,12 @@ interface Variant {
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
 const COLUMNS = [
-  { key: 'image', label: 'صورة المنتج' },
-  { key: 'name', label: 'اسم المنتج' },
-  { key: 'sku', label: 'رمز SKU' },
-  { key: 'quantity', label: 'الكمية' },
-  { key: 'price', label: 'السعر' },
-  { key: 'status', label: 'الحالة' },
+  { key: 'image', labelKey: 'inventory.productImage' },
+  { key: 'name', labelKey: 'inventory.productName' },
+  { key: 'sku', labelKey: 'inventory.skuCode' },
+  { key: 'quantity', labelKey: 'common.quantity' },
+  { key: 'price', labelKey: 'common.price' },
+  { key: 'status', labelKey: 'common.status' },
 ] as const;
 
 type ColumnKey = (typeof COLUMNS)[number]['key'];
@@ -68,7 +69,7 @@ function variantLabel(optionValues: Json): string {
     const vals = Object.values(optionValues as Record<string, string>);
     if (vals.length > 0) return vals.join(' / ');
   }
-  return 'قياس موحد';
+  return 'Standard Size';
 }
 
 function stockStatus(qty: number): 'in_stock' | 'low_stock' | 'out_of_stock' {
@@ -83,27 +84,28 @@ const STATUS_DOT: Record<string, string> = {
   out_of_stock: 'bg-red-500',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  in_stock: 'متوفر',
-  low_stock: 'منخفض',
-  out_of_stock: 'نفد',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  in_stock: 'inventory.statusInStock',
+  low_stock: 'inventory.statusLowStock',
+  out_of_stock: 'inventory.statusOutOfStock',
 };
-
-const FILTER_TABS: { key: StockFilter; label: string }[] = [
-  { key: 'all', label: 'الكل' },
-  { key: 'in_stock', label: 'متوفر' },
-  { key: 'low_stock', label: 'منخفض' },
-  { key: 'out_of_stock', label: 'نفد المخزون' },
-];
 
 // ── Component ──
 export default function AdminInventoryPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<StockFilter>('all');
   const [page, setPage] = useState(0);
   const [columns, setColumns] = useState<Record<ColumnKey, boolean>>(getColumnPrefs);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const FILTER_TABS: { key: StockFilter; label: string }[] = [
+    { key: 'all', label: t('inventory.filterAll') },
+    { key: 'in_stock', label: t('inventory.filterInStock') },
+    { key: 'low_stock', label: t('inventory.filterLowStock') },
+    { key: 'out_of_stock', label: t('inventory.filterOutOfStock') },
+  ];
 
   // Data
   const { data: products = [], isLoading: loadingProducts } = useQuery({
@@ -137,7 +139,6 @@ export default function AdminInventoryPage() {
     return map;
   }, [allVariants]);
 
-  // Compute total quantity per product
   const totalQty = useCallback((p: Product) => {
     if (p.has_variants) {
       const vars = variantsByProduct[p.id];
@@ -147,7 +148,6 @@ export default function AdminInventoryPage() {
     return p.stock ?? 0;
   }, [variantsByProduct]);
 
-  // KPIs
   const kpis = useMemo(() => {
     let total = 0, outOfStock = 0, lowStock = 0, inventoryValue = 0;
     products.forEach(p => {
@@ -168,7 +168,6 @@ export default function AdminInventoryPage() {
     return { total, outOfStock, lowStock, inventoryValue };
   }, [products, variantsByProduct, totalQty]);
 
-  // Filtered + searched + paginated
   const filtered = useMemo(() => {
     let list = products;
     if (search.trim()) {
@@ -184,7 +183,6 @@ export default function AdminInventoryPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  // Column prefs
   const toggleCol = (key: ColumnKey) => {
     setColumns(prev => {
       const next = { ...prev, [key]: !prev[key] };
@@ -207,27 +205,27 @@ export default function AdminInventoryPage() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard icon={Package} label="إجمالي المنتجات" value={kpis.total} color="text-primary" />
-        <KpiCard icon={PackageX} label="نفد المخزون" value={kpis.outOfStock} color="text-destructive" />
-        <KpiCard icon={AlertTriangle} label="مخزون منخفض" value={kpis.lowStock} color="text-yellow-500" />
-        <KpiCard icon={DollarSign} label="قيمة المخزون" value={formatPrice(kpis.inventoryValue)} color="text-primary" />
+        <KpiCard icon={Package} label={t('inventory.totalProducts')} value={kpis.total} color="text-primary" />
+        <KpiCard icon={PackageX} label={t('inventory.outOfStock')} value={kpis.outOfStock} color="text-destructive" />
+        <KpiCard icon={AlertTriangle} label={t('inventory.lowStock')} value={kpis.lowStock} color="text-yellow-500" />
+        <KpiCard icon={DollarSign} label={t('inventory.inventoryValue')} value={formatPrice(kpis.inventoryValue)} color="text-primary" />
       </div>
 
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
         <div className="flex gap-2 flex-wrap">
-          {FILTER_TABS.map(t => (
+          {FILTER_TABS.map(tab => (
             <Button
-              key={t.key}
+              key={tab.key}
               size="sm"
-              variant={filter === t.key ? 'default' : 'outline'}
-              onClick={() => { setFilter(t.key); setPage(0); }}
+              variant={filter === tab.key ? 'default' : 'outline'}
+              onClick={() => { setFilter(tab.key); setPage(0); }}
               className="font-cairo text-xs"
             >
-              {t.label}
+              {tab.label}
             </Button>
           ))}
         </div>
@@ -237,7 +235,7 @@ export default function AdminInventoryPage() {
             <Input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(0); }}
-              placeholder="البحث عن منتج..."
+              placeholder={t('inventory.searchPlaceholder')}
               className="pr-8 h-9 font-cairo text-sm"
             />
           </div>
@@ -245,14 +243,14 @@ export default function AdminInventoryPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5 font-cairo text-xs shrink-0">
                 <Settings2 className="w-3.5 h-3.5" />
-                إعدادات العرض
+                {t('inventory.displaySettings')}
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-48 p-3 space-y-2">
               {COLUMNS.map(c => (
                 <label key={c.key} className="flex items-center gap-2 cursor-pointer">
                   <Checkbox checked={columns[c.key]} onCheckedChange={() => toggleCol(c.key)} />
-                  <span className="font-cairo text-sm">{c.label}</span>
+                  <span className="font-cairo text-sm">{t(c.labelKey)}</span>
                 </label>
               ))}
             </PopoverContent>
@@ -268,12 +266,12 @@ export default function AdminInventoryPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
-                  {isCol('image') && <th className="p-3 text-right font-cairo font-semibold w-16">صورة</th>}
-                  {isCol('name') && <th className="p-3 text-right font-cairo font-semibold">المنتج</th>}
-                  {isCol('sku') && <th className="p-3 text-right font-cairo font-semibold">SKU</th>}
-                  {isCol('quantity') && <th className="p-3 text-right font-cairo font-semibold">الكمية</th>}
-                  {isCol('price') && <th className="p-3 text-right font-cairo font-semibold">السعر</th>}
-                  {isCol('status') && <th className="p-3 text-right font-cairo font-semibold">الحالة</th>}
+                  {isCol('image') && <th className="p-3 text-right font-cairo font-semibold w-16">{t('inventory.productImage')}</th>}
+                  {isCol('name') && <th className="p-3 text-right font-cairo font-semibold">{t('inventory.productName')}</th>}
+                  {isCol('sku') && <th className="p-3 text-right font-cairo font-semibold">{t('inventory.skuCode')}</th>}
+                  {isCol('quantity') && <th className="p-3 text-right font-cairo font-semibold">{t('common.quantity')}</th>}
+                  {isCol('price') && <th className="p-3 text-right font-cairo font-semibold">{t('common.price')}</th>}
+                  {isCol('status') && <th className="p-3 text-right font-cairo font-semibold">{t('common.status')}</th>}
                   <th className="p-3 w-10" />
                 </tr>
               </thead>
@@ -293,11 +291,12 @@ export default function AdminInventoryPage() {
                       variants={variantsByProduct[p.id] ?? []}
                       columns={columns}
                       queryClient={queryClient}
+                      t={t}
                     />
                   );
                 })}
                 {paged.length === 0 && (
-                  <tr><td colSpan={8} className="p-8 text-center text-muted-foreground font-cairo">لا توجد منتجات</td></tr>
+                  <tr><td colSpan={8} className="p-8 text-center text-muted-foreground font-cairo">{t('inventory.noProducts')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -319,11 +318,12 @@ export default function AdminInventoryPage() {
                   onToggle={() => setExpandedId(expanded ? null : p.id)}
                   variants={variantsByProduct[p.id] ?? []}
                   queryClient={queryClient}
+                  t={t}
                 />
               );
             })}
             {paged.length === 0 && (
-              <div className="p-8 text-center text-muted-foreground font-cairo">لا توجد منتجات</div>
+              <div className="p-8 text-center text-muted-foreground font-cairo">{t('inventory.noProducts')}</div>
             )}
           </div>
         </CardContent>
@@ -334,11 +334,11 @@ export default function AdminInventoryPage() {
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} className="font-cairo gap-1">
             <ChevronRight className="w-4 h-4" />
-            السابق
+            {t('common.previous')}
           </Button>
           <span className="font-cairo text-sm text-muted-foreground">{page + 1} / {totalPages}</span>
           <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="font-cairo gap-1">
-            التالي
+            {t('common.next')}
             <ChevronLeft className="w-4 h-4" />
           </Button>
         </div>
@@ -366,11 +366,11 @@ function KpiCard({ icon: Icon, label, value, color }: { icon: any; label: string
 
 // ── Desktop Product Rows ──
 function ProductRows({
-  product: p, qty, st, expanded, onToggle, variants, columns, queryClient,
+  product: p, qty, st, expanded, onToggle, variants, columns, queryClient, t
 }: {
   product: Product; qty: number; st: string; expanded: boolean;
   onToggle: () => void; variants: Variant[];
-  columns: Record<ColumnKey, boolean>; queryClient: any;
+  columns: Record<ColumnKey, boolean>; queryClient: any; t: any;
 }) {
   const img = p.images?.[0];
   const isCol = (k: ColumnKey) => columns[k];
@@ -392,7 +392,7 @@ function ProductRows({
           <td className="p-3">
             <span className="flex items-center gap-1.5">
               <span className={`w-2.5 h-2.5 rounded-full ${STATUS_DOT[st]}`} />
-              <span className="font-cairo text-xs">{STATUS_LABEL[st]}</span>
+              <span className="font-cairo text-xs">{t(STATUS_LABEL_KEYS[st])}</span>
             </span>
           </td>
         )}
@@ -403,7 +403,7 @@ function ProductRows({
       {expanded && (
         <tr>
           <td colSpan={colCount} className="bg-muted/20 p-0">
-            <VariantDetails product={p} variants={variants} queryClient={queryClient} />
+            <VariantDetails product={p} variants={variants} queryClient={queryClient} t={t} />
           </td>
         </tr>
       )}
@@ -413,10 +413,10 @@ function ProductRows({
 
 // ── Mobile Product Card ──
 function MobileProductCard({
-  product: p, qty, st, expanded, onToggle, variants, queryClient,
+  product: p, qty, st, expanded, onToggle, variants, queryClient, t
 }: {
   product: Product; qty: number; st: string; expanded: boolean;
-  onToggle: () => void; variants: Variant[]; queryClient: any;
+  onToggle: () => void; variants: Variant[]; queryClient: any; t: any;
 }) {
   const img = p.images?.[0];
   return (
@@ -427,7 +427,7 @@ function MobileProductCard({
           <p className="font-cairo font-medium text-sm truncate">{p.name}</p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className={`w-2 h-2 rounded-full ${STATUS_DOT[st]}`} />
-            <span className="font-cairo text-xs text-muted-foreground">{qty} قطعة</span>
+            <span className="font-cairo text-xs text-muted-foreground">{qty} {t('inventory.pieces')}</span>
             <span className="font-cairo text-xs text-muted-foreground">· {formatPrice(p.price)}</span>
           </div>
         </div>
@@ -435,7 +435,7 @@ function MobileProductCard({
       </button>
       {expanded && (
         <div className="mt-2">
-          <VariantDetails product={p} variants={variants} queryClient={queryClient} />
+          <VariantDetails product={p} variants={variants} queryClient={queryClient} t={t} />
         </div>
       )}
     </div>
@@ -443,17 +443,17 @@ function MobileProductCard({
 }
 
 // ── Variant Details (shared desktop/mobile) ──
-function VariantDetails({ product, variants, queryClient }: { product: Product; variants: Variant[]; queryClient: any }) {
+function VariantDetails({ product, variants, queryClient, t }: { product: Product; variants: Variant[]; queryClient: any; t: any }) {
   const rows = product.has_variants && variants.length > 0
     ? variants.map(v => ({ id: v.id, label: variantLabel(v.option_values), price: v.price, quantity: v.quantity, isVariant: true }))
-    : [{ id: product.id, label: 'المنتج الأساسي', price: product.price, quantity: product.stock ?? 0, isVariant: false }];
+    : [{ id: product.id, label: t('inventory.baseProduct'), price: product.price, quantity: product.stock ?? 0, isVariant: false }];
 
   return (
     <div className="p-3 md:px-6">
-      <p className="font-cairo font-semibold text-xs text-muted-foreground mb-2">تفاصيل المقاسات والأسعار</p>
+      <p className="font-cairo font-semibold text-xs text-muted-foreground mb-2">{t('inventory.variantDetails')}</p>
       <div className="space-y-1">
         {rows.map(row => (
-          <VariantRow key={row.id} row={row} productId={product.id} hasVariants={!!product.has_variants} queryClient={queryClient} />
+          <VariantRow key={row.id} row={row} productId={product.id} hasVariants={!!product.has_variants} queryClient={queryClient} t={t} />
         ))}
       </div>
     </div>
@@ -462,10 +462,10 @@ function VariantDetails({ product, variants, queryClient }: { product: Product; 
 
 // ── Single Variant Row with inline edit + add stock ──
 function VariantRow({
-  row, productId, hasVariants, queryClient,
+  row, productId, hasVariants, queryClient, t
 }: {
   row: { id: string; label: string; price: number; quantity: number; isVariant: boolean };
-  productId: string; hasVariants: boolean; queryClient: any;
+  productId: string; hasVariants: boolean; queryClient: any; t: any;
 }) {
   const [editing, setEditing] = useState(false);
   const [editQty, setEditQty] = useState(row.quantity);
@@ -497,11 +497,11 @@ function VariantRow({
       } else {
         await supabase.from('products').update({ stock: editQty, price: editPrice }).eq('id', row.id);
       }
-      toast.success('تم الحفظ بنجاح');
+      toast.success(t('common.savedSuccess'));
       invalidate();
       setEditing(false);
     } catch {
-      toast.error('حدث خطأ');
+      toast.error(t('common.errorOccurred'));
     } finally {
       setSaving(false);
     }
@@ -517,12 +517,12 @@ function VariantRow({
       } else {
         await supabase.from('products').update({ stock: (row.quantity) + addAmount }).eq('id', row.id);
       }
-      toast.success(`تم إضافة ${addAmount} وحدة`);
+      toast.success(`${t('common.add')} ${addAmount}`);
       invalidate();
       setAdding(false);
       setAddAmount(1);
     } catch {
-      toast.error('حدث خطأ');
+      toast.error(t('common.errorOccurred'));
     } finally {
       setSaving(false);
     }
@@ -533,16 +533,16 @@ function VariantRow({
   return (
     <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border text-sm">
       <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[st]}`} />
-      <span className="font-cairo font-medium flex-1 min-w-[80px]">{row.label}</span>
+      <span className="font-cairo font-medium flex-1 min-w-[80px]">{row.label === 'Standard Size' ? t('inventory.standardSize') : row.label}</span>
 
       {editing ? (
         <>
           <div className="flex items-center gap-1">
-            <span className="font-cairo text-xs text-muted-foreground">الكمية:</span>
+            <span className="font-cairo text-xs text-muted-foreground">{t('common.quantity')}:</span>
             <Input type="number" min={0} value={editQty} onChange={e => setEditQty(Number(e.target.value))} className="w-20 h-7 text-xs" />
           </div>
           <div className="flex items-center gap-1">
-            <span className="font-cairo text-xs text-muted-foreground">السعر:</span>
+            <span className="font-cairo text-xs text-muted-foreground">{t('common.price')}:</span>
             <Input type="number" min={0} value={editPrice} onChange={e => setEditPrice(Number(e.target.value))} className="w-24 h-7 text-xs" />
           </div>
           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSave} disabled={saving}>
@@ -555,11 +555,11 @@ function VariantRow({
       ) : adding ? (
         <>
           <div className="flex items-center gap-1">
-            <span className="font-cairo text-xs text-muted-foreground">إضافة:</span>
+            <span className="font-cairo text-xs text-muted-foreground">{t('common.add')}:</span>
             <Input type="number" min={1} value={addAmount} onChange={e => setAddAmount(Number(e.target.value))} className="w-20 h-7 text-xs" />
           </div>
           <Button size="sm" variant="default" className="h-7 text-xs font-cairo" onClick={handleAdd} disabled={saving}>
-            تأكيد
+            {t('common.confirm')}
           </Button>
           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setAdding(false)}>
             <X className="w-3.5 h-3.5 text-destructive" />
@@ -567,14 +567,14 @@ function VariantRow({
         </>
       ) : (
         <>
-          <span className="font-cairo text-xs text-muted-foreground">{row.quantity} قطعة</span>
+          <span className="font-cairo text-xs text-muted-foreground">{row.quantity} {t('inventory.pieces')}</span>
           <span className="font-cairo text-xs text-muted-foreground">· {formatPrice(row.price)}</span>
           <Button size="sm" variant="outline" className="h-7 text-xs font-cairo gap-1" onClick={() => { setEditing(true); setEditQty(row.quantity); setEditPrice(row.price); }}>
-            تعديل
+            {t('common.edit')}
           </Button>
           <Button size="sm" variant="outline" className="h-7 text-xs font-cairo gap-1" onClick={() => setAdding(true)}>
             <Plus className="w-3 h-3" />
-            إضافة مخزون
+            {t('common.add')}
           </Button>
         </>
       )}
