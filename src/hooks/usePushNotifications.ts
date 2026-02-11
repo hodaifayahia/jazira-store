@@ -20,7 +20,7 @@ export function usePushNotifications() {
     if (!isSupported || !user) return;
     // Check if already subscribed
     navigator.serviceWorker.ready.then(async (reg) => {
-      const sub = await reg.pushManager.getSubscription();
+      const sub = await (reg as any).pushManager.getSubscription();
       setIsSubscribed(!!sub);
     }).catch(() => {});
   }, [isSupported, user]);
@@ -38,7 +38,7 @@ export function usePushNotifications() {
       // For PWA push to work, you need VAPID keys.
       // This is a placeholder - user needs to generate VAPID keys and add the public key here.
       // Generate at: https://vapidkeys.com
-      const sub = await reg.pushManager.getSubscription();
+      const sub = await (reg as any).pushManager.getSubscription();
       
       if (sub) {
         // Already subscribed, register with backend

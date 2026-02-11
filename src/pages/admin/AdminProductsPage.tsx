@@ -8,10 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Star, X, Upload, ImageIcon, Loader2, Package, Search, Copy, Download, FileUp, ChevronLeft, ChevronRight, DollarSign, Tag, CheckSquare } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, X, Upload, ImageIcon, Loader2, Package, Search, Copy, Download, FileUp, ChevronLeft, ChevronRight, DollarSign, Tag, CheckSquare, ExternalLink, PackageX, AlertTriangle, EyeOff } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { useCategories } from '@/hooks/useCategories';
 
@@ -30,6 +31,7 @@ export default function AdminProductsPage() {
   const [filterCategory, setFilterCategory] = useState('الكل');
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState('all');
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -46,6 +48,33 @@ export default function AdminProductsPage() {
       return data || [];
     },
   });
+
+  // Best sellers query
+  const { data: bestSellersData } = useQuery({
+    queryKey: ['best-sellers'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('order_items')
+        .select('product_id, quantity');
+      if (!data) return {};
+      const map: Record<string, number> = {};
+      data.forEach(item => {
+        map[item.product_id] = (map[item.product_id] || 0) + item.quantity;
+      });
+      return map;
+    },
+  });
+
+  // KPI calculations
+  const kpis = useMemo(() => {
+    const all = products || [];
+    return {
+      total: all.length,
+      outOfStock: all.filter(p => (p.stock ?? 0) <= 0).length,
+      lowStock: all.filter(p => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= 5).length,
+      hidden: all.filter(p => !p.is_active).length,
+    };
+  }, [products]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -71,7 +100,7 @@ export default function AdminProductsPage() {
 
   const duplicateMutation = useMutation({
     mutationFn: async (p: any) => {
-      const { id, created_at, ...rest } = p;
+      const { id, created_at, sku, ...rest } = p;
       const { error } = await supabase.from('products').insert({ ...rest, name: `${rest.name} (نسخة)` });
       if (error) throw error;
     },
@@ -129,15 +158,31 @@ export default function AdminProductsPage() {
   const openEdit = (p: any) => { setEditingProduct(p); setShowForm(true); };
   const handleFormClose = () => { setShowForm(false); setEditingProduct(null); };
 
-  // Filtered products
+  // Filtered products with smart tabs
   const filteredProducts = useMemo(() => {
-    return (products || []).filter(p => {
-      const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    let list = products || [];
+
+    // Smart tab filtering
+    if (activeTab === 'recent') {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      list = list.filter(p => new Date(p.created_at || '') >= sevenDaysAgo);
+      list = [...list].sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
+    } else if (activeTab === 'bestsellers') {
+      const sellers = bestSellersData || {};
+      list = [...list].sort((a, b) => (sellers[b.id] || 0) - (sellers[a.id] || 0));
+      list = list.filter(p => (bestSellersData?.[p.id] || 0) > 0);
+    }
+
+    return list.filter(p => {
+      const matchSearch = !searchQuery || 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ((p as any).sku && (p as any).sku.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchCategory = filterCategory === 'الكل' || (Array.isArray(p.category) ? p.category.includes(filterCategory) : p.category === filterCategory);
       const matchStatus = filterStatus === 'all' || (filterStatus === 'active' ? p.is_active : !p.is_active);
       return matchSearch && matchCategory && matchStatus;
     });
-  }, [products, searchQuery, filterCategory, filterStatus]);
+  }, [products, searchQuery, filterCategory, filterStatus, activeTab, bestSellersData]);
 
   // Pagination
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
@@ -171,7 +216,7 @@ export default function AdminProductsPage() {
   // --- Export CSV ---
   const exportCSV = () => {
     if (!products || products.length === 0) return;
-    const headers = ['name', 'description', 'price', 'category', 'stock', 'is_active'];
+    const headers = ['name', 'description', 'price', 'category', 'stock', 'is_active', 'sku'];
     const rows = products.map(p => [
       `"${(p.name || '').replace(/"/g, '""')}"`,
       `"${(p.description || '').replace(/"/g, '""')}"`,
@@ -179,6 +224,7 @@ export default function AdminProductsPage() {
       `"${Array.isArray(p.category) ? p.category.join(';') : p.category}"`,
       p.stock ?? 0,
       p.is_active ? 'true' : 'false',
+      `"${((p as any).sku || '').replace(/"/g, '""')}"`,
     ]);
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -209,7 +255,7 @@ export default function AdminProductsPage() {
           category: cols[3] ? cols[3].split(';') : [],
           stock: Number(cols[4]) || 0,
           is_active: cols[5] !== 'false',
-        });
+        } as any);
         if (error) { errors++; } else { imported++; }
       } catch { errors++; }
     }
@@ -224,6 +270,7 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="font-cairo font-bold text-2xl text-foreground">المنتجات</h2>
@@ -243,11 +290,68 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-cairo text-xs text-muted-foreground">كل المنتجات</p>
+              <p className="font-roboto font-bold text-xl text-foreground">{kpis.total}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+              <PackageX className="w-5 h-5 text-destructive" />
+            </div>
+            <div>
+              <p className="font-cairo text-xs text-muted-foreground">نفذت الكمية</p>
+              <p className="font-roboto font-bold text-xl text-foreground">{kpis.outOfStock}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="font-cairo text-xs text-muted-foreground">كمية منخفضة</p>
+              <p className="font-roboto font-bold text-xl text-foreground">{kpis.lowStock}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+              <EyeOff className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-cairo text-xs text-muted-foreground">مخفية</p>
+              <p className="font-roboto font-bold text-xl text-foreground">{kpis.hidden}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Smart Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setCurrentPage(1); }}>
+        <TabsList className="font-cairo">
+          <TabsTrigger value="all" className="font-cairo">كل المنتجات</TabsTrigger>
+          <TabsTrigger value="recent" className="font-cairo">المضافة حديثاً</TabsTrigger>
+          <TabsTrigger value="bestsellers" className="font-cairo">الأكثر مبيعاً</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="ابحث باسم المنتج..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="pr-10 font-cairo h-10" />
+          <Input placeholder="ابحث باسم المنتج أو رمز SKU..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="pr-10 font-cairo h-10" />
         </div>
         <Select value={filterCategory} onValueChange={handleFilterChange(setFilterCategory)}>
           <SelectTrigger className="w-full sm:w-44 font-cairo h-10"><SelectValue placeholder="الفئة" /></SelectTrigger>
@@ -300,10 +404,10 @@ export default function AdminProductsPage() {
                   <th className="p-3 text-right"><Checkbox checked={allPageSelected} onCheckedChange={toggleSelectAll} /></th>
                   <th className="p-3 text-right font-cairo font-semibold">الصورة</th>
                   <th className="p-3 text-right font-cairo font-semibold">المنتج</th>
+                  <th className="p-3 text-right font-cairo font-semibold">SKU</th>
+                  <th className="p-3 text-right font-cairo font-semibold">معاينة</th>
+                  <th className="p-3 text-right font-cairo font-semibold">الكمية</th>
                   <th className="p-3 text-right font-cairo font-semibold">السعر</th>
-                  <th className="p-3 text-right font-cairo font-semibold">الفئة</th>
-                  <th className="p-3 text-right font-cairo font-semibold">المخزون</th>
-                  <th className="p-3 text-right font-cairo font-semibold">الصور</th>
                   <th className="p-3 text-right font-cairo font-semibold">الحالة</th>
                   <th className="p-3 text-right font-cairo font-semibold">إجراءات</th>
                 </tr>
@@ -321,14 +425,24 @@ export default function AdminProductsPage() {
                         </div>
                       </td>
                       <td className="p-3 font-cairo font-medium text-foreground max-w-[200px] truncate">{p.name}</td>
-                      <td className="p-3 font-roboto font-bold text-primary">{formatPrice(Number(p.price))}</td>
-                      <td className="p-3 font-cairo text-xs text-muted-foreground">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</td>
-                      <td className="p-3 font-roboto">{p.stock}</td>
-                      <td className="p-3 font-roboto text-muted-foreground">{p.images?.length || 0}</td>
+                      <td className="p-3 font-roboto text-muted-foreground text-xs">{(p as any).sku || '—'}</td>
                       <td className="p-3">
-                        <button onClick={() => toggleStatusMutation.mutate({ id: p.id, is_active: !p.is_active })} disabled={toggleStatusMutation.isPending} className={`text-xs px-2.5 py-1 rounded-full font-cairo cursor-pointer transition-all hover:scale-105 active:scale-95 ${p.is_active ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-muted text-muted-foreground hover:bg-muted-foreground/10'}`}>
-                          {p.is_active ? 'نشط' : 'معطّل'}
-                        </button>
+                        <a href={`/product/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 inline-flex items-center gap-1 font-cairo text-xs">
+                          عرض <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </td>
+                      <td className="p-3">
+                        <span className={`font-roboto ${(p.stock ?? 0) <= 0 ? 'text-destructive font-bold' : (p.stock ?? 0) <= 5 ? 'text-orange-500 font-semibold' : ''}`}>
+                          {p.stock ?? 0}
+                        </span>
+                      </td>
+                      <td className="p-3 font-roboto font-bold text-primary">{formatPrice(Number(p.price))}</td>
+                      <td className="p-3">
+                        <Switch
+                          checked={p.is_active ?? false}
+                          onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: p.id, is_active: checked })}
+                          disabled={toggleStatusMutation.isPending}
+                        />
                       </td>
                       <td className="p-3">
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -357,15 +471,21 @@ export default function AdminProductsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-cairo font-medium text-sm truncate">{p.name}</h4>
+                      {(p as any).sku && <p className="font-roboto text-xs text-muted-foreground">SKU: {(p as any).sku}</p>}
                       <p className="font-roboto font-bold text-primary text-sm mt-0.5">{formatPrice(Number(p.price))}</p>
-                      <p className="font-cairo text-xs text-muted-foreground mt-0.5">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</p>
                     </div>
-                    <button onClick={() => toggleStatusMutation.mutate({ id: p.id, is_active: !p.is_active })} className={`text-xs px-2 py-0.5 rounded-full font-cairo shrink-0 ${p.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                      {p.is_active ? 'نشط' : 'معطّل'}
-                    </button>
+                    <Switch
+                      checked={p.is_active ?? false}
+                      onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: p.id, is_active: checked })}
+                    />
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t">
-                    <span className="font-cairo text-xs text-muted-foreground">المخزون: <span className="font-roboto font-bold">{p.stock}</span></span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-cairo text-xs text-muted-foreground">المخزون: <span className="font-roboto font-bold">{p.stock}</span></span>
+                      <a href={`/product/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-primary text-xs font-cairo inline-flex items-center gap-1">
+                        عرض <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
                     <div className="flex gap-1">
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => duplicateMutation.mutate(p)}><Copy className="w-3.5 h-3.5" /></Button>
@@ -522,6 +642,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [name, setName] = useState(product?.name || '');
   const [description, setDescription] = useState(product?.description || '');
   const [price, setPrice] = useState(product ? String(product.price) : '');
+  const [sku, setSku] = useState(product?.sku || '');
   const [category, setCategory] = useState(product ? (Array.isArray(product.category) ? product.category[0] : product.category) : categoryNames[0] || '');
   const [stock, setStock] = useState(product ? String(product.stock) : '0');
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
@@ -658,7 +779,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
       if (!name.trim()) throw new Error('اسم المنتج مطلوب');
       if (!price || Number(price) <= 0) throw new Error('السعر مطلوب');
 
-      const payload = {
+      const payload: any = {
         name: name.trim(),
         description: description.trim(),
         price: Number(price),
@@ -667,6 +788,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         is_active: isActive,
         images,
         main_image_index: mainImageIndex,
+        sku: sku.trim() || null,
       };
 
       let productId = product?.id;
@@ -682,10 +804,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
 
       // Sync product_variations
       if (productId) {
-        // Delete existing
         await supabase.from('product_variations').delete().eq('product_id', productId);
-
-        // Insert selected
         const selectedOpts = variationOptions?.filter(o => selectedVariationIds.has(o.id)) || [];
         if (selectedOpts.length > 0) {
           const inserts = selectedOpts.map(o => ({
@@ -824,9 +943,15 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         </h3>
 
         <div className="space-y-4">
-          <div>
-            <Label className="font-cairo">اسم المنتج <span className="text-destructive">*</span></Label>
-            <Input value={name} onChange={e => setName(e.target.value)} className="font-cairo mt-1.5 h-11" placeholder="مثال: ساعة يد كلاسيكية" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="font-cairo">اسم المنتج <span className="text-destructive">*</span></Label>
+              <Input value={name} onChange={e => setName(e.target.value)} className="font-cairo mt-1.5 h-11" placeholder="مثال: ساعة يد كلاسيكية" />
+            </div>
+            <div>
+              <Label className="font-cairo">رمز المنتج (SKU)</Label>
+              <Input value={sku} onChange={e => setSku(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="مثال: FW01" />
+            </div>
           </div>
           <div>
             <Label className="font-cairo">الوصف</Label>
@@ -888,7 +1013,6 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
               return (
                 <div key={type}>
                   <Label className="font-cairo text-sm font-semibold mb-3 block">{type}</Label>
-                  {/* Selection swatches */}
                   <div className="flex flex-wrap gap-2">
                     {opts!.map(o => {
                       const selected = selectedVariationIds.has(o.id);
@@ -933,7 +1057,6 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                     })}
                   </div>
 
-                  {/* WooCommerce-style table for selected variations */}
                   {selectedOfType.length > 0 && (
                     <div className="mt-3 border rounded-lg overflow-hidden">
                       <table className="w-full text-sm">
