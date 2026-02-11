@@ -11,7 +11,7 @@ export default function Footer() {
     queryKey: ['footer-settings'],
     queryFn: async () => {
       const { data } = await supabase.from('settings').select('*').in('key', [
-        'store_name', 'footer_description', 'footer_phone', 'footer_email', 'footer_address', 'facebook_url'
+        'store_name', 'footer_description', 'footer_phone', 'footer_email', 'footer_address', 'facebook_url', 'copyright_text'
       ]);
       const map: Record<string, string> = {};
       data?.forEach(s => { map[s.key] = s.value || ''; });
@@ -97,7 +97,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-background/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-background/40 font-cairo text-xs">
-            © {new Date().getFullYear()} {storeName}. جميع الحقوق محفوظة.
+            {settings?.copyright_text || `© ${new Date().getFullYear()} ${storeName}. جميع الحقوق محفوظة.`}
           </p>
           {facebookUrl && (
             <a
