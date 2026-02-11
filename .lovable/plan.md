@@ -1,109 +1,105 @@
 
 
-# Inventory Management Page (`/admin/inventory`)
+# Order Confirmers Management (Phase 1 -- MVP)
 
 ## Overview
-Create a dedicated stock management page that provides a product-level table with expandable per-variant inventory details, inline stock editing, search, filtering, and column customization. This separates inventory concerns from product catalog management.
+Build a confirmer management page where admins can add, edit, and manage order confirmation agents (مؤكدين). Phase 1 focuses on the CRUD management of confirmers with type classification, pricing, search, and filtering -- matching the UI patterns already established in the Leads page.
 
-## Current State
-- Product stock is stored in `products.stock` (integer, for simple products)
-- Variant stock is in `product_variants.quantity` (integer, per variant row)
-- Products with `has_variants=true` use the variant system; others use the product-level `stock` field
-- No dedicated inventory page exists -- stock is edited via the product form
-- Low stock notifications already exist in AdminLayout (threshold: 5)
+## Scope (Phase 1 Only)
+- Confirmer CRUD: add, edit, delete, deactivate
+- Two types: Private (خاصين) and External (خارجيين)
+- Per-confirmer pricing: confirmation price + cancellation price
+- Search by name/phone, filter by type and status
+- KPI counters: total, private, external, active
+- No confirmer login/portal (future phase)
+- No order assignment system (future phase)
 
-## What Gets Built
+## Database
 
-### New Page: `src/pages/admin/AdminAbandonedPage.tsx` -> `src/pages/admin/AdminInventoryPage.tsx`
+### New Table: `confirmers`
 
-**KPI Summary Cards** (4 cards at top):
-- Total Products (count of all active products)
-- Out of Stock (products where stock = 0 or all variants have quantity = 0)
-- Low Stock (stock between 1-5, or any variant with quantity 1-5)
-- Total Inventory Value (SUM of stock x price across all products/variants)
+```text
+confirmers
+  id                UUID PK (gen_random_uuid)
+  name              TEXT NOT NULL
+  phone             TEXT NOT NULL
+  type              TEXT NOT NULL DEFAULT 'private'  -- 'private' or 'external'
+  confirmation_price NUMERIC DEFAULT 0              -- DZD per confirmed order
+  cancellation_price NUMERIC DEFAULT 0              -- DZD per cancelled order
+  status            TEXT DEFAULT 'active'            -- 'active' or 'inactive'
+  notes             TEXT nullable
+  created_at        TIMESTAMPTZ DEFAULT now()
+  updated_at        TIMESTAMPTZ DEFAULT now()
+```
 
-**Product Table** with columns:
-- Product Image (first image from `images` array)
-- Product Name
-- SKU Code
-- Total Quantity (product.stock for simple, SUM of variant quantities for variant products)
-- Price (DZD)
-- Status indicator (color dot: green = in stock, yellow = low, red = out of stock)
+### RLS Policies
+- Admin full access (ALL) using `has_role(auth.uid(), 'admin')`
+- No public access needed -- confirmers are admin-managed only
 
-**Column Display Settings**:
-- A "Display Settings" button opening a popover with checkboxes to toggle each column's visibility
-- Preference saved in localStorage
+## Admin Page: `/admin/confirmers`
 
-**Search**: Filter by product name or SKU
+### Header
+- Title: "إدارة المؤكدين" with Users icon
+- "إضافة مؤكد جديد" button
 
-**Filter Tabs**: All / In Stock / Low Stock (1-5) / Out of Stock (0)
+### KPI Cards (3 cards)
+- كل المؤكدين (All Confirmers) -- total count
+- مؤكدين خاصين (Private) -- count where type = 'private'
+- مؤكدين خارجيين (External) -- count where type = 'external'
 
-**Expandable Variant Details** per product row:
-- For products with `has_variants=true`: Shows variant matrix table with columns: Variant Label (from `option_values` JSONB), Price, Quantity, Actions
-- For simple products: Shows single row labeled "المنتج الأساسي" (Base Product) with "قياس موحد" (Unified Size)
+### Search and Filter
+- Search input: "ابحث عن مؤكد..." (by name or phone)
+- Type filter tabs: All / Private / External
+- Status filter: All / Active / Inactive
 
-**Per-Row Actions**:
-- **Edit** (inline quantity/price editing with save/cancel)
-- **Add Stock** (increment dialog: enter amount to add)
+### Table Columns (Desktop)
+- المؤكد (Name)
+- رقم الهاتف (Phone)
+- النوع (Type) -- badge: private/external
+- سعر التأكيد (Confirmation Price) -- DZD
+- سعر الإلغاء (Cancellation Price) -- DZD
+- الحالة (Status) -- active/inactive badge
+- تاريخ الانضمام (Join Date)
+- الإجراءات (Actions) -- edit, toggle status, delete
 
-**Pagination**: 15 items per page with Previous/Next navigation
+### Mobile Card Layout
+Same pattern as the Leads page: card with name, phone, type badge, prices, and action buttons.
 
-## Database Changes
-No database migration needed. The page reads and writes to existing `products` and `product_variants` tables.
+### Add/Edit Dialog
+Fields:
+- الاسم (Name) -- required
+- رقم الهاتف (Phone) -- required
+- النوع (Type) -- dropdown: خاص / خارجي
+- سعر التأكيد (Confirmation Price) -- number input (DZD)
+- سعر الإلغاء (Cancellation Price) -- number input (DZD)
+- ملاحظات (Notes) -- optional textarea
 
-## Stock Update Logic
+### Delete Confirmation
+Standard delete dialog with warning message.
 
-### Simple Products (has_variants = false)
-- Edit: `UPDATE products SET stock = :newValue WHERE id = :id`
-- Add Stock: `UPDATE products SET stock = stock + :amount WHERE id = :id`
-
-### Variant Products (has_variants = true)
-- Edit: `UPDATE product_variants SET quantity = :newValue WHERE id = :variantId`
-- Add Stock: `UPDATE product_variants SET quantity = quantity + :amount WHERE id = :variantId`
-- After any variant update, sync the parent `products.stock` = SUM of all variant quantities
+### Status Toggle
+Click to toggle active/inactive. Inactive confirmers are visually dimmed in the list.
 
 ## Technical Details
 
 ### Files to Create
-- `src/pages/admin/AdminInventoryPage.tsx` -- Complete inventory management page
+- `src/pages/admin/AdminConfirmersPage.tsx` -- Full confirmer management page
 
 ### Files to Modify
-- `src/App.tsx` -- Add route `/admin/inventory`
-- `src/components/AdminLayout.tsx` -- Add "إدارة المخزون" nav item with `Package` or `Layers` icon, placed after "المنتجات"
+- `src/App.tsx` -- Add route `/admin/confirmers`
+- `src/components/AdminLayout.tsx` -- Add "إدارة المؤكدين" nav item with `Users` icon (or `UserCheck`), placed after "العملاء المحتملون"
 
-### Data Fetching
-- Fetch all products: `supabase.from('products').select('*').order('created_at', { ascending: false })`
-- Fetch all variants: `supabase.from('product_variants').select('*')` -- loaded once and grouped by `product_id` client-side
-- This avoids N+1 queries (one per product expansion)
+### Database Migration
+- Create `confirmers` table
+- Enable RLS
+- Add admin-only ALL policy
 
-### Variant Label Display
-The `option_values` JSONB in `product_variants` stores the combination (e.g., `{ "Color": "Red", "Size": "XL" }`). The variant label will be generated by joining the values: "Red / XL".
+### Data Pattern
+Follows the same query/mutation pattern as `AdminLeadsPage.tsx`:
+- `useQuery` with key `['admin-confirmers']` to fetch all confirmers
+- `useMutation` for create/update/delete with `invalidateQueries` on success
+- Client-side search and filtering with `useMemo`
 
-### Inline Editing UX
-1. Click "تعديل" (Edit) on a variant row
-2. Quantity and price cells become editable inputs
-3. Show Save (check icon) and Cancel (X icon) buttons
-4. On save: update the database, invalidate query cache, show success toast
-5. On cancel: revert to original values
-
-### Add Stock Dialog
-1. Click "إضافة مخزون" on a variant row
-2. Small inline input appears with a number field (default: 1)
-3. Confirm adds the amount atomically
-4. Toast shows: "تم إضافة X وحدة" (Added X units)
-
-### Column Visibility
-- Stored in `localStorage` key `inventory_column_prefs`
-- Default: all columns visible
-- Toggle via a popover with checkboxes for each column
-
-### Stock Status Calculation
-- Out of Stock: quantity = 0
-- Low Stock: quantity > 0 AND quantity <= 5
-- In Stock: quantity > 5
-- For variant products: status based on the total SUM of variant quantities
-
-### Mobile Responsive
-- On mobile, table switches to card layout (same pattern used in other admin pages)
-- Each card shows product image, name, total stock with status badge, and expand button for variants
+### No New Edge Functions
+All operations use direct Supabase client calls since RLS handles authorization (admin-only).
 
