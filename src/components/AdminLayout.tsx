@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,7 @@ const NAV_ITEMS = [
   { href: '/admin/categories', label: 'الفئات', icon: Layers },
   { href: '/admin/orders', label: 'الطلبات', icon: ShoppingCart },
   { href: '/admin/returns', label: 'الاسترجاع', icon: RotateCcw },
+  { href: '/admin/costs', label: 'التكاليف والأرباح', icon: DollarSign },
   { href: '/admin/leads', label: 'العملاء المحتملون', icon: Users },
   { href: '/admin/confirmers', label: 'إدارة المؤكدين', icon: UserCheck },
   { href: '/admin/abandoned', label: 'السلات المتروكة', icon: PackageX },

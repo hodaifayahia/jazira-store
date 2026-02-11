@@ -396,6 +396,63 @@ export type Database = {
           },
         ]
       }
+      product_costs: {
+        Row: {
+          created_at: string
+          id: string
+          other_cost: number
+          other_cost_label: string | null
+          packaging_cost: number
+          product_id: string
+          purchase_cost: number
+          storage_cost: number
+          total_cost_per_unit: number | null
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          other_cost?: number
+          other_cost_label?: string | null
+          packaging_cost?: number
+          product_id: string
+          purchase_cost?: number
+          storage_cost?: number
+          total_cost_per_unit?: number | null
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          other_cost?: number
+          other_cost_label?: string | null
+          packaging_cost?: number
+          product_id?: string
+          purchase_cost?: number
+          storage_cost?: number
+          total_cost_per_unit?: number | null
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_costs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_costs_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_offers: {
         Row: {
           created_at: string | null
