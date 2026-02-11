@@ -1,35 +1,115 @@
 
-# Fix Admin Sidebar Responsiveness
 
-## Problems Identified
-1. At tablet width (768px), the sidebar is permanently visible and takes too much space, cramping the main content
-2. On mobile, when the sidebar opens, the nav items don't scroll properly -- the logout button at the bottom can overlap with long nav lists
-3. The overlay behind the mobile sidebar doesn't fully block interaction with background content
-4. The `md:` breakpoint (768px) is too small for a permanent 256px sidebar -- should use `lg:` (1024px) instead
+# Multi-Language Support for Admin Dashboard (Arabic, French, English)
 
-## Solution
+## Overview
+Add a language switcher to the admin dashboard that supports Arabic, French, and English. All hardcoded Arabic text across 15+ admin pages and the layout will be replaced with translation keys.
 
-Modify `src/components/AdminLayout.tsx` with these changes:
+## Approach
 
-### 1. Change breakpoint from `md:` to `lg:` (1024px)
-- Sidebar: change `md:translate-x-0` to `lg:translate-x-0` so the sidebar only stays permanently open on screens 1024px and wider
-- Main content: change `md:mr-64` to `lg:mr-64`
-- Hamburger menu: change `md:hidden` to `lg:hidden` so it shows on tablets too
-- Close button in sidebar: change `md:hidden` to `lg:hidden`
-- Header title and search: change `md:block` / `md:flex` to `lg:block` / `lg:flex`
-- Overlay: change `md:hidden` to `lg:hidden`
+### 1. Create i18n Infrastructure
+- Create a `LanguageContext` with React Context + localStorage persistence
+- Create translation files for all three languages (ar, fr, en)
+- Create a `useTranslation` hook that returns the `t()` function
+- Arabic and French remain RTL-aware (Arabic = RTL, French/English = LTR)
 
-### 2. Add scrollable nav area
-- Add `overflow-y-auto` and proper height constraints to the nav section so all items are accessible without overlapping the logout button
-- Use `flex-1 overflow-y-auto` on the nav container and keep the logout footer fixed at bottom
+### 2. Translation Files Structure
 
-### 3. Improve mobile overlay
-- Ensure the overlay `z-index` is correct (z-40 for overlay, z-50 for sidebar)
+```text
+src/
+  i18n/
+    index.ts          -- LanguageProvider, useTranslation hook
+    locales/
+      ar.ts           -- Arabic translations (current text)
+      fr.ts           -- French translations
+      en.ts           -- English translations
+```
 
-## Files Changed
-- `src/components/AdminLayout.tsx` -- update breakpoints and add scroll to nav
+Each file exports a flat object with ~300+ keys covering:
+- **Layout**: sidebar nav labels, notifications, logout, search, user menu
+- **Dashboard**: stat cards, chart labels, alerts, table headers
+- **Products**: form labels, tabs, KPI labels, bulk actions, CSV import/export
+- **Orders**: statuses, filters, table headers, advanced filters, bulk actions
+- **Categories**: form fields, icon labels
+- **Wilayas**: table headers, form fields, stats
+- **Coupons**: form fields, types
+- **Leads**: statuses, sources, form fields
+- **Confirmers**: form fields, payment modes
+- **Abandoned**: statuses, recovery actions
+- **Returns**: statuses, form fields, history
+- **Costs**: cost types, profit labels
+- **Inventory**: stock labels
+- **Variations**: option groups, values
+- **Settings**: all tab labels, form fields, sections
+- **Login**: form labels, buttons
+- **Common**: save, delete, cancel, edit, search, loading, etc.
+
+### 3. Language Switcher
+- Add a language toggle button in the admin header (AdminLayout.tsx)
+- Shows current language flag/code (AR/FR/EN)
+- Dropdown to switch between languages
+- Selection saved to localStorage
+
+### 4. RTL/LTR Direction Handling
+- Arabic: `dir="rtl"` (current behavior)
+- French and English: `dir="ltr"`
+- The `LanguageProvider` will set `document.documentElement.dir` and `document.documentElement.lang` dynamically
+- Font: keep Cairo for Arabic, use system font or Cairo for French/English
+
+### 5. Files to Modify
+
+**New files (4):**
+- `src/i18n/index.ts` -- Context, Provider, hook
+- `src/i18n/locales/ar.ts` -- Arabic translations
+- `src/i18n/locales/fr.ts` -- French translations  
+- `src/i18n/locales/en.ts` -- English translations
+
+**Modified files (17):**
+- `src/components/AdminLayout.tsx` -- use translations + add language switcher
+- `src/pages/admin/AdminLoginPage.tsx`
+- `src/pages/admin/AdminDashboardPage.tsx`
+- `src/pages/admin/AdminProductsPage.tsx`
+- `src/pages/admin/AdminOrdersPage.tsx`
+- `src/pages/admin/AdminCategoriesPage.tsx`
+- `src/pages/admin/AdminWilayasPage.tsx`
+- `src/pages/admin/AdminCouponsPage.tsx`
+- `src/pages/admin/AdminLeadsPage.tsx`
+- `src/pages/admin/AdminConfirmersPage.tsx`
+- `src/pages/admin/AdminAbandonedPage.tsx`
+- `src/pages/admin/AdminReturnsPage.tsx`
+- `src/pages/admin/AdminCostsPage.tsx`
+- `src/pages/admin/AdminInventoryPage.tsx`
+- `src/pages/admin/AdminVariationsPage.tsx`
+- `src/pages/admin/AdminSettingsPage.tsx`
+- `src/App.tsx` -- wrap admin routes with LanguageProvider
+
+### 6. Order Status Translations
+Order statuses stored in the database are in Arabic. The display will be translated but the database values remain Arabic. A mapping will handle this:
+- "جديد" -> "New" / "Nouveau"
+- "قيد المعالجة" -> "Processing" / "En cours"
+- "تم الشحن" -> "Shipped" / "Expedie"
+- "تم التسليم" -> "Delivered" / "Livre"
+- "ملغي" -> "Cancelled" / "Annule"
 
 ## Technical Details
-- All `md:` responsive prefixes in the sidebar/layout section get changed to `lg:`
-- The nav `<nav>` element gets `flex-1 overflow-y-auto` classes
-- The sidebar `<aside>` gets `flex flex-col` to enable proper flex layout for header/nav/footer sections
+
+### Translation Hook Usage
+```typescript
+const { t, language, setLanguage, dir } = useTranslation();
+// t('sidebar.dashboard') -> "Dashboard" / "Tableau de bord" / "لوحة القيادة"
+```
+
+### Language Switcher Component
+A small dropdown in the header bar showing flags/codes: 🇩🇿 AR | 🇫🇷 FR | 🇬🇧 EN
+
+### Direction Switching
+When language changes:
+- Set `document.documentElement.dir` to "rtl" or "ltr"
+- Set `document.documentElement.lang` to "ar", "fr", or "en"
+- Tailwind's RTL classes (`rtl:` prefix) can be used where needed, but since the current layout is RTL-first, we'll swap CSS logical properties where needed (e.g., sidebar position, margins, text alignment)
+
+### Sidebar Position
+- Arabic: sidebar on the right (current)
+- French/English: sidebar on the left
+- This requires conditional classes based on language direction
+
