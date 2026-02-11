@@ -1,106 +1,117 @@
 
 
-# Abandoned Orders System (Phase 1)
+# Store Settings Page Enhancement
 
 ## Overview
-Implement an abandoned cart capture and recovery system. When a customer fills out the checkout form but leaves without confirming, their data is automatically saved. Admins can view, contact, and convert these abandoned carts into real orders.
+Reorganize the existing settings page into a tabbed interface with 4 tabs, adding new features: primary/secondary color pickers, announcement bar, hero slider (multiple images), favicon upload, and social media links. All settings continue using the existing `settings` key-value table -- no new database tables needed.
 
-## How It Works
+## Current State
+- Settings are stored as key-value pairs in the `settings` table
+- Existing settings: store_logo, hero_banner, footer_description, footer_phone, footer_email, footer_address, store_name, facebook_url, payment methods, telegram bot config
+- Categories managed separately in `AdminCategoriesPage.tsx`
+- CSS theme colors are hardcoded in `src/index.css`
+- No announcement bar, no favicon, no color customization exists yet
 
-1. **Capture**: As the customer types their name and phone on the checkout page, after a short delay (5 seconds of inactivity), the system silently saves their info + cart contents to the database
-2. **Deduplication**: If the same phone number abandons again, the existing record is updated (not duplicated)
-3. **Auto-resolve**: When an order is successfully confirmed, any matching abandoned cart (same phone) is automatically marked as "recovered"
-4. **Admin Dashboard**: A new page at `/admin/abandoned` shows all abandoned carts with KPI cards, search, filtering, and action buttons
+## Tab Structure
 
-## Database
+### Tab 1: هوية المتجر (Store Identity)
+- **Store Name** (existing `store_name` field)
+- **Store Logo** (existing `store_logo` upload -- move here)
+- **Favicon** (new `store_favicon` setting -- 32x32px upload, rendered in `index.html` via a hook)
+- **Primary Color** (new `primary_color` setting -- hex color picker, default `#2ecc71` matching current CSS)
+- **Secondary Color** (new `secondary_color` setting -- hex color picker, default `#3498db`)
+  - Warning text: "تجنب اللون الأبيض لضمان وضوح النصوص"
+  - Live preview swatch showing both colors together
+- **Announcement Bar** (new settings: `announcement_1` through `announcement_4`)
+  - 4 text input slots with enable/disable toggle (`announcements_enabled`)
+  - Preview strip showing how announcements rotate
+- **Hero Slider** (upgrade from single `hero_banner` to multi-image)
+  - New setting `hero_slides` storing JSON array: `[{ url, link?, alt? }]`
+  - Upload up to 5 images, reorder with drag handles, delete individual slides
+  - Each slide can optionally link to a URL
+- **Copyright Text** (new `copyright_text` setting, rendered in Footer)
+- **Products Per Page** (new `products_per_page` setting -- dropdown: 5, 10, 25, 50)
 
-A new `abandoned_orders` table:
-- `id`, `customer_name`, `customer_phone`, `customer_wilaya` (text), `cart_items` (JSONB snapshot of products), `cart_total` (numeric), `item_count` (integer)
-- `status`: 'abandoned' | 'contacted' | 'recovered' | 'lost' (default: 'abandoned')
-- `recovered_order_id` (uuid, nullable, references orders)
-- `notes` (text, nullable) -- admin notes for follow-up
-- `abandoned_at` (timestamptz, default now)
-- `created_at`, `updated_at`
+### Tab 2: الدفع والتوصيل (Payment and Shipping)
+- Move existing payment settings here (BaridiMob, Flexy)
+- Keep as-is, just relocated under this tab
 
-RLS: Public insert (anyone can create from checkout), admin-only for read/update/delete.
+### Tab 3: بوت تلغرام (Telegram Bot)
+- Move existing Telegram bot settings here
+- Keep as-is, just relocated under this tab
 
-## Changes
+### Tab 4: الأمان (Security)
+- Move existing password change section here
+- Move admin user management here
 
-### 1. Checkout Page (`CheckoutPage.tsx`)
-- Add a `useEffect` with a 5-second debounce that fires when `name` and `phone` are both filled
-- On trigger: upsert into `abandoned_orders` matching by `customer_phone`
-- Cart items are snapshotted as JSONB: `[{ product_id, name, price, quantity, image, variant_info }]`
-- On successful order submission: update matching abandoned record to status='recovered' with `recovered_order_id`
+## Settings Keys (New)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `primary_color` | hex string | `#2ecc71` | Store primary color |
+| `secondary_color` | hex string | `#3498db` | Store secondary color |
+| `store_favicon` | URL string | empty | Favicon image URL |
+| `announcements_enabled` | `true`/`false` | `false` | Show announcement bar |
+| `announcement_1` to `announcement_4` | text | empty | Announcement texts |
+| `hero_slides` | JSON string | `[]` | Array of slider images |
+| `copyright_text` | text | empty | Footer copyright |
+| `products_per_page` | number string | `10` | Products per page on storefront |
 
-### 2. New Admin Page (`src/pages/admin/AdminAbandonedPage.tsx`)
-- **KPI Cards** (3 cards at top):
-  - Total abandoned carts (count where status='abandoned')
-  - Contacted (count where status='contacted')
-  - Total abandoned value (sum of cart_total where status='abandoned')
-- **Search**: By phone number or customer name
-- **Filter**: By status (all / abandoned / contacted / recovered / lost)
-- **Table columns**: Customer name, Phone, Products (expandable), Cart value, Status, Date, Actions
-- **Actions per row**:
-  - "Call" button (tel: link to phone number)
-  - "Convert to Order" button (pre-fills checkout with the abandoned cart data and navigates admin, or creates order directly)
-  - Status dropdown (change to contacted/lost)
-  - "Add Note" (inline text input)
-  - "Delete" (with confirmation)
-- **Mobile cards view** for responsive layout (same pattern as Leads page)
-- **Product details**: Expandable row showing what products were in the cart with images and quantities
+## Storefront Integration
 
-### 3. Navigation
-- Add "السلات المتروكة" (Abandoned Carts) link in `AdminLayout.tsx` sidebar, using `ShoppingCart` icon with a different style, placed after "الطلبات"
-- Add route `/admin/abandoned` in `App.tsx`
+### Dynamic Colors
+- Create `useStoreTheme` hook that fetches `primary_color` and `secondary_color` from settings
+- In `App.tsx`, apply colors as CSS custom properties on `<html>` element:
+  ```
+  document.documentElement.style.setProperty('--primary', hslFromHex(color))
+  ```
+- This makes all existing Tailwind `primary` / `secondary` classes respond dynamically
 
-### 4. Convert to Order Flow
-When admin clicks "Convert to Order":
-1. Open a confirmation dialog showing cart contents and customer info
-2. Admin confirms -- system creates a real order in `orders` table with the snapshotted data
-3. Creates `order_items` from the cart snapshot
-4. Updates abandoned record: status='recovered', recovered_order_id set
-5. Shows success toast with link to the new order
+### Announcement Bar
+- New `AnnouncementBar` component rendered above `Navbar`
+- Fetches `announcements_enabled` + `announcement_1..4`
+- Rotates between non-empty texts every 4 seconds with fade animation
+- Compact strip: colored background (primary), white text, ~36px height
+
+### Hero Slider
+- Update `Index.tsx` hero section to use `hero_slides` setting
+- If slides exist, render with Embla Carousel (already installed)
+- Auto-play, dots navigation, swipe on mobile
+- Fallback to current static hero if no slides configured
+
+### Favicon
+- Create `useFavicon` hook that updates `<link rel="icon">` in document head
+- Called in `App.tsx`
+
+### Products Per Page
+- Update `ProductsPage.tsx` to fetch `products_per_page` setting and use it as page size
+
+### Copyright
+- Update `Footer.tsx` to use `copyright_text` setting if set, otherwise keep default
 
 ## Technical Details
 
 ### Files to Create
-- `src/pages/admin/AdminAbandonedPage.tsx` -- The full abandoned orders admin page
+- `src/hooks/useStoreTheme.ts` -- Fetches colors and applies CSS variables
+- `src/hooks/useFavicon.ts` -- Updates document favicon
+- `src/components/AnnouncementBar.tsx` -- Rotating announcement strip
 
 ### Files to Modify
-- `src/pages/CheckoutPage.tsx` -- Add debounced abandoned cart capture + auto-resolve on order confirm
-- `src/App.tsx` -- Add route for `/admin/abandoned`
-- `src/components/AdminLayout.tsx` -- Add sidebar nav item
+- `src/pages/admin/AdminSettingsPage.tsx` -- Complete restructure into 4 tabs
+- `src/pages/Index.tsx` -- Hero slider using Embla
+- `src/components/Footer.tsx` -- Copyright text from settings
+- `src/pages/ProductsPage.tsx` -- Dynamic products per page
+- `src/App.tsx` -- Add `useStoreTheme`, `useFavicon`, `AnnouncementBar`
 
-### Cart Items JSONB Structure
-```json
-[
-  {
-    "product_id": "uuid",
-    "name": "T-Shirt Sport",
-    "price": 1500,
-    "quantity": 2,
-    "image": "https://...",
-    "variant_id": "uuid-or-null",
-    "variant_label": "أحمر / XL"
-  }
-]
-```
+### No Database Migration Needed
+All new settings use the existing `settings` key-value table with upsert logic already in place.
 
-### Debounce Logic in Checkout
-- Trigger conditions: `name.length >= 2` AND `phone.length >= 10` AND cart has items
-- Debounce: 5 seconds after last keystroke in name/phone fields
-- Uses `setTimeout` with cleanup in `useEffect`
-- Only upserts if no order has been submitted yet (check `submitting` state)
+### Color Picker Implementation
+- Use native HTML `<input type="color">` alongside a text input for hex value
+- Validate hex format on save
+- Show live preview swatches
 
-### Auto-resolve Logic
-- After successful order insert in `handleSubmit`, run:
-  ```
-  UPDATE abandoned_orders SET status='recovered', recovered_order_id=order.id
-  WHERE customer_phone = phone AND status IN ('abandoned','contacted')
-  ```
-
-### Validation for Convert to Order
-- Re-check product availability (stock) before creating the order
-- If any product is out of stock, show warning and let admin decide
-- Use current product prices (not snapshot prices) with option to use original prices
+### Hero Slider Storage
+- Images uploaded to existing `store` bucket
+- URLs stored as JSON array in `hero_slides` setting
+- Max 5 slides enforced in UI
 
