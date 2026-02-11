@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard, Building2, Home, X } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard, Building2, Home, X, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -107,6 +107,43 @@ export default function SingleProductPage() {
     enabled: !!orderWilayaId,
   });
 
+  // NEW: Fetch option groups + values + variants
+  const { data: optionGroups } = useQuery({
+    queryKey: ['product-option-groups', id],
+    queryFn: async () => {
+      const { data: groups } = await supabase
+        .from('product_option_groups')
+        .select('*')
+        .eq('product_id', id!)
+        .order('position');
+      if (!groups || groups.length === 0) return [];
+      const { data: values } = await supabase
+        .from('product_option_values')
+        .select('*')
+        .in('option_group_id', groups.map((g: any) => g.id))
+        .order('position');
+      return groups.map((g: any) => ({
+        ...g,
+        values: (values || []).filter((v: any) => v.option_group_id === g.id),
+      }));
+    },
+    enabled: !!id,
+  });
+
+  const { data: productVariants } = useQuery({
+    queryKey: ['product-variants', id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', id!)
+        .eq('is_active', true);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Legacy variations (backward compat)
   const { data: variations } = useQuery({
     queryKey: ['product-variations', id],
     queryFn: async () => {
@@ -125,6 +162,16 @@ export default function SingleProductPage() {
     },
   });
 
+  // Bundle offers
+  const { data: bundleOffers } = useQuery({
+    queryKey: ['product-offers', id],
+    queryFn: async () => {
+      const { data } = await supabase.from('product_offers').select('*').eq('product_id', id!).order('position');
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
   const getColorCode = (type: string, value: string) => {
     if (!variationOptions) return null;
     const opt = variationOptions.find(o => o.variation_type === type && o.variation_value === value);
@@ -136,17 +183,45 @@ export default function SingleProductPage() {
     return t.includes('لون') || t.includes('color') || t.includes('colour');
   };
 
+  // Determine if using new variant system or legacy
+  const hasNewVariants = (optionGroups || []).length > 0 && (productVariants || []).length > 0;
+
+  // Legacy variation groups
   const variationGroups = useMemo(() => {
-    if (!variations || variations.length === 0) return {};
+    if (hasNewVariants || !variations || variations.length === 0) return {};
     const groups: Record<string, typeof variations> = {};
     variations.forEach(v => {
       if (!groups[v.variation_type]) groups[v.variation_type] = [];
       groups[v.variation_type].push(v);
     });
     return groups;
-  }, [variations]);
+  }, [variations, hasNewVariants]);
 
+  // Selection state
   const [selectedVariations, setSelectedVariations] = useState<Record<string, string>>({});
+  const [selectedNewOptions, setSelectedNewOptions] = useState<Record<string, string>>({});
+
+  // Find matching variant for new system
+  const matchedVariant = useMemo(() => {
+    if (!hasNewVariants || !productVariants) return null;
+    const groupCount = (optionGroups || []).length;
+    if (Object.keys(selectedNewOptions).length < groupCount) return null;
+
+    return productVariants.find((v: any) => {
+      const ov = v.option_values || {};
+      return Object.entries(selectedNewOptions).every(([key, val]) => ov[key] === val);
+    }) || null;
+  }, [selectedNewOptions, productVariants, optionGroups, hasNewVariants]);
+
+  // Cross-disable logic: check if a specific value would lead to any available variant
+  const isOptionValueAvailable = (groupName: string, valueLabel: string) => {
+    if (!productVariants) return true;
+    const testSelection = { ...selectedNewOptions, [groupName]: valueLabel };
+    return productVariants.some((v: any) => {
+      const ov = v.option_values || {};
+      return Object.entries(testSelection).every(([key, val]) => ov[key] === val) && (v.quantity > 0);
+    });
+  };
 
   const { data: settings } = useQuery({
     queryKey: ['settings'],
@@ -197,14 +272,17 @@ export default function SingleProductPage() {
   }
 
   const productImages = product.images || [];
-  const variationImages = (variations || []).map(v => v.image_url).filter((url): url is string => !!url);
-  const images = [...productImages, ...variationImages.filter(url => !productImages.includes(url))];
-  const outOfStock = (product.stock ?? 0) <= 0;
+  const images = productImages;
+  const outOfStock = hasNewVariants
+    ? (matchedVariant ? matchedVariant.quantity <= 0 : (productVariants || []).every((v: any) => v.quantity <= 0))
+    : (product.stock ?? 0) <= 0;
   const avgRating = reviews && reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
-  const hasVariations = Object.keys(variationGroups).length > 0;
+  const hasLegacyVariations = Object.keys(variationGroups).length > 0;
 
+  // Legacy variation for cart
   const selectedVariationForCart: CartItemVariation | undefined = (() => {
+    if (hasNewVariants) return undefined;
     const types = Object.keys(variationGroups);
     if (types.length === 0) return undefined;
     for (const type of types) {
@@ -217,26 +295,52 @@ export default function SingleProductPage() {
     return undefined;
   })();
 
-  const priceAdjustment = selectedVariationForCart?.priceAdjustment || 0;
-  const effectivePrice = Number(product.price) + priceAdjustment;
+  // Compute effective price
+  const effectivePrice = hasNewVariants && matchedVariant
+    ? Number(matchedVariant.price)
+    : Number(product.price) + (selectedVariationForCart?.priceAdjustment || 0);
 
-  const allVariationsSelected = () => {
+  const effectiveStock = hasNewVariants && matchedVariant
+    ? matchedVariant.quantity
+    : (product.stock ?? 0);
+
+  const allOptionsSelected = () => {
+    if (hasNewVariants) {
+      return (optionGroups || []).every((g: any) => selectedNewOptions[g.name]);
+    }
     const types = Object.keys(variationGroups);
     if (types.length === 0) return true;
     return types.every(type => selectedVariations[type] && selectedVariations[type] !== '');
   };
 
   const handleAdd = () => {
-    if (hasVariations && !allVariationsSelected()) {
-      toast({ title: 'يرجى اختيار جميع المتغيرات أولاً', variant: 'destructive' });
+    if ((hasNewVariants || hasLegacyVariations) && !allOptionsSelected()) {
+      toast({ title: 'يرجى اختيار جميع الخيارات أولاً', variant: 'destructive' });
       return;
     }
-    for (let i = 0; i < qty; i++) {
-      addItem({
-        id: product.id, name: product.name, price: Number(product.price),
-        image: images[0] || '', stock: product.stock ?? 0,
-        shippingPrice: Number(product.shipping_price) || 0, variation: selectedVariationForCart,
-      });
+
+    if (hasNewVariants && matchedVariant) {
+      for (let i = 0; i < qty; i++) {
+        addItem({
+          id: product.id,
+          name: product.name,
+          price: Number(matchedVariant.price),
+          image: matchedVariant.image_url || images[0] || '',
+          stock: matchedVariant.quantity,
+          shippingPrice: Number(product.shipping_price) || 0,
+          variantId: matchedVariant.id,
+          variantSku: matchedVariant.sku || undefined,
+          variantOptionValues: matchedVariant.option_values as Record<string, string>,
+        });
+      }
+    } else {
+      for (let i = 0; i < qty; i++) {
+        addItem({
+          id: product.id, name: product.name, price: Number(product.price),
+          image: images[0] || '', stock: product.stock ?? 0,
+          shippingPrice: Number(product.shipping_price) || 0, variation: selectedVariationForCart,
+        });
+      }
     }
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
@@ -264,8 +368,8 @@ export default function SingleProductPage() {
   };
 
   const handleDirectOrder = async () => {
-    if (hasVariations && !allVariationsSelected()) {
-      toast({ title: 'يرجى اختيار جميع المتغيرات أولاً', variant: 'destructive' });
+    if ((hasNewVariants || hasLegacyVariations) && !allOptionsSelected()) {
+      toast({ title: 'يرجى اختيار جميع الخيارات أولاً', variant: 'destructive' });
       return;
     }
 
@@ -304,9 +408,14 @@ export default function SingleProductPage() {
       }).select().single();
       if (error) throw error;
 
-      await supabase.from('order_items').insert({
-        order_id: order.id, product_id: product.id, quantity: qty, unit_price: Number(product.price),
-      });
+      const orderItemPayload: any = {
+        order_id: order.id, product_id: product.id, quantity: qty, unit_price: effectivePrice,
+      };
+      if (hasNewVariants && matchedVariant) {
+        orderItemPayload.variant_id = matchedVariant.id;
+      }
+
+      await supabase.from('order_items').insert(orderItemPayload);
 
       supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
 
@@ -373,6 +482,10 @@ export default function SingleProductPage() {
             </div>
             <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
 
+            {product.short_description && (
+              <p className="font-cairo text-sm text-muted-foreground">{product.short_description}</p>
+            )}
+
             {reviews && reviews.length > 0 && (
               <div className="flex items-center gap-2">
                 <StarRating value={Math.round(avgRating)} readonly />
@@ -381,21 +494,133 @@ export default function SingleProductPage() {
               </div>
             )}
 
-            <p className="font-roboto font-bold text-3xl text-primary">
-              {formatPrice(effectivePrice)}
-              {priceAdjustment !== 0 && (
-                <span className="text-base text-muted-foreground line-through mr-2">{formatPrice(Number(product.price))}</span>
+            <div className="flex items-baseline gap-3">
+              <p className="font-roboto font-bold text-3xl text-primary">
+                {formatPrice(effectivePrice)}
+              </p>
+              {product.old_price && Number(product.old_price) > effectivePrice && (
+                <span className="font-roboto text-lg text-muted-foreground line-through">{formatPrice(Number(product.old_price))}</span>
               )}
-            </p>
+            </div>
+
+            {product.is_free_shipping && (
+              <div className="flex items-center gap-1.5 text-primary">
+                <Truck className="w-4 h-4" />
+                <span className="font-cairo text-sm font-medium">توصيل مجاني</span>
+              </div>
+            )}
+
+            {/* Bundle Offers */}
+            {bundleOffers && bundleOffers.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <Label className="font-cairo text-sm font-semibold flex items-center gap-1.5">
+                  <Tag className="w-4 h-4 text-primary" /> عروض خاصة
+                </Label>
+                <div className="space-y-1.5">
+                  {bundleOffers.map((offer: any) => {
+                    const savings = (effectivePrice * offer.quantity) - Number(offer.price);
+                    return (
+                      <button
+                        key={offer.id}
+                        onClick={() => setQty(offer.quantity)}
+                        className={`w-full text-right px-4 py-2.5 border-2 rounded-xl transition-all flex items-center justify-between ${qty === offer.quantity ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-cairo font-medium text-sm">{offer.description}</span>
+                          <span className="font-cairo text-xs text-muted-foreground">({offer.quantity} قطع)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-roboto font-bold text-primary">{formatPrice(Number(offer.price))}</span>
+                          {savings > 0 && (
+                            <Badge variant="secondary" className="font-cairo text-xs">وفّر {formatPrice(savings)}</Badge>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {outOfStock ? (
               <Badge variant="destructive" className="font-cairo">غير متوفر حالياً</Badge>
             ) : (
-              <p className="font-cairo text-sm text-primary">متوفر في المخزون ({product.stock} قطعة)</p>
+              <p className="font-cairo text-sm text-primary">متوفر في المخزون ({effectiveStock} قطعة)</p>
             )}
 
-            {/* Variation Selector */}
-            {hasVariations && (
+            {/* NEW Variant Selector */}
+            {hasNewVariants && (
+              <div className="space-y-4 pt-2">
+                {(optionGroups || []).map((group: any) => (
+                  <div key={group.id}>
+                    <Label className="font-cairo font-semibold text-sm mb-2 block">
+                      {group.name} <span className="text-destructive">*</span>
+                      {selectedNewOptions[group.name] && (
+                        <span className="font-normal text-muted-foreground mr-2">: {selectedNewOptions[group.name]}</span>
+                      )}
+                    </Label>
+                    {group.display_type === 'dropdown' ? (
+                      <Select value={selectedNewOptions[group.name] || ''} onValueChange={v => setSelectedNewOptions(prev => ({ ...prev, [group.name]: v }))}>
+                        <SelectTrigger className="font-cairo"><SelectValue placeholder={`اختر ${group.name}`} /></SelectTrigger>
+                        <SelectContent>
+                          {group.values.map((val: any) => {
+                            const available = isOptionValueAvailable(group.name, val.label);
+                            return (
+                              <SelectItem key={val.id} value={val.label} className="font-cairo" disabled={!available}>
+                                {val.label} {!available && '(غير متوفر)'}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {group.values.map((val: any) => {
+                          const isSelected = selectedNewOptions[group.name] === val.label;
+                          const available = isOptionValueAvailable(group.name, val.label);
+                          const handleClick = () => {
+                            if (!available) return;
+                            setSelectedNewOptions(prev => ({ ...prev, [group.name]: isSelected ? '' : val.label }));
+                          };
+
+                          if (group.display_type === 'color_swatch' && val.color_hex) {
+                            return (
+                              <button key={val.id} onClick={handleClick} disabled={!available}
+                                title={val.label}
+                                className={`relative w-9 h-9 rounded-full border-2 transition-all ring-2 ring-offset-2 ${isSelected ? 'ring-primary border-primary' : 'ring-transparent border-muted-foreground/30 hover:border-muted-foreground/50'} ${!available ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                style={{ backgroundColor: val.color_hex }}>
+                                {!available && <div className="absolute inset-0 flex items-center justify-center"><div className="w-full h-0.5 bg-destructive rotate-45 rounded-full" /></div>}
+                              </button>
+                            );
+                          }
+
+                          if (group.display_type === 'radio') {
+                            return (
+                              <label key={val.id} className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/10' : 'border-border'} ${!available ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                                <input type="radio" name={group.name} checked={isSelected} onChange={handleClick} disabled={!available} />
+                                <span className="font-cairo text-sm">{val.label}</span>
+                              </label>
+                            );
+                          }
+
+                          // Default: button
+                          return (
+                            <button key={val.id} onClick={handleClick} disabled={!available}
+                              className={`relative px-4 py-2 rounded-lg border-2 text-sm font-cairo font-medium transition-all ${isSelected ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/30 text-foreground'} ${!available ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                              {val.label}
+                              {!available && <div className="absolute inset-0 flex items-center justify-center"><div className="w-full h-0.5 bg-destructive/50 rotate-45 rounded-full" /></div>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Legacy Variation Selector */}
+            {!hasNewVariants && hasLegacyVariations && (
               <div className="space-y-4 pt-2">
                 {Object.entries(variationGroups).map(([type, vars]) => {
                   const isColor = isColorType(type);
@@ -457,7 +682,7 @@ export default function SingleProductPage() {
                 <div className="flex items-center border rounded-xl">
                   <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))} className="rounded-xl"><Minus className="w-4 h-4" /></Button>
                   <span className="w-10 text-center font-roboto font-bold">{qty}</span>
-                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(product.stock ?? 1, q + 1))} className="rounded-xl"><Plus className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(effectiveStock, q + 1))} className="rounded-xl"><Plus className="w-4 h-4" /></Button>
                 </div>
                 <Button onClick={handleAdd} variant="outline" className="font-cairo font-semibold gap-2 flex-1 rounded-xl">
                   <ShoppingCart className="w-4 h-4" />
@@ -524,7 +749,6 @@ export default function SingleProductPage() {
                   {errors.orderWilayaId && <p className="text-destructive text-xs font-cairo mt-1">{errors.orderWilayaId}</p>}
                 </div>
 
-                {/* Baladiya */}
                 {orderWilayaId && baladiyat && baladiyat.length > 0 && (
                   <div>
                     <Label className="font-cairo text-sm">البلدية</Label>
@@ -539,7 +763,6 @@ export default function SingleProductPage() {
                   </div>
                 )}
 
-                {/* Delivery Type */}
                 {orderWilayaId && selectedWilaya && (
                   <div>
                     <Label className="font-cairo text-sm">نوع التوصيل *</Label>

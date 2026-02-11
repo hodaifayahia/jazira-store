@@ -140,6 +140,7 @@ export type Database = {
           product_id: string
           quantity: number
           unit_price: number
+          variant_id: string | null
         }
         Insert: {
           id?: string
@@ -147,6 +148,7 @@ export type Database = {
           product_id: string
           quantity: number
           unit_price: number
+          variant_id?: string | null
         }
         Update: {
           id?: string
@@ -154,6 +156,7 @@ export type Database = {
           product_id?: string
           quantity?: number
           unit_price?: number
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -168,6 +171,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -281,6 +291,156 @@ export type Database = {
           },
         ]
       }
+      product_option_groups: {
+        Row: {
+          display_type: string
+          id: string
+          name: string
+          position: number | null
+          product_id: string
+        }
+        Insert: {
+          display_type?: string
+          id?: string
+          name: string
+          position?: number | null
+          product_id: string
+        }
+        Update: {
+          display_type?: string
+          id?: string
+          name?: string
+          position?: number | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_option_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_option_values: {
+        Row: {
+          color_hex: string | null
+          id: string
+          label: string
+          option_group_id: string
+          position: number | null
+        }
+        Insert: {
+          color_hex?: string | null
+          id?: string
+          label: string
+          option_group_id: string
+          position?: number | null
+        }
+        Update: {
+          color_hex?: string | null
+          id?: string
+          label?: string
+          option_group_id?: string
+          position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_option_values_option_group_id_fkey"
+            columns: ["option_group_id"]
+            isOneToOne: false
+            referencedRelation: "product_option_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variant_options: {
+        Row: {
+          option_value_id: string
+          variant_id: string
+        }
+        Insert: {
+          option_value_id: string
+          variant_id: string
+        }
+        Update: {
+          option_value_id?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variant_options_option_value_id_fkey"
+            columns: ["option_value_id"]
+            isOneToOne: false
+            referencedRelation: "product_option_values"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variant_options_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variants: {
+        Row: {
+          barcode: string | null
+          compare_at_price: number | null
+          created_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          option_values: Json
+          price: number
+          product_id: string
+          quantity: number
+          sku: string | null
+          updated_at: string | null
+          weight_grams: number | null
+        }
+        Insert: {
+          barcode?: string | null
+          compare_at_price?: number | null
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          option_values?: Json
+          price: number
+          product_id: string
+          quantity?: number
+          sku?: string | null
+          updated_at?: string | null
+          weight_grams?: number | null
+        }
+        Update: {
+          barcode?: string | null
+          compare_at_price?: number | null
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          option_values?: Json
+          price?: number
+          product_id?: string
+          quantity?: number
+          sku?: string | null
+          updated_at?: string | null
+          weight_grams?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variations: {
         Row: {
           created_at: string | null
@@ -330,6 +490,7 @@ export type Database = {
           category: string[]
           created_at: string | null
           description: string | null
+          has_variants: boolean | null
           id: string
           images: string[] | null
           is_active: boolean | null
@@ -348,6 +509,7 @@ export type Database = {
           category: string[]
           created_at?: string | null
           description?: string | null
+          has_variants?: boolean | null
           id?: string
           images?: string[] | null
           is_active?: boolean | null
@@ -366,6 +528,7 @@ export type Database = {
           category?: string[]
           created_at?: string | null
           description?: string | null
+          has_variants?: boolean | null
           id?: string
           images?: string[] | null
           is_active?: boolean | null

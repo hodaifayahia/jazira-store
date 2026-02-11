@@ -44,7 +44,12 @@ export default function CartPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <Link to={`/product/${item.id}`} className="font-cairo font-semibold text-foreground hover:text-primary line-clamp-1">{item.name}</Link>
-                  {item.variation && (
+              {item.variantOptionValues && (
+                    <p className="font-cairo text-xs text-muted-foreground mt-0.5">
+                      {Object.entries(item.variantOptionValues).map(([k, v]) => `${k}: ${v}`).join(' • ')}
+                    </p>
+                  )}
+                  {!item.variantOptionValues && item.variation && (
                     <p className="font-cairo text-xs text-muted-foreground mt-0.5">
                       {item.variation.type}: {item.variation.value}
                     </p>
@@ -58,13 +63,13 @@ export default function CartPage() {
                   )}
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center border rounded-md">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity - 1, item.variation)}><Minus className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity - 1, item.variation, item.variantId)}><Minus className="w-3 h-3" /></Button>
                       <span className="w-8 text-center font-roboto text-sm font-bold">{item.quantity}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity + 1, item.variation)}><Plus className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity + 1, item.variation, item.variantId)}><Plus className="w-3 h-3" /></Button>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-roboto font-bold text-sm">{formatPrice(itemPrice * item.quantity)}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeItem(item.id, item.variation)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeItem(item.id, item.variation, item.variantId)}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </div>
                 </div>
