@@ -14,6 +14,7 @@ import {
   Search, Eye, RotateCcw, Clock, CheckCircle, XCircle, Truck, Package,
   PackageCheck, AlertTriangle, Plus, Loader2, ChevronDown, ChevronUp
 } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
 const RETURN_STATUSES = ['requested', 'approved', 'rejected', 'pickup_scheduled', 'in_transit', 'received', 'inspected', 'completed', 'cancelled', 'disputed'];
 
@@ -50,6 +51,7 @@ const RESOLUTION_LABELS: Record<string, string> = {
 };
 
 export default function AdminReturnsPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState('');

@@ -13,8 +13,10 @@ import { Save, Upload, X, ImageIcon, Bot, Plus, Send, Webhook, Key, Shield, Pale
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import AdminUserManagement from '@/components/admin/AdminUserManagement';
+import { useTranslation } from '@/i18n';
 
 export default function AdminSettingsPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { toast } = useToast();
   const logoInputRef = useRef<HTMLInputElement>(null);

@@ -12,8 +12,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
+import { useTranslation } from '@/i18n';
 
 const STATUSES = ['جديد', 'قيد المعالجة', 'تم الشحن', 'تم التسليم', 'ملغي'];
+
+const STATUS_KEYS: Record<string, string> = {
+  'جديد': 'status.new',
+  'قيد المعالجة': 'status.processing',
+  'تم الشحن': 'status.shipped',
+  'تم التسليم': 'status.delivered',
+  'ملغي': 'status.cancelled',
+};
 
 const STATUS_CONFIG: Record<string, { icon: typeof Clock; color: string; bg: string }> = {
   'جديد': { icon: Clock, color: 'text-secondary', bg: 'bg-secondary/10' },
@@ -24,6 +33,7 @@ const STATUS_CONFIG: Record<string, { icon: typeof Clock; color: string; bg: str
 };
 
 export default function AdminOrdersPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
@@ -78,7 +88,7 @@ export default function AdminOrdersPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-orders'] });
-      toast({ title: 'تم تحديث الحالة ✅' });
+      toast({ title: t('status.updated') });
     },
   });
 
@@ -91,7 +101,7 @@ export default function AdminOrdersPage() {
       qc.invalidateQueries({ queryKey: ['admin-orders'] });
       setSelectedIds(new Set());
       setBulkStatusDialog(false);
-      toast({ title: `تم تحديث حالة ${selectedIds.size} طلب ✅` });
+      toast({ title: t('orders.bulkStatusUpdate').replace('{n}', String(selectedIds.size)) });
     },
   });
 
@@ -176,12 +186,12 @@ export default function AdminOrdersPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث برقم الطلب أو اسم العميل أو الهاتف" className="pr-10 font-cairo" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('orders.searchPlaceholder')} className="pr-10 font-cairo" />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-40 font-cairo"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="الكل" className="font-cairo">الكل</SelectItem>
+              <SelectItem value="الكل" className="font-cairo">{t('common.all')}</SelectItem>
               {STATUSES.map(s => {
                 const cfg = STATUS_CONFIG[s];
                 const Icon = cfg.icon;
@@ -189,7 +199,7 @@ export default function AdminOrdersPage() {
                   <SelectItem key={s} value={s} className="font-cairo">
                     <span className="flex items-center gap-2">
                       <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
-                      {s}
+                      {t(STATUS_KEYS[s])}
                     </span>
                   </SelectItem>
                 );
@@ -202,7 +212,7 @@ export default function AdminOrdersPage() {
             onClick={() => setShowAdvanced(!showAdvanced)}
           >
             <Filter className="w-4 h-4" />
-            فلتر متقدم
+            {t('orders.advancedFilter')}
             {hasAdvancedFilters && <span className="w-2 h-2 rounded-full bg-destructive" />}
             {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </Button>
@@ -213,55 +223,55 @@ export default function AdminOrdersPage() {
           <div className="bg-card border rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-cairo font-semibold text-sm flex items-center gap-2">
-                <Filter className="w-4 h-4 text-primary" /> فلتر متقدم
+                <Filter className="w-4 h-4 text-primary" /> {t('orders.advancedFilter')}
               </h3>
               {hasAdvancedFilters && (
                 <Button variant="ghost" size="sm" className="font-cairo text-xs" onClick={clearAdvanced}>
-                  مسح الفلاتر
+                  {t('orders.clearFilters')}
                 </Button>
               )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div>
-                <Label className="font-cairo text-xs">الولاية</Label>
+                <Label className="font-cairo text-xs">{t('orders.wilaya')}</Label>
                 <Select value={wilayaFilter} onValueChange={setWilayaFilter}>
                   <SelectTrigger className="font-cairo mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="الكل" className="font-cairo">الكل</SelectItem>
+                    <SelectItem value="الكل" className="font-cairo">{t('common.all')}</SelectItem>
                     {wilayas?.map(w => <SelectItem key={w} value={w} className="font-cairo">{w}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="font-cairo text-xs">طريقة الدفع</Label>
+                <Label className="font-cairo text-xs">{t('orders.paymentMethod')}</Label>
                 <Select value={paymentFilter} onValueChange={setPaymentFilter}>
                   <SelectTrigger className="font-cairo mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="الكل" className="font-cairo">الكل</SelectItem>
-                    <SelectItem value="cod" className="font-cairo">الدفع عند التسليم</SelectItem>
-                    <SelectItem value="baridimob" className="font-cairo">بريدي موب</SelectItem>
-                    <SelectItem value="flexy" className="font-cairo">فليكسي</SelectItem>
+                    <SelectItem value="الكل" className="font-cairo">{t('common.all')}</SelectItem>
+                    <SelectItem value="cod" className="font-cairo">{t('orders.cod')}</SelectItem>
+                    <SelectItem value="baridimob" className="font-cairo">{t('orders.baridimob')}</SelectItem>
+                    <SelectItem value="flexy" className="font-cairo">{t('orders.flexy')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="font-cairo text-xs">من تاريخ</Label>
+                <Label className="font-cairo text-xs">{t('orders.fromDate')}</Label>
                 <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="mt-1 h-9 text-xs" />
               </div>
               <div>
-                <Label className="font-cairo text-xs">إلى تاريخ</Label>
+                <Label className="font-cairo text-xs">{t('orders.toDate')}</Label>
                 <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="mt-1 h-9 text-xs" />
               </div>
               <div>
-                <Label className="font-cairo text-xs">أقل مبلغ</Label>
+                <Label className="font-cairo text-xs">{t('orders.minAmount')}</Label>
                 <Input type="number" value={minTotal} onChange={e => setMinTotal(e.target.value)} placeholder="0" className="mt-1 h-9 text-xs font-roboto" />
               </div>
               <div>
-                <Label className="font-cairo text-xs">أعلى مبلغ</Label>
+                <Label className="font-cairo text-xs">{t('orders.maxAmount')}</Label>
                 <Input type="number" value={maxTotal} onChange={e => setMaxTotal(e.target.value)} placeholder="∞" className="mt-1 h-9 text-xs font-roboto" />
               </div>
             </div>
-            <p className="font-cairo text-xs text-muted-foreground">{filtered.length} طلب مطابق</p>
+            <p className="font-cairo text-xs text-muted-foreground">{t('orders.matchingOrders').replace('{n}', String(filtered.length))}</p>
           </div>
         )}
 
@@ -269,7 +279,7 @@ export default function AdminOrdersPage() {
         {someSelected && (
           <div className="flex flex-wrap items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3">
             <CheckSquare className="w-5 h-5 text-primary" />
-            <span className="font-cairo text-sm font-medium text-primary">{selectedIds.size} طلب محدد</span>
+            <span className="font-cairo text-sm font-medium text-primary">{t('common.selected').replace('{n}', String(selectedIds.size))}</span>
             <div className="flex flex-wrap gap-2 mr-auto">
               {STATUSES.map(s => {
                 const cfg = STATUS_CONFIG[s];
@@ -283,13 +293,13 @@ export default function AdminOrdersPage() {
                     onClick={() => handleBulkQuickStatus(s)}
                     disabled={bulkUpdateStatus.isPending}
                   >
-                    <Icon className="w-3.5 h-3.5" /> {s}
+                    <Icon className="w-3.5 h-3.5" /> {t(STATUS_KEYS[s])}
                   </Button>
                 );
               })}
             </div>
             <Button size="sm" variant="ghost" className="font-cairo text-xs" onClick={() => setSelectedIds(new Set())}>
-              إلغاء التحديد
+              {t('common.deselectAll')}
             </Button>
           </div>
         )}
@@ -300,14 +310,14 @@ export default function AdminOrdersPage() {
             <thead className="bg-muted">
               <tr>
                 <th className="p-3 text-right"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></th>
-                <th className="p-3 text-right font-cairo">رقم الطلب</th>
-                <th className="p-3 text-right font-cairo">العميل</th>
-                <th className="p-3 text-right font-cairo">الهاتف</th>
-                <th className="p-3 text-right font-cairo">الولاية</th>
-                <th className="p-3 text-right font-cairo">الإجمالي</th>
-                <th className="p-3 text-right font-cairo">الحالة</th>
-                <th className="p-3 text-right font-cairo">التاريخ</th>
-                <th className="p-3 text-right font-cairo">إجراءات</th>
+                <th className="p-3 text-right font-cairo">{t('orders.orderNumber')}</th>
+                <th className="p-3 text-right font-cairo">{t('orders.customer')}</th>
+                <th className="p-3 text-right font-cairo">{t('orders.phone')}</th>
+                <th className="p-3 text-right font-cairo">{t('orders.wilaya')}</th>
+                <th className="p-3 text-right font-cairo">{t('orders.total')}</th>
+                <th className="p-3 text-right font-cairo">{t('orders.status')}</th>
+                <th className="p-3 text-right font-cairo">{t('orders.date')}</th>
+                <th className="p-3 text-right font-cairo">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -326,7 +336,7 @@ export default function AdminOrdersPage() {
                       <span className="flex items-center gap-1">
                         {wilayaName}
                         {cancelRate !== undefined && (
-                          <Tooltip><TooltipTrigger><AlertTriangle className="w-3.5 h-3.5 text-destructive" /></TooltipTrigger><TooltipContent className="font-cairo">نسبة إلغاء مرتفعة ({cancelRate}%)</TooltipContent></Tooltip>
+                          <Tooltip><TooltipTrigger><AlertTriangle className="w-3.5 h-3.5 text-destructive" /></TooltipTrigger><TooltipContent className="font-cairo">{t('orders.highCancelRate').replace('{n}', String(cancelRate))}</TooltipContent></Tooltip>
                         )}
                       </span>
                     </td>
@@ -335,13 +345,13 @@ export default function AdminOrdersPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-cairo cursor-pointer hover:opacity-80 transition-opacity ${statusCfg.bg} ${statusCfg.color}`}>
-                            <StatusIcon className="w-3.5 h-3.5" /> {o.status}
+                            <StatusIcon className="w-3.5 h-3.5" /> {t(STATUS_KEYS[o.status || 'جديد'])}
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="bg-popover border z-50 min-w-[160px]">
                           {STATUSES.map(s => { const cfg = STATUS_CONFIG[s]; const Icon = cfg.icon; const isActive = o.status === s; return (
                             <DropdownMenuItem key={s} onClick={() => !isActive && handleQuickStatus(o.id, s)} className={`font-cairo gap-2 cursor-pointer ${isActive ? 'bg-muted font-bold' : ''}`}>
-                              <Icon className={`w-4 h-4 ${cfg.color}`} /> {s} {isActive && <CheckCircle className="w-3.5 h-3.5 text-primary mr-auto" />}
+                              <Icon className={`w-4 h-4 ${cfg.color}`} /> {t(STATUS_KEYS[s])} {isActive && <CheckCircle className="w-3.5 h-3.5 text-primary mr-auto" />}
                             </DropdownMenuItem>
                           ); })}
                         </DropdownMenuContent>
@@ -352,15 +362,20 @@ export default function AdminOrdersPage() {
                       <div className="flex items-center gap-1">
                         <Tooltip>
                           <TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedOrder(o); setNewStatus(o.status || 'جديد'); }}><Eye className="w-4 h-4" /></Button></TooltipTrigger>
-                          <TooltipContent className="font-cairo">عرض التفاصيل</TooltipContent>
+                          <TooltipContent className="font-cairo">{t('common.view')}</TooltipContent>
                         </Tooltip>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover border z-50 min-w-[160px]">
-                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'قيد المعالجة')} className="font-cairo gap-2 cursor-pointer"><PackageOpen className="w-4 h-4 text-orange-500" /> قيد المعالجة</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'تم الشحن')} className="font-cairo gap-2 cursor-pointer"><Truck className="w-4 h-4 text-blue-500" /> تم الشحن</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'تم التسليم')} className="font-cairo gap-2 cursor-pointer"><PackageCheck className="w-4 h-4 text-primary" /> تم التسليم</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleQuickStatus(o.id, 'ملغي')} className="font-cairo gap-2 cursor-pointer text-destructive"><Ban className="w-4 h-4" /> إلغاء الطلب</DropdownMenuItem>
+                            {STATUSES.map(s => {
+                              const cfg = STATUS_CONFIG[s];
+                              const Icon = cfg.icon;
+                              return (
+                                <DropdownMenuItem key={s} onClick={() => handleQuickStatus(o.id, s)} className="font-cairo gap-2 cursor-pointer">
+                                  <Icon className={`w-4 h-4 ${cfg.color}`} /> {t(STATUS_KEYS[s])}
+                                </DropdownMenuItem>
+                              );
+                            })}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -383,26 +398,26 @@ export default function AdminOrdersPage() {
                 <div className="flex items-center justify-between">
                   <span className="font-roboto font-bold text-primary text-sm">{o.order_number}</span>
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-cairo ${statusCfg.bg} ${statusCfg.color}`}>
-                    <StatusIcon className="w-3 h-3" /> {o.status}
+                    <StatusIcon className="w-3 h-3" /> {t(STATUS_KEYS[o.status || 'جديد'])}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs font-cairo">
-                  <div><span className="text-muted-foreground">العميل:</span> {o.customer_name}</div>
-                  <div><span className="text-muted-foreground">الهاتف:</span> <span className="font-roboto">{o.customer_phone}</span></div>
-                  <div><span className="text-muted-foreground">الولاية:</span> {wilayaName || '—'}</div>
-                  <div><span className="text-muted-foreground">التاريخ:</span> {formatDate(o.created_at!)}</div>
+                  <div><span className="text-muted-foreground">{t('orders.customer')}:</span> {o.customer_name}</div>
+                  <div><span className="text-muted-foreground">{t('orders.phone')}:</span> <span className="font-roboto">{o.customer_phone}</span></div>
+                  <div><span className="text-muted-foreground">{t('orders.wilaya')}:</span> {wilayaName || '—'}</div>
+                  <div><span className="text-muted-foreground">{t('orders.date')}:</span> {formatDate(o.created_at!)}</div>
                 </div>
                 <div className="flex items-center justify-between pt-1 border-t">
                   <span className="font-roboto font-bold text-sm">{formatPrice(Number(o.total_amount))}</span>
                   <div className="flex gap-1">
                     <Button variant="outline" size="sm" className="h-8 font-cairo text-xs" onClick={() => { setSelectedOrder(o); setNewStatus(o.status || 'جديد'); }}>
-                      <Eye className="w-3.5 h-3.5 ml-1" /> تفاصيل
+                      <Eye className="w-3.5 h-3.5 ml-1" /> {t('common.view')}
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-popover border z-50">
                         {STATUSES.map(s => { const cfg = STATUS_CONFIG[s]; const Icon = cfg.icon; return (
-                          <DropdownMenuItem key={s} onClick={() => handleQuickStatus(o.id, s)} className={`font-cairo gap-2 cursor-pointer ${cfg.color}`}><Icon className="w-4 h-4" /> {s}</DropdownMenuItem>
+                          <DropdownMenuItem key={s} onClick={() => handleQuickStatus(o.id, s)} className={`font-cairo gap-2 cursor-pointer ${cfg.color}`}><Icon className="w-4 h-4" /> {t(STATUS_KEYS[s])}</DropdownMenuItem>
                         ); })}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -415,16 +430,16 @@ export default function AdminOrdersPage() {
 
         <Dialog open={!!selectedOrder} onOpenChange={open => !open && setSelectedOrder(null)}>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle className="font-cairo">تفاصيل الطلب {selectedOrder?.order_number}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="font-cairo">{t('orders.orderDetails')} {selectedOrder?.order_number}</DialogTitle></DialogHeader>
             {selectedOrder && (
               <div className="space-y-4 text-sm">
                 <div className="grid grid-cols-2 gap-2 font-cairo">
-                  <div><span className="text-muted-foreground">الاسم:</span> {selectedOrder.customer_name}</div>
-                  <div><span className="text-muted-foreground">الهاتف:</span> <span className="font-roboto">{selectedOrder.customer_phone}</span></div>
-                  <div><span className="text-muted-foreground">الولاية:</span> {(selectedOrder as any).wilayas?.name}</div>
-                  <div><span className="text-muted-foreground">الدفع:</span> {selectedOrder.payment_method === 'baridimob' ? 'بريدي موب' : selectedOrder.payment_method === 'flexy' ? 'فليكسي' : selectedOrder.payment_method === 'cod' ? 'الدفع عند التسليم' : selectedOrder.payment_method}</div>
+                  <div><span className="text-muted-foreground">{t('orders.customer')}:</span> {selectedOrder.customer_name}</div>
+                  <div><span className="text-muted-foreground">{t('orders.phone')}:</span> <span className="font-roboto">{selectedOrder.customer_phone}</span></div>
+                  <div><span className="text-muted-foreground">{t('orders.wilaya')}:</span> {(selectedOrder as any).wilayas?.name}</div>
+                  <div><span className="text-muted-foreground">{t('orders.paymentMethod')}:</span> {selectedOrder.payment_method === 'baridimob' ? t('orders.baridimob') : selectedOrder.payment_method === 'flexy' ? t('orders.flexy') : selectedOrder.payment_method === 'cod' ? t('orders.cod') : selectedOrder.payment_method}</div>
                 </div>
-                {selectedOrder.address && <div className="font-cairo"><span className="text-muted-foreground">العنوان:</span> {selectedOrder.address}</div>}
+                {selectedOrder.address && <div className="font-cairo"><span className="text-muted-foreground">{t('orders.address')}:</span> {selectedOrder.address}</div>}
                 {selectedOrder.payment_receipt_url && (
                   <div className="space-y-2">
                     <a href={selectedOrder.payment_receipt_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary font-cairo hover:underline">
@@ -434,7 +449,7 @@ export default function AdminOrdersPage() {
                   </div>
                 )}
                 <div className="border rounded-lg p-3">
-                  <h3 className="font-cairo font-bold mb-2">المنتجات</h3>
+                  <h3 className="font-cairo font-bold mb-2">{t('orders.items')}</h3>
                   {orderItems?.map((item: any) => (
                     <div key={item.id} className="flex justify-between py-1 font-cairo">
                       <span>{item.products?.name} ×{item.quantity}</span>
@@ -443,28 +458,28 @@ export default function AdminOrdersPage() {
                   ))}
                   <hr className="my-2" />
                   <div className="flex justify-between font-cairo text-sm">
-                    <span>المجموع الفرعي</span>
+                    <span>{t('orders.subtotal')}</span>
                     <span className="font-roboto">{formatPrice(Number(selectedOrder.subtotal))}</span>
                   </div>
                   <div className="flex justify-between font-cairo text-sm">
-                    <span>التوصيل</span>
+                    <span>{t('orders.shipping')}</span>
                     <span className="font-roboto">{formatPrice(Number(selectedOrder.shipping_cost))}</span>
                   </div>
                   {Number(selectedOrder.discount_amount) > 0 && (
                     <div className="flex justify-between font-cairo text-sm text-primary">
-                      <span>الخصم {selectedOrder.coupon_code && `(${selectedOrder.coupon_code})`}</span>
+                      <span>{t('orders.discount')} {selectedOrder.coupon_code && `(${selectedOrder.coupon_code})`}</span>
                       <span className="font-roboto">-{formatPrice(Number(selectedOrder.discount_amount))}</span>
                     </div>
                   )}
                   <hr className="my-2" />
                   <div className="flex justify-between font-cairo font-bold">
-                    <span>الإجمالي</span>
+                    <span>{t('common.total')}</span>
                     <span className="font-roboto text-primary">{formatPrice(Number(selectedOrder.total_amount))}</span>
                   </div>
                 </div>
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
-                    <Label className="font-cairo">تحديث الحالة</Label>
+                    <Label className="font-cairo">{t('common.status')}</Label>
                     <Select value={newStatus} onValueChange={setNewStatus}>
                       <SelectTrigger className="font-cairo mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -475,7 +490,7 @@ export default function AdminOrdersPage() {
                             <SelectItem key={s} value={s} className="font-cairo">
                               <span className="flex items-center gap-2">
                                 <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
-                                {s}
+                                {t(STATUS_KEYS[s])}
                               </span>
                             </SelectItem>
                           );
@@ -483,7 +498,7 @@ export default function AdminOrdersPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={() => { updateStatus.mutate({ id: selectedOrder.id, status: newStatus }); setSelectedOrder(null); }} disabled={updateStatus.isPending} className="font-cairo">حفظ</Button>
+                  <Button onClick={() => { updateStatus.mutate({ id: selectedOrder.id, status: newStatus }); setSelectedOrder(null); }} disabled={updateStatus.isPending} className="font-cairo">{t('common.save')}</Button>
                 </div>
               </div>
             )}

@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/format';
 import { Search, DollarSign, TrendingUp, TrendingDown, AlertTriangle, Pencil, Package } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
 interface ProductWithCost {
   id: string;
@@ -42,6 +43,7 @@ function getMarginIcon(margin: number) {
 }
 
 export default function AdminCostsPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [editProduct, setEditProduct] = useState<ProductWithCost | null>(null);
@@ -105,34 +107,34 @@ export default function AdminCostsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="font-cairo font-bold text-2xl text-foreground">إدارة التكاليف</h2>
-        <p className="font-cairo text-sm text-muted-foreground mt-1">إدخال تكلفة الشراء والتغليف لكل منتج وحساب هامش الربح</p>
+        <h2 className="font-cairo font-bold text-2xl text-foreground">{t('costs.title')}</h2>
+        <p className="font-cairo text-sm text-muted-foreground mt-1">{t('costs.subtitle')}</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="border"><CardContent className="p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Package className="w-5 h-5 text-primary" /></div>
-          <div><p className="font-cairo text-xs text-muted-foreground">كل المنتجات</p><p className="font-roboto font-bold text-xl text-foreground">{kpis.total}</p></div>
+          <div><p className="font-cairo text-xs text-muted-foreground">{t('costs.allProducts')}</p><p className="font-roboto font-bold text-xl text-foreground">{kpis.total}</p></div>
         </CardContent></Card>
         <Card className="border"><CardContent className="p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0"><AlertTriangle className="w-5 h-5 text-destructive" /></div>
-          <div><p className="font-cairo text-xs text-muted-foreground">بدون تكلفة</p><p className="font-roboto font-bold text-xl text-foreground">{kpis.noCost}</p></div>
+          <div><p className="font-cairo text-xs text-muted-foreground">{t('costs.noCost')}</p><p className="font-roboto font-bold text-xl text-foreground">{kpis.noCost}</p></div>
         </CardContent></Card>
         <Card className="border"><CardContent className="p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5 text-green-600" /></div>
-          <div><p className="font-cairo text-xs text-muted-foreground">هامش جيد</p><p className="font-roboto font-bold text-xl text-foreground">{kpis.profitable}</p></div>
+          <div><p className="font-cairo text-xs text-muted-foreground">{t('costs.goodMargin')}</p><p className="font-roboto font-bold text-xl text-foreground">{kpis.profitable}</p></div>
         </CardContent></Card>
         <Card className="border"><CardContent className="p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><TrendingDown className="w-5 h-5 text-red-600" /></div>
-          <div><p className="font-cairo text-xs text-muted-foreground">هامش منخفض</p><p className="font-roboto font-bold text-xl text-foreground">{kpis.lowMargin}</p></div>
+          <div><p className="font-cairo text-xs text-muted-foreground">{t('costs.lowMargin')}</p><p className="font-roboto font-bold text-xl text-foreground">{kpis.lowMargin}</p></div>
         </CardContent></Card>
       </div>
 
       {/* Search */}
       <div className="relative max-w-sm">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="ابحث عن منتج..." value={search} onChange={e => setSearch(e.target.value)} className="pr-10 font-cairo h-10" />
+        <Input placeholder={t('costs.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} className="pr-10 font-cairo h-10" />
       </div>
 
       {/* Table */}
@@ -143,14 +145,14 @@ export default function AdminCostsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/30">
-                <th className="text-right font-cairo font-semibold px-4 py-3">المنتج</th>
-                <th className="text-right font-cairo font-semibold px-4 py-3">سعر البيع</th>
-                <th className="text-right font-cairo font-semibold px-4 py-3">تكلفة الشراء</th>
-                <th className="text-right font-cairo font-semibold px-4 py-3">التغليف</th>
-                <th className="text-right font-cairo font-semibold px-4 py-3">إجمالي التكلفة</th>
-                <th className="text-right font-cairo font-semibold px-4 py-3">الربح</th>
-                <th className="text-right font-cairo font-semibold px-4 py-3">الهامش</th>
-                <th className="text-center font-cairo font-semibold px-4 py-3">إجراء</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3">{t('common.product')}</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.sellingPrice')}</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.purchaseCost')}</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.packagingCost')}</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.totalCost')}</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.profit')}</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.margin')}</th>
+                <th className="text-center font-cairo font-semibold px-4 py-3">{t('costs.action')}</th>
               </tr>
             </thead>
             <tbody>
@@ -174,7 +176,7 @@ export default function AdminCostsPage() {
                     </td>
                     <td className="px-4 py-3 font-roboto text-foreground">{formatPrice(p.price)}</td>
                     <td className="px-4 py-3 font-roboto text-foreground">
-                      {hasCost ? formatPrice(p.cost!.purchase_cost) : <span className="text-destructive font-cairo text-xs">⚠️ غير محدد</span>}
+                      {hasCost ? formatPrice(p.cost!.purchase_cost) : <span className="text-destructive font-cairo text-xs">{t('costs.notSet')}</span>}
                     </td>
                     <td className="px-4 py-3 font-roboto text-foreground">
                       {hasCost ? formatPrice(p.cost!.packaging_cost) : '—'}
@@ -198,14 +200,14 @@ export default function AdminCostsPage() {
                     <td className="px-4 py-3 text-center">
                       <Button size="sm" variant="ghost" className="font-cairo gap-1.5 h-8" onClick={() => setEditProduct(p)}>
                         <Pencil className="w-3.5 h-3.5" />
-                        {hasCost ? 'تعديل' : 'إضافة'}
+                        {hasCost ? t('common.edit') : t('common.add')}
                       </Button>
                     </td>
                   </tr>
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-10 text-center font-cairo text-muted-foreground">لا توجد منتجات</td></tr>
+                <tr><td colSpan={8} className="px-4 py-10 text-center font-cairo text-muted-foreground">{t('costs.noProducts')}</td></tr>
               )}
             </tbody>
           </table>
@@ -221,6 +223,7 @@ export default function AdminCostsPage() {
 }
 
 function CostEditDialog({ product, onClose }: { product: ProductWithCost; onClose: () => void }) {
+  const { t } = useTranslation();
   const [purchaseCost, setPurchaseCost] = useState(String(product.cost?.purchase_cost ?? ''));
   const [packagingCost, setPackagingCost] = useState(String(product.cost?.packaging_cost ?? 0));
   const [storageCost, setStorageCost] = useState(String(product.cost?.storage_cost ?? 0));
@@ -238,7 +241,7 @@ function CostEditDialog({ product, onClose }: { product: ProductWithCost; onClos
 
   const handleSave = async () => {
     if (purchase <= 0) {
-      toast.error('يجب إدخال سعر الشراء');
+      toast.error(t('costs.purchaseRequired'));
       return;
     }
     setSaving(true);
@@ -261,10 +264,10 @@ function CostEditDialog({ product, onClose }: { product: ProductWithCost; onClos
         const { error } = await supabase.from('product_costs').insert(payload);
         if (error) throw error;
       }
-      toast.success('تم حفظ التكلفة ✅');
+      toast.success(t('costs.costSaved'));
       onClose();
     } catch (err: any) {
-      toast.error(err.message || 'خطأ في الحفظ');
+      toast.error(err.message || t('costs.saveError'));
     } finally {
       setSaving(false);
     }
@@ -274,52 +277,52 @@ function CostEditDialog({ product, onClose }: { product: ProductWithCost; onClos
     <Dialog open onOpenChange={() => onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-cairo text-lg">تكلفة المنتج: {product.name}</DialogTitle>
+          <DialogTitle className="font-cairo text-lg">{t('costs.editCost')}: {product.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="font-cairo text-sm">سعر الشراء *</Label>
+              <Label className="font-cairo text-sm">{t('costs.purchaseCostLabel')}</Label>
               <Input type="number" min={0} value={purchaseCost} onChange={e => setPurchaseCost(e.target.value)} className="font-roboto mt-1" placeholder="0" />
             </div>
             <div>
-              <Label className="font-cairo text-sm">تكلفة التغليف</Label>
+              <Label className="font-cairo text-sm">{t('costs.packagingCostLabel')}</Label>
               <Input type="number" min={0} value={packagingCost} onChange={e => setPackagingCost(e.target.value)} className="font-roboto mt-1" placeholder="0" />
             </div>
             <div>
-              <Label className="font-cairo text-sm">تكلفة التخزين</Label>
+              <Label className="font-cairo text-sm">{t('costs.storageCost')}</Label>
               <Input type="number" min={0} value={storageCost} onChange={e => setStorageCost(e.target.value)} className="font-roboto mt-1" placeholder="0" />
             </div>
             <div>
-              <Label className="font-cairo text-sm">تكلفة أخرى</Label>
+              <Label className="font-cairo text-sm">{t('costs.otherCost')}</Label>
               <Input type="number" min={0} value={otherCost} onChange={e => setOtherCost(e.target.value)} className="font-roboto mt-1" placeholder="0" />
             </div>
           </div>
           {Number(otherCost) > 0 && (
             <div>
-              <Label className="font-cairo text-sm">وصف التكلفة الأخرى</Label>
-              <Input value={otherLabel} onChange={e => setOtherLabel(e.target.value)} className="font-cairo mt-1" placeholder="مثال: ملصقات" />
+              <Label className="font-cairo text-sm">{t('costs.otherCostDesc')}</Label>
+              <Input value={otherLabel} onChange={e => setOtherLabel(e.target.value)} className="font-cairo mt-1" placeholder={t('costs.otherCostPlaceholder')} />
             </div>
           )}
 
           {/* Profit Preview */}
           <Card className="border">
             <CardContent className="p-4 space-y-2">
-              <h4 className="font-cairo font-semibold text-sm text-muted-foreground">معاينة الربح</h4>
+              <h4 className="font-cairo font-semibold text-sm text-muted-foreground">{t('costs.profitPreview')}</h4>
               <div className="flex justify-between font-cairo text-sm">
-                <span>سعر البيع</span>
+                <span>{t('costs.sellingPrice')}</span>
                 <span className="font-roboto font-medium">{formatPrice(product.price)}</span>
               </div>
               <div className="flex justify-between font-cairo text-sm">
-                <span>إجمالي التكلفة</span>
+                <span>{t('costs.totalCost')}</span>
                 <span className="font-roboto font-medium">{formatPrice(totalCost)}</span>
               </div>
               <div className="border-t pt-2 flex justify-between font-cairo text-sm font-bold">
-                <span>الربح الإجمالي</span>
+                <span>{t('costs.grossProfit')}</span>
                 <span className={`font-roboto ${grossProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{formatPrice(grossProfit)}</span>
               </div>
               <div className="flex justify-between font-cairo text-sm">
-                <span>هامش الربح</span>
+                <span>{t('costs.profitMargin')}</span>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${getMarginColor(margin)}`}>
                   {margin.toFixed(1)}%
                 </span>
@@ -336,7 +339,7 @@ function CostEditDialog({ product, onClose }: { product: ProductWithCost; onClos
 
           <Button onClick={handleSave} disabled={saving} className="w-full font-cairo gap-2">
             <DollarSign className="w-4 h-4" />
-            {saving ? 'جاري الحفظ...' : 'حفظ التكلفة'}
+            {saving ? t('common.saving') : t('costs.saveCost')}
           </Button>
         </div>
       </DialogContent>

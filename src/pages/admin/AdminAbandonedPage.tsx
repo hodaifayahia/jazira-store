@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Search, Phone, ShoppingCart, Trash2, StickyNote, ArrowRight, ChevronDown, ChevronUp, PackageX, Users, DollarSign } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
 interface AbandonedOrder {
   id: string;
@@ -27,14 +28,8 @@ interface AbandonedOrder {
   abandoned_at: string;
 }
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  abandoned: { label: 'متروك', color: 'bg-destructive/10 text-destructive' },
-  contacted: { label: 'تم التواصل', color: 'bg-primary/10 text-primary' },
-  recovered: { label: 'تم الاسترجاع', color: 'bg-green-100 text-green-700' },
-  lost: { label: 'مفقود', color: 'bg-muted text-muted-foreground' },
-};
-
 export default function AdminAbandonedPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -43,6 +38,13 @@ export default function AdminAbandonedPage() {
   const [convertDialog, setConvertDialog] = useState<AbandonedOrder | null>(null);
   const [converting, setConverting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const STATUS_MAP: Record<string, { label: string; color: string }> = {
+    abandoned: { label: t('abandoned.statusAbandoned'), color: 'bg-destructive/10 text-destructive' },
+    contacted: { label: t('abandoned.statusContacted'), color: 'bg-primary/10 text-primary' },
+    recovered: { label: t('abandoned.statusRecovered'), color: 'bg-green-100 text-green-700' },
+    lost: { label: t('abandoned.statusLost'), color: 'bg-muted text-muted-foreground' },
+  };
 
   const { data: abandoned, isLoading } = useQuery({
     queryKey: ['abandoned-orders', statusFilter],
@@ -69,7 +71,7 @@ export default function AdminAbandonedPage() {
   const updateStatus = async (id: string, status: string) => {
     await supabase.from('abandoned_orders').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
     queryClient.invalidateQueries({ queryKey: ['abandoned-orders'] });
-    toast.success('تم تحديث الحالة');
+    toast.success(t('abandoned.statusUpdated'));
   };
 
   const saveNote = async () => {
@@ -77,7 +79,7 @@ export default function AdminAbandonedPage() {
     await supabase.from('abandoned_orders').update({ notes: noteDialog.notes, updated_at: new Date().toISOString() }).eq('id', noteDialog.id);
     queryClient.invalidateQueries({ queryKey: ['abandoned-orders'] });
     setNoteDialog(null);
-    toast.success('تم حفظ الملاحظة');
+    toast.success(t('abandoned.noteSaved'));
   };
 
   const handleDelete = async () => {
@@ -85,7 +87,7 @@ export default function AdminAbandonedPage() {
     await supabase.from('abandoned_orders').delete().eq('id', deleteId);
     queryClient.invalidateQueries({ queryKey: ['abandoned-orders'] });
     setDeleteId(null);
-    toast.success('تم الحذف');
+    toast.success(t('abandoned.deleted'));
   };
 
   const handleConvert = async () => {
@@ -127,9 +129,9 @@ export default function AdminAbandonedPage() {
 
       queryClient.invalidateQueries({ queryKey: ['abandoned-orders'] });
       setConvertDialog(null);
-      toast.success(`تم إنشاء الطلب #${order.order_number}`);
+      toast.success(`Order #${order.order_number} created`);
     } catch {
-      toast.error('حدث خطأ أثناء تحويل السلة');
+      toast.error(t('abandoned.convertError'));
     } finally {
       setConverting(false);
     }
@@ -145,7 +147,7 @@ export default function AdminAbandonedPage() {
               <PackageX className="w-5 h-5 text-destructive" />
             </div>
             <div>
-              <p className="font-cairo text-sm text-muted-foreground">سلات متروكة</p>
+              <p className="font-cairo text-sm text-muted-foreground">{t('abandoned.abandonedCarts')}</p>
               <p className="font-cairo font-bold text-xl">{abandonedCount}</p>
             </div>
           </CardContent>
@@ -156,7 +158,7 @@ export default function AdminAbandonedPage() {
               <Users className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="font-cairo text-sm text-muted-foreground">تم التواصل</p>
+              <p className="font-cairo text-sm text-muted-foreground">{t('abandoned.contacted')}</p>
               <p className="font-cairo font-bold text-xl">{contactedCount}</p>
             </div>
           </CardContent>
@@ -167,7 +169,7 @@ export default function AdminAbandonedPage() {
               <DollarSign className="w-5 h-5 text-accent-foreground" />
             </div>
             <div>
-              <p className="font-cairo text-sm text-muted-foreground">قيمة المتروكة</p>
+              <p className="font-cairo text-sm text-muted-foreground">{t('abandoned.abandonedValue')}</p>
               <p className="font-cairo font-bold text-xl">{formatPrice(abandonedValue)}</p>
             </div>
           </CardContent>
@@ -178,16 +180,16 @@ export default function AdminAbandonedPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث بالاسم أو رقم الهاتف..." className="pr-9 font-cairo" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('abandoned.searchPlaceholder')} className="pr-9 font-cairo" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-40 font-cairo"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="font-cairo">الكل</SelectItem>
-            <SelectItem value="abandoned" className="font-cairo">متروك</SelectItem>
-            <SelectItem value="contacted" className="font-cairo">تم التواصل</SelectItem>
-            <SelectItem value="recovered" className="font-cairo">تم الاسترجاع</SelectItem>
-            <SelectItem value="lost" className="font-cairo">مفقود</SelectItem>
+            <SelectItem value="all" className="font-cairo">{t('common.all')}</SelectItem>
+            <SelectItem value="abandoned" className="font-cairo">{t('abandoned.statusAbandoned')}</SelectItem>
+            <SelectItem value="contacted" className="font-cairo">{t('abandoned.statusContacted')}</SelectItem>
+            <SelectItem value="recovered" className="font-cairo">{t('abandoned.statusRecovered')}</SelectItem>
+            <SelectItem value="lost" className="font-cairo">{t('abandoned.statusLost')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -198,8 +200,8 @@ export default function AdminAbandonedPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <PackageX className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="font-cairo text-lg text-muted-foreground">لا توجد سلات متروكة</p>
-          <p className="font-cairo text-sm text-muted-foreground/70 mt-1">سيتم التقاط السلات المتروكة تلقائياً من صفحة الطلب</p>
+          <p className="font-cairo text-lg text-muted-foreground">{t('abandoned.noAbandoned')}</p>
+          <p className="font-cairo text-sm text-muted-foreground/70 mt-1">{t('abandoned.autoCaptureHint')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -218,7 +220,7 @@ export default function AdminAbandonedPage() {
                       </div>
                       <p className="font-roboto text-sm text-muted-foreground" dir="ltr">{a.customer_phone}</p>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground font-cairo">
-                        <span>{a.item_count} منتج</span>
+                        <span>{a.item_count} {t('common.products')}</span>
                         <span>•</span>
                         <span className="font-roboto font-semibold text-foreground">{formatPrice(Number(a.cart_total))}</span>
                         <span>•</span>
@@ -230,19 +232,19 @@ export default function AdminAbandonedPage() {
                     {/* Actions */}
                     <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                       <Button variant="outline" size="sm" className="h-8 gap-1 font-cairo text-xs" asChild>
-                        <a href={`tel:${a.customer_phone}`}><Phone className="w-3.5 h-3.5" /> اتصال</a>
+                        <a href={`tel:${a.customer_phone}`}><Phone className="w-3.5 h-3.5" /> {t('abandoned.call')}</a>
                       </Button>
                       {a.status !== 'recovered' && (
                         <Button variant="default" size="sm" className="h-8 gap-1 font-cairo text-xs" onClick={() => setConvertDialog(a)}>
-                          <ArrowRight className="w-3.5 h-3.5" /> تحويل لطلب
+                          <ArrowRight className="w-3.5 h-3.5" /> {t('abandoned.convertToOrder')}
                         </Button>
                       )}
                       <Select value={a.status} onValueChange={v => updateStatus(a.id, v)}>
                         <SelectTrigger className="h-8 w-28 font-cairo text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="abandoned" className="font-cairo text-xs">متروك</SelectItem>
-                          <SelectItem value="contacted" className="font-cairo text-xs">تم التواصل</SelectItem>
-                          <SelectItem value="lost" className="font-cairo text-xs">مفقود</SelectItem>
+                          <SelectItem value="abandoned" className="font-cairo text-xs">{t('abandoned.statusAbandoned')}</SelectItem>
+                          <SelectItem value="contacted" className="font-cairo text-xs">{t('abandoned.statusContacted')}</SelectItem>
+                          <SelectItem value="lost" className="font-cairo text-xs">{t('abandoned.statusLost')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNoteDialog({ id: a.id, notes: a.notes || '' })}>
@@ -283,10 +285,10 @@ export default function AdminAbandonedPage() {
       {/* Note Dialog */}
       <Dialog open={!!noteDialog} onOpenChange={o => !o && setNoteDialog(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="font-cairo">ملاحظة</DialogTitle></DialogHeader>
-          <Textarea value={noteDialog?.notes || ''} onChange={e => setNoteDialog(prev => prev ? { ...prev, notes: e.target.value } : null)} placeholder="أضف ملاحظة..." className="font-cairo" rows={4} />
+          <DialogHeader><DialogTitle className="font-cairo">{t('abandoned.note')}</DialogTitle></DialogHeader>
+          <Textarea value={noteDialog?.notes || ''} onChange={e => setNoteDialog(prev => prev ? { ...prev, notes: e.target.value } : null)} placeholder="..." className="font-cairo" rows={4} />
           <DialogFooter>
-            <Button onClick={saveNote} className="font-cairo">حفظ</Button>
+            <Button onClick={saveNote} className="font-cairo">{t('common.save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -294,11 +296,11 @@ export default function AdminAbandonedPage() {
       {/* Convert Dialog */}
       <Dialog open={!!convertDialog} onOpenChange={o => !o && setConvertDialog(null)}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="font-cairo">تحويل إلى طلب</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-cairo">{t('abandoned.convertTitle')}</DialogTitle></DialogHeader>
           {convertDialog && (
             <div className="space-y-3">
-              <p className="font-cairo text-sm"><strong>العميل:</strong> {convertDialog.customer_name}</p>
-              <p className="font-cairo text-sm"><strong>الهاتف:</strong> <span dir="ltr">{convertDialog.customer_phone}</span></p>
+              <p className="font-cairo text-sm"><strong>{t('common.customer')}:</strong> {convertDialog.customer_name}</p>
+              <p className="font-cairo text-sm"><strong>{t('common.phone')}:</strong> <span dir="ltr">{convertDialog.customer_phone}</span></p>
               <div className="border rounded-lg p-3 space-y-2">
                 {(convertDialog.cart_items || []).map((item: any, idx: number) => (
                   <div key={idx} className="flex justify-between text-sm font-cairo">
@@ -308,16 +310,16 @@ export default function AdminAbandonedPage() {
                 ))}
                 <hr />
                 <div className="flex justify-between font-cairo font-bold">
-                  <span>الإجمالي</span>
+                  <span>{t('common.total')}</span>
                   <span className="font-roboto">{formatPrice(Number(convertDialog.cart_total))}</span>
                 </div>
               </div>
-              <p className="font-cairo text-xs text-muted-foreground">سيتم إنشاء طلب جديد بالدفع عند الاستلام. يمكنك تعديل التفاصيل من صفحة الطلبات.</p>
+              <p className="font-cairo text-xs text-muted-foreground">{t('abandoned.convertHint')}</p>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConvertDialog(null)} className="font-cairo">إلغاء</Button>
-            <Button onClick={handleConvert} disabled={converting} className="font-cairo">{converting ? 'جاري...' : 'تأكيد التحويل'}</Button>
+            <Button variant="outline" onClick={() => setConvertDialog(null)} className="font-cairo">{t('common.cancel')}</Button>
+            <Button onClick={handleConvert} disabled={converting} className="font-cairo">{converting ? t('abandoned.converting') : t('abandoned.confirmConvert')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -325,11 +327,11 @@ export default function AdminAbandonedPage() {
       {/* Delete Confirmation */}
       <Dialog open={!!deleteId} onOpenChange={o => !o && setDeleteId(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="font-cairo">حذف السلة المتروكة</DialogTitle></DialogHeader>
-          <p className="font-cairo text-sm text-muted-foreground">هل أنت متأكد من حذف هذه السلة المتروكة؟</p>
+          <DialogHeader><DialogTitle className="font-cairo">{t('abandoned.deleteTitle')}</DialogTitle></DialogHeader>
+          <p className="font-cairo text-sm text-muted-foreground">{t('abandoned.deleteMessage')}</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)} className="font-cairo">إلغاء</Button>
-            <Button variant="destructive" onClick={handleDelete} className="font-cairo">حذف</Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)} className="font-cairo">{t('common.cancel')}</Button>
+            <Button variant="destructive" onClick={handleDelete} className="font-cairo">{t('common.delete')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
