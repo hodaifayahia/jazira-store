@@ -99,6 +99,45 @@ export type Database = {
           },
         ]
       }
+      confirmers: {
+        Row: {
+          cancellation_price: number | null
+          confirmation_price: number | null
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          status: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          cancellation_price?: number | null
+          confirmation_price?: number | null
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone: string
+          status?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          cancellation_price?: number | null
+          confirmation_price?: number | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          status?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       coupon_products: {
         Row: {
           coupon_id: string
