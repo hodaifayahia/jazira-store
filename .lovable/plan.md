@@ -1,105 +1,100 @@
 
 
-# Order Confirmers Management (Phase 1 -- MVP)
+# Phase 2: Enhanced Confirmer Management System
 
 ## Overview
-Build a confirmer management page where admins can add, edit, and manage order confirmation agents (مؤكدين). Phase 1 focuses on the CRUD management of confirmers with type classification, pricing, search, and filtering -- matching the UI patterns already established in the Leads page.
+Upgrade the existing basic confirmer CRUD page into a tabbed interface with proper authentication (email/password login for confirmers), a dual payment model (per-order vs monthly salary), and a confirmation settings tab. This builds on the existing `confirmers` table and follows the `manage-admin` edge function pattern for account creation.
 
-## Scope (Phase 1 Only)
-- Confirmer CRUD: add, edit, delete, deactivate
-- Two types: Private (خاصين) and External (خارجيين)
-- Per-confirmer pricing: confirmation price + cancellation price
-- Search by name/phone, filter by type and status
-- KPI counters: total, private, external, active
-- No confirmer login/portal (future phase)
-- No order assignment system (future phase)
+## What Changes
 
-## Database
+### 1. Database Migration -- Alter `confirmers` table + Add `confirmation_settings`
 
-### New Table: `confirmers`
+**Alter `confirmers`** to add:
+- `email` (TEXT, nullable) -- login credential for the confirmer
+- `user_id` (UUID, nullable) -- linked to auth.users for login
+- `payment_mode` (TEXT, DEFAULT 'per_order') -- either 'per_order' or 'monthly'
+- `monthly_salary` (NUMERIC, DEFAULT 0) -- used when payment_mode = 'monthly'
 
-```text
-confirmers
-  id                UUID PK (gen_random_uuid)
-  name              TEXT NOT NULL
-  phone             TEXT NOT NULL
-  type              TEXT NOT NULL DEFAULT 'private'  -- 'private' or 'external'
-  confirmation_price NUMERIC DEFAULT 0              -- DZD per confirmed order
-  cancellation_price NUMERIC DEFAULT 0              -- DZD per cancelled order
-  status            TEXT DEFAULT 'active'            -- 'active' or 'inactive'
-  notes             TEXT nullable
-  created_at        TIMESTAMPTZ DEFAULT now()
-  updated_at        TIMESTAMPTZ DEFAULT now()
-```
+**Create `confirmation_settings`** table (single row, global config):
+- `id` (UUID, PK)
+- `assignment_mode` (TEXT, DEFAULT 'manual') -- manual / round_robin / load_balanced
+- `auto_timeout_minutes` (INTEGER, DEFAULT 30)
+- `max_call_attempts` (INTEGER, DEFAULT 3)
+- `enable_confirm_chat` (BOOLEAN, DEFAULT false)
+- `working_hours_start` (TEXT, DEFAULT '08:00')
+- `working_hours_end` (TEXT, DEFAULT '20:00')
+- `created_at`, `updated_at` (TIMESTAMPTZ)
 
-### RLS Policies
-- Admin full access (ALL) using `has_role(auth.uid(), 'admin')`
-- No public access needed -- confirmers are admin-managed only
+RLS: Admin-only ALL policy on `confirmation_settings`.
 
-## Admin Page: `/admin/confirmers`
+Also add 'confirmer' to the `app_role` enum so confirmers can have their own role in `user_roles`.
 
-### Header
-- Title: "إدارة المؤكدين" with Users icon
-- "إضافة مؤكد جديد" button
+### 2. Edge Function -- `manage-confirmer`
 
-### KPI Cards (3 cards)
-- كل المؤكدين (All Confirmers) -- total count
-- مؤكدين خاصين (Private) -- count where type = 'private'
-- مؤكدين خارجيين (External) -- count where type = 'external'
+A new edge function (modeled after `manage-admin`) that:
+- **Action: "create"** -- Creates a Supabase Auth user with email/password, assigns the 'confirmer' role in `user_roles`, and updates the `confirmers` row with `user_id` and `email`.
+- **Action: "deactivate"** -- Removes the confirmer's active sessions.
+- Requires admin authentication (same pattern as `manage-admin`).
 
-### Search and Filter
-- Search input: "ابحث عن مؤكد..." (by name or phone)
-- Type filter tabs: All / Private / External
-- Status filter: All / Active / Inactive
+### 3. Restructured Admin Page -- 3 Tabs
 
-### Table Columns (Desktop)
-- المؤكد (Name)
-- رقم الهاتف (Phone)
-- النوع (Type) -- badge: private/external
-- سعر التأكيد (Confirmation Price) -- DZD
-- سعر الإلغاء (Cancellation Price) -- DZD
-- الحالة (Status) -- active/inactive badge
-- تاريخ الانضمام (Join Date)
-- الإجراءات (Actions) -- edit, toggle status, delete
+Restructure `AdminConfirmersPage.tsx` into a tabbed layout:
 
-### Mobile Card Layout
-Same pattern as the Leads page: card with name, phone, type badge, prices, and action buttons.
+**Tab 1: "إضافة مؤكد جديد" (Add New Confirmer)**
+- Form with sections:
+  - **معلومات المؤكد (Confirmer Info):**
+    - الاسم الكامل (Full Name) -- required
+    - الإيمايل (Email) -- required, for login
+    - كلمة السر (Password) -- required, min 8 chars
+    - رقم الهاتف (Phone) -- optional
+    - النوع (Type) -- dropdown: خاص / خارجي
+  - **نظام محاسبة المؤكد (Payment System):**
+    - طريقة المحاسبة (Payment Method) -- radio/dropdown:
+      - "دفع حسب الطلبات" (Per Order) -- shows confirmation_price + cancellation_price fields
+      - "دفع شهري" (Monthly Salary) -- shows monthly_salary field
+  - Buttons: إلغاء (Cancel) / إضافة (Add)
+- On submit: calls `manage-confirmer` edge function to create auth account, then inserts into `confirmers` table.
 
-### Add/Edit Dialog
-Fields:
-- الاسم (Name) -- required
-- رقم الهاتف (Phone) -- required
-- النوع (Type) -- dropdown: خاص / خارجي
-- سعر التأكيد (Confirmation Price) -- number input (DZD)
-- سعر الإلغاء (Cancellation Price) -- number input (DZD)
-- ملاحظات (Notes) -- optional textarea
+**Tab 2: "فريق المؤكدين" (Confirmer Team)**
+- The existing table/list view (KPI cards, search, filters, table) -- moved here as-is with minor enhancements:
+  - Add "طريقة الدفع" (Payment Method) column showing per_order or monthly badge
+  - Edit dialog updated with payment_mode and monthly_salary fields
+  - Status toggle and delete remain the same
 
-### Delete Confirmation
-Standard delete dialog with warning message.
+**Tab 3: "إعدادات التأكيد" (Confirmation Settings)**
+- Form to manage `confirmation_settings`:
+  - طريقة التوزيع (Assignment Mode) -- dropdown: يدوي / دوري / حسب الحمل
+  - مهلة التأكيد (Timeout Minutes) -- number input
+  - محاولات الاتصال القصوى (Max Call Attempts) -- number input
+  - تفعيل التأكيد التلقائي (Enable Confirm Chat) -- toggle switch
+  - ساعات العمل (Working Hours) -- start/end time inputs
+- Uses upsert to save (single row pattern)
 
-### Status Toggle
-Click to toggle active/inactive. Inactive confirmers are visually dimmed in the list.
+### 4. Files to Create
+- `supabase/functions/manage-confirmer/index.ts` -- Edge function for confirmer account lifecycle
 
-## Technical Details
+### 5. Files to Modify
+- `src/pages/admin/AdminConfirmersPage.tsx` -- Complete restructure into 3 tabs
+- Database migration (new SQL)
 
-### Files to Create
-- `src/pages/admin/AdminConfirmersPage.tsx` -- Full confirmer management page
+### 6. Files NOT Modified
+- `src/App.tsx` -- Route already exists at `/admin/confirmers`
+- `src/components/AdminLayout.tsx` -- Nav item already exists
 
-### Files to Modify
-- `src/App.tsx` -- Add route `/admin/confirmers`
-- `src/components/AdminLayout.tsx` -- Add "إدارة المؤكدين" nav item with `Users` icon (or `UserCheck`), placed after "العملاء المحتملون"
+## Technical Notes
 
-### Database Migration
-- Create `confirmers` table
-- Enable RLS
-- Add admin-only ALL policy
+- **No multi-tenant (store_id)**: The current project has no `stores` table. All data is single-tenant. Skipping store_id scoping.
+- **Password handling**: Passwords are managed entirely through Supabase Auth. The edge function creates the auth account; the frontend never stores passwords.
+- **Confirmer login page**: NOT included in this phase. Confirmers will use a separate login page and dashboard in a future phase. This phase only creates their accounts.
+- **The `app_role` enum** needs 'confirmer' added via `ALTER TYPE app_role ADD VALUE 'confirmer'`.
+- **Payment mode conditional rendering**: When "per_order" is selected, show price fields and hide salary. When "monthly" is selected, show salary and hide price fields.
 
-### Data Pattern
-Follows the same query/mutation pattern as `AdminLeadsPage.tsx`:
-- `useQuery` with key `['admin-confirmers']` to fetch all confirmers
-- `useMutation` for create/update/delete with `invalidateQueries` on success
-- Client-side search and filtering with `useMemo`
-
-### No New Edge Functions
-All operations use direct Supabase client calls since RLS handles authorization (admin-only).
+## What This Does NOT Include (Future Phases)
+- Confirmer login page and dashboard
+- Order assignment system (queue, auto-assign)
+- Call logging and tracking
+- Earnings ledger and payroll
+- Performance analytics
+- Real-time WebSocket notifications
+- Confirmer-scoped RLS policies
 
