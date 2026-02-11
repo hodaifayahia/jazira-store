@@ -216,12 +216,16 @@ export default function CheckoutPage() {
       }).select().single();
       if (error) throw error;
 
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        unit_price: item.price,
-      }));
+      const orderItems = items.map(item => {
+        const oi: any = {
+          order_id: order.id,
+          product_id: item.id,
+          quantity: item.quantity,
+          unit_price: item.price,
+        };
+        if (item.variantId) oi.variant_id = item.variantId;
+        return oi;
+      });
       await supabase.from('order_items').insert(orderItems);
 
       supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
@@ -426,9 +430,9 @@ export default function CheckoutPage() {
           <div className="bg-card border rounded-lg p-6 sticky top-20 space-y-3">
             <h2 className="font-cairo font-bold text-xl mb-4">ملخص الطلب</h2>
             {items.map((item, idx) => (
-              <div key={`${item.id}-${item.variation?.value || ''}-${idx}`} className="flex justify-between text-sm font-cairo">
+              <div key={`${item.id}-${item.variantId || item.variation?.value || ''}-${idx}`} className="flex justify-between text-sm font-cairo">
                 <span>
-                  {item.name} {item.variation ? `(${item.variation.value})` : ''} ×{item.quantity}
+                  {item.name} {item.variantOptionValues ? `(${Object.values(item.variantOptionValues).join(' / ')})` : item.variation ? `(${item.variation.value})` : ''} ×{item.quantity}
                 </span>
                 <span className="font-roboto">{formatPrice((item.price + (item.variation?.priceAdjustment || 0)) * item.quantity)}</span>
               </div>

@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Star, X, Upload, ImageIcon, Loader2, Package, Search, Copy, Download, FileUp, ChevronLeft, ChevronRight, DollarSign, Tag, CheckSquare, ExternalLink, PackageX, AlertTriangle, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, X, Upload, ImageIcon, Loader2, Package, Search, Copy, Download, FileUp, ChevronLeft, ChevronRight, DollarSign, Tag, CheckSquare, ExternalLink, PackageX, AlertTriangle, EyeOff, Layers } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { useCategories } from '@/hooks/useCategories';
 
@@ -633,6 +633,34 @@ export default function AdminProductsPage() {
   );
 }
 
+/* ─── Cartesian product helper ─── */
+function cartesianProduct<T>(arrays: T[][]): T[][] {
+  if (arrays.length === 0) return [[]];
+  return arrays.reduce<T[][]>(
+    (acc, arr) => acc.flatMap(combo => arr.map(val => [...combo, val])),
+    [[]]
+  );
+}
+
+/* ─── Types for option groups ─── */
+interface OptionGroupState {
+  id?: string; // DB id if editing existing
+  name: string;
+  displayType: string;
+  values: { id?: string; label: string; colorHex: string }[];
+}
+
+interface VariantRow {
+  id?: string; // DB id if editing existing
+  comboKey: string; // serialized option values for matching
+  optionValues: Record<string, string>; // { "اللون": "أحمر", "المقاس": "XL" }
+  sku: string;
+  price: string;
+  quantity: string;
+  imageUrl: string;
+  isActive: boolean;
+}
+
 /* ─── Product Form (full page) ─── */
 
 function ProductForm({ product, categoryNames, onClose }: { product: any; categoryNames: string[]; onClose: () => void }) {
@@ -684,141 +712,197 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
     setOffers(prev => prev.map((o, i) => i === idx ? { ...o, [field]: value } : o));
   };
 
-  // Variation options (abstract templates)
-  const { data: variationOptions } = useQuery({
-    queryKey: ['variation-options'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('variation_options')
-        .select('*')
-        .eq('is_active', true)
-        .order('variation_type')
-        .order('variation_value');
-      return (data || []) as Array<{ id: string; variation_type: string; variation_value: string; color_code: string | null; is_active: boolean }>;
-    },
-  });
+  // ─── NEW: Option Groups + Variants ───
+  const [optionGroups, setOptionGroups] = useState<OptionGroupState[]>([]);
+  const [variantRows, setVariantRows] = useState<VariantRow[]>([]);
+  const [newValueInputs, setNewValueInputs] = useState<Record<number, string>>({});
 
-  // Existing product_variations for this product
-  const { data: productVariations } = useQuery({
-    queryKey: ['product-variations', product?.id],
+  // Load existing option groups, values, and variants
+  const { data: existingOptionGroups } = useQuery({
+    queryKey: ['product-option-groups', product?.id],
     queryFn: async () => {
       if (!product?.id) return [];
-      const { data } = await supabase.from('product_variations').select('*').eq('product_id', product.id);
+      const { data: groups } = await supabase
+        .from('product_option_groups')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('position');
+      if (!groups || groups.length === 0) return [];
+
+      const { data: values } = await supabase
+        .from('product_option_values')
+        .select('*')
+        .in('option_group_id', groups.map(g => g.id))
+        .order('position');
+
+      return groups.map(g => ({
+        id: g.id,
+        name: g.name,
+        displayType: g.display_type,
+        values: (values || [])
+          .filter(v => v.option_group_id === g.id)
+          .map(v => ({ id: v.id, label: v.label, colorHex: v.color_hex || '' })),
+      })) as OptionGroupState[];
+    },
+    enabled: !!product?.id,
+  });
+
+  const { data: existingVariants } = useQuery({
+    queryKey: ['product-variants', product?.id],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      const { data } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('created_at');
       return data || [];
     },
     enabled: !!product?.id,
   });
 
-  // Track selected variation option IDs
-  const [selectedVariationIds, setSelectedVariationIds] = useState<Set<string>>(new Set());
-  const [variationPriceAdj, setVariationPriceAdj] = useState<Record<string, string>>({});
-  const [variationStock, setVariationStock] = useState<Record<string, string>>({});
-  const [variationImages, setVariationImages] = useState<Record<string, string>>({});
-  const [uploadingVariationImage, setUploadingVariationImage] = useState<string | null>(null);
-
-  // Initialize selected variations from existing product_variations
-  useState(() => {
-    if (productVariations && variationOptions) {
-      const selected = new Set<string>();
-      const priceAdj: Record<string, string> = {};
-      const stockMap: Record<string, string> = {};
-      const imgMap: Record<string, string> = {};
-      productVariations.forEach(pv => {
-        const opt = variationOptions.find(o => o.variation_type === pv.variation_type && o.variation_value === pv.variation_value);
-        if (opt) {
-          selected.add(opt.id);
-          priceAdj[opt.id] = String(pv.price_adjustment || 0);
-          stockMap[opt.id] = String(pv.stock || 0);
-          if (pv.image_url) imgMap[opt.id] = pv.image_url;
-        }
-      });
-      setSelectedVariationIds(selected);
-      setVariationPriceAdj(priceAdj);
-      setVariationStock(stockMap);
-      setVariationImages(imgMap);
-    }
-  });
-
-  // Re-sync when productVariations load
+  // Sync existing data into state
   useMemo(() => {
-    if (productVariations && variationOptions && productVariations.length > 0) {
-      const selected = new Set<string>();
-      const priceAdj: Record<string, string> = {};
-      const stockMap: Record<string, string> = {};
-      const imgMap: Record<string, string> = {};
-      productVariations.forEach(pv => {
-        const opt = variationOptions.find(o => o.variation_type === pv.variation_type && o.variation_value === pv.variation_value);
-        if (opt) {
-          selected.add(opt.id);
-          priceAdj[opt.id] = String(pv.price_adjustment || 0);
-          stockMap[opt.id] = String(pv.stock || 0);
-          if (pv.image_url) imgMap[opt.id] = pv.image_url;
-        }
-      });
-      if (selected.size > 0) {
-        setSelectedVariationIds(selected);
-        setVariationPriceAdj(priceAdj);
-        setVariationStock(stockMap);
-        setVariationImages(imgMap);
-      }
+    if (existingOptionGroups && existingOptionGroups.length > 0 && optionGroups.length === 0) {
+      setOptionGroups(existingOptionGroups);
     }
-  }, [productVariations, variationOptions]);
+  }, [existingOptionGroups]);
 
-  // Group variation options by type
-  const groupedOptions = useMemo(() => {
-    const groups: Record<string, typeof variationOptions> = {};
-    variationOptions?.forEach(o => {
-      if (!groups[o.variation_type]) groups[o.variation_type] = [];
-      groups[o.variation_type]!.push(o);
-    });
-    return groups;
-  }, [variationOptions]);
+  useMemo(() => {
+    if (existingVariants && existingVariants.length > 0 && variantRows.length === 0 && optionGroups.length > 0) {
+      setVariantRows(existingVariants.map((v: any) => ({
+        id: v.id,
+        comboKey: JSON.stringify(v.option_values || {}),
+        optionValues: v.option_values || {},
+        sku: v.sku || '',
+        price: String(v.price),
+        quantity: String(v.quantity),
+        imageUrl: v.image_url || '',
+        isActive: v.is_active ?? true,
+      })));
+    }
+  }, [existingVariants, optionGroups]);
 
-  const isColorType = (type: string) => {
-    const t = type.toLowerCase();
-    return t.includes('لون') || t.includes('color') || t.includes('colour');
-  };
-
-  const toggleVariation = (id: string) => {
-    setSelectedVariationIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const handleVariationImageUpload = async (optionId: string, file: File) => {
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: 'حجم الصورة كبير جداً (الحد الأقصى 5MB)', variant: 'destructive' });
+  // Regenerate variant matrix when option groups change
+  const regenerateVariants = (groups: OptionGroupState[]) => {
+    const validGroups = groups.filter(g => g.values.length > 0);
+    if (validGroups.length === 0) {
+      setVariantRows([]);
       return;
     }
-    setUploadingVariationImage(optionId);
-    try {
-      const ext = file.name.split('.').pop();
-      const path = `variations/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from('products').upload(path, file);
-      if (error) throw error;
-      const { data } = supabase.storage.from('products').getPublicUrl(path);
-      setVariationImages(prev => ({ ...prev, [optionId]: data.publicUrl }));
-      toast({ title: 'تم رفع صورة المتغير ✅' });
-    } catch {
-      toast({ title: 'فشل رفع الصورة', variant: 'destructive' });
-    } finally {
-      setUploadingVariationImage(null);
+
+    const valueArrays = validGroups.map(g => g.values.map(v => ({ groupName: g.name, label: v.label })));
+    const combos = cartesianProduct(valueArrays);
+
+    if (combos.length > 100) {
+      toast({ title: `عدد المتغيرات (${combos.length}) يتجاوز الحد الأقصى (100)`, variant: 'destructive' });
+      return;
     }
+
+    const newRows: VariantRow[] = combos.map(combo => {
+      const optionValues: Record<string, string> = {};
+      combo.forEach(c => { optionValues[c.groupName] = c.label; });
+      const comboKey = JSON.stringify(optionValues);
+
+      // Try to match existing variant
+      const existing = variantRows.find(v => v.comboKey === comboKey);
+      if (existing) return existing;
+
+      return {
+        comboKey,
+        optionValues,
+        sku: '',
+        price: price || '0',
+        quantity: '0',
+        imageUrl: '',
+        isActive: true,
+      };
+    });
+
+    setVariantRows(newRows);
   };
 
+  // Option group management
+  const addOptionGroup = () => {
+    if (optionGroups.length >= 3) return;
+    const newGroups = [...optionGroups, { name: '', displayType: 'button', values: [] }];
+    setOptionGroups(newGroups);
+  };
+
+  const removeOptionGroup = (idx: number) => {
+    const newGroups = optionGroups.filter((_, i) => i !== idx);
+    setOptionGroups(newGroups);
+    regenerateVariants(newGroups);
+  };
+
+  const updateOptionGroup = (idx: number, field: keyof OptionGroupState, value: any) => {
+    const newGroups = optionGroups.map((g, i) => i === idx ? { ...g, [field]: value } : g);
+    setOptionGroups(newGroups);
+  };
+
+  const addValueToGroup = (groupIdx: number, label: string) => {
+    if (!label.trim()) return;
+    const group = optionGroups[groupIdx];
+    if (group.values.length >= 20) {
+      toast({ title: 'الحد الأقصى 20 قيمة لكل مجموعة', variant: 'destructive' });
+      return;
+    }
+    if (group.values.some(v => v.label === label.trim())) {
+      toast({ title: 'هذه القيمة موجودة بالفعل', variant: 'destructive' });
+      return;
+    }
+    const newGroups = optionGroups.map((g, i) =>
+      i === groupIdx ? { ...g, values: [...g.values, { label: label.trim(), colorHex: '' }] } : g
+    );
+    setOptionGroups(newGroups);
+    regenerateVariants(newGroups);
+    setNewValueInputs(prev => ({ ...prev, [groupIdx]: '' }));
+  };
+
+  const removeValueFromGroup = (groupIdx: number, valueIdx: number) => {
+    const newGroups = optionGroups.map((g, i) =>
+      i === groupIdx ? { ...g, values: g.values.filter((_, vi) => vi !== valueIdx) } : g
+    );
+    setOptionGroups(newGroups);
+    regenerateVariants(newGroups);
+  };
+
+  const updateValueColor = (groupIdx: number, valueIdx: number, color: string) => {
+    const newGroups = optionGroups.map((g, i) =>
+      i === groupIdx ? {
+        ...g,
+        values: g.values.map((v, vi) => vi === valueIdx ? { ...v, colorHex: color } : v),
+      } : g
+    );
+    setOptionGroups(newGroups);
+  };
+
+  const updateVariantRow = (rowIdx: number, field: keyof VariantRow, value: any) => {
+    setVariantRows(prev => prev.map((r, i) => i === rowIdx ? { ...r, [field]: value } : r));
+  };
+
+  const autoGenerateSKUs = () => {
+    const baseSku = sku.trim() || 'PRD';
+    setVariantRows(prev => prev.map(r => ({
+      ...r,
+      sku: `${baseSku}-${Object.values(r.optionValues).join('-')}`.slice(0, 100),
+    })));
+  };
+
+  // ─── Save ───
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!name.trim()) throw new Error('اسم المنتج مطلوب');
       if (!price || Number(price) <= 0) throw new Error('السعر مطلوب');
+
+      const hasVariants = optionGroups.length > 0 && optionGroups.some(g => g.values.length > 0);
 
       const payload: any = {
         name: name.trim(),
         description: description.trim(),
         price: Number(price),
         category: [category],
-        stock: Number(stock),
+        stock: hasVariants ? variantRows.reduce((sum, v) => sum + Number(v.quantity || 0), 0) : Number(stock),
         is_active: isActive,
         images,
         main_image_index: mainImageIndex,
@@ -827,6 +911,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         short_description: shortDescription.trim() || null,
         is_free_shipping: isFreeShipping,
         slug: slug.trim() || null,
+        has_variants: hasVariants,
       };
 
       let productId = product?.id;
@@ -840,39 +925,75 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         productId = data.id;
       }
 
-      // Sync product_variations
-      if (productId) {
-        await supabase.from('product_variations').delete().eq('product_id', productId);
-        const selectedOpts = variationOptions?.filter(o => selectedVariationIds.has(o.id)) || [];
-        if (selectedOpts.length > 0) {
-          const inserts = selectedOpts.map(o => ({
-            product_id: productId!,
-            variation_type: o.variation_type,
-            variation_value: o.variation_value,
-            price_adjustment: Number(variationPriceAdj[o.id] || 0),
-            stock: Number(variationStock[o.id] || 0),
-            is_active: true,
-            image_url: variationImages[o.id] || null,
-          }));
-          const { error } = await supabase.from('product_variations').insert(inserts);
-          if (error) throw error;
-        }
+      if (!productId) throw new Error('خطأ في حفظ المنتج');
 
-        // Sync bundle offers
-        await supabase.from('product_offers').delete().eq('product_id', productId);
-        const validOffers = offers.filter(o => o.description.trim() && Number(o.quantity) > 0 && Number(o.price) > 0);
-        if (validOffers.length > 0) {
-          const offerInserts = validOffers.map((o, i) => ({
-            product_id: productId!,
-            description: o.description.trim(),
-            quantity: Number(o.quantity),
-            price: Number(o.price),
-            position: i,
+      // Sync option groups + values
+      // Delete old ones first
+      await supabase.from('product_option_groups').delete().eq('product_id', productId);
+
+      if (hasVariants) {
+        for (let i = 0; i < optionGroups.length; i++) {
+          const group = optionGroups[i];
+          if (group.values.length === 0) continue;
+
+          const { data: groupData, error: groupError } = await supabase
+            .from('product_option_groups')
+            .insert({
+              product_id: productId,
+              name: group.name,
+              display_type: group.displayType,
+              position: i,
+            })
+            .select()
+            .single();
+          if (groupError) throw groupError;
+
+          const valueInserts = group.values.map((v, vi) => ({
+            option_group_id: groupData.id,
+            label: v.label,
+            color_hex: v.colorHex || null,
+            position: vi,
           }));
-          const { error } = await supabase.from('product_offers').insert(offerInserts);
-          if (error) throw error;
+          const { error: valError } = await supabase.from('product_option_values').insert(valueInserts);
+          if (valError) throw valError;
         }
       }
+
+      // Sync product_variants
+      await supabase.from('product_variants').delete().eq('product_id', productId);
+
+      if (hasVariants && variantRows.length > 0) {
+        const variantInserts = variantRows.map(v => ({
+          product_id: productId!,
+          sku: v.sku || null,
+          price: Number(v.price) || Number(price),
+          compare_at_price: null,
+          quantity: Number(v.quantity) || 0,
+          image_url: v.imageUrl || null,
+          is_active: v.isActive,
+          option_values: v.optionValues,
+        }));
+        const { error } = await supabase.from('product_variants').insert(variantInserts);
+        if (error) throw error;
+      }
+
+      // Sync bundle offers
+      await supabase.from('product_offers').delete().eq('product_id', productId);
+      const validOffers = offers.filter(o => o.description.trim() && Number(o.quantity) > 0 && Number(o.price) > 0);
+      if (validOffers.length > 0) {
+        const offerInserts = validOffers.map((o, i) => ({
+          product_id: productId!,
+          description: o.description.trim(),
+          quantity: Number(o.quantity),
+          price: Number(o.price),
+          position: i,
+        }));
+        const { error } = await supabase.from('product_offers').insert(offerInserts);
+        if (error) throw error;
+      }
+
+      // Sync old product_variations (keep backward compat)
+      await supabase.from('product_variations').delete().eq('product_id', productId);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-products'] });
@@ -913,6 +1034,9 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
     if (mainImageIndex === index) setMainImageIndex(0);
     else if (mainImageIndex > index) setMainImageIndex(prev => prev - 1);
   };
+
+  const variantComboLabel = (optionValues: Record<string, string>) =>
+    Object.values(optionValues).join(' / ');
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -1086,10 +1210,12 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="font-cairo">المخزون</Label>
-              <Input type="number" value={stock} onChange={e => setStock(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
-            </div>
+            {optionGroups.length === 0 && (
+              <div>
+                <Label className="font-cairo">المخزون</Label>
+                <Input type="number" value={stock} onChange={e => setStock(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
+              </div>
+            )}
             <div className="flex items-end pb-1">
               <div className="flex items-center gap-2">
                 <Switch checked={isFreeShipping} onCheckedChange={setIsFreeShipping} />
@@ -1097,6 +1223,11 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
               </div>
             </div>
           </div>
+          {optionGroups.length > 0 && variantRows.length > 0 && (
+            <p className="font-cairo text-xs text-muted-foreground">
+              المخزون الإجمالي: <span className="font-roboto font-bold">{variantRows.reduce((s, v) => s + Number(v.quantity || 0), 0)}</span> (يُحسب تلقائياً من المتغيرات)
+            </p>
+          )}
         </div>
       </div>
 
@@ -1109,7 +1240,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             </div>
             عروض الحزم
           </h3>
-          <Button variant="outline" size="sm" onClick={addOffer} className="font-cairo gap-1.5">
+          <Button variant="outline" size="sm" onClick={addOffer} className="font-cairo gap-1.5" disabled={offers.length >= 5}>
             <Plus className="w-4 h-4" /> إضافة عرض
           </Button>
         </div>
@@ -1177,169 +1308,180 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         )}
       </div>
 
-      {/* ─── Variations Picker (WooCommerce-style) ─── */}
+      {/* ─── NEW: Option Groups Builder ─── */}
       <div className="bg-card border rounded-xl p-5 space-y-4">
-        <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
-            <Tag className="w-4 h-4 text-secondary" />
-          </div>
-          المتغيرات (ألوان، مقاسات...)
-        </h3>
-        <p className="font-cairo text-xs text-muted-foreground">اختر المتغيرات المتاحة لهذا المنتج. أضف متغيرات جديدة من صفحة المتغيرات.</p>
-
-        {Object.keys(groupedOptions).length === 0 ? (
-          <div className="text-center py-6 border-2 border-dashed rounded-xl">
-            <p className="font-cairo text-sm text-muted-foreground">لا توجد متغيرات. أضفها أولاً من صفحة المتغيرات.</p>
-            <Button variant="outline" size="sm" className="font-cairo mt-2 gap-1" onClick={() => { window.location.href = '/admin/variations'; }}>
-              <Plus className="w-3.5 h-3.5" /> إضافة متغيرات
+        <div className="flex items-center justify-between">
+          <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
+              <Layers className="w-4 h-4 text-secondary" />
+            </div>
+            خيارات المنتج (ألوان، مقاسات...)
+          </h3>
+          {optionGroups.length < 3 && (
+            <Button variant="outline" size="sm" onClick={addOptionGroup} className="font-cairo gap-1.5">
+              <Plus className="w-4 h-4" /> إضافة خيار
             </Button>
+          )}
+        </div>
+
+        {optionGroups.length === 0 ? (
+          <div className="border-2 border-dashed border-muted-foreground/20 rounded-xl py-8 text-center">
+            <Layers className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="font-cairo text-muted-foreground text-sm">لا توجد خيارات — أضف خياراً مثل اللون أو المقاس</p>
+            <p className="font-cairo text-muted-foreground/60 text-xs mt-1">سيتم إنشاء المتغيرات تلقائياً من تركيبات الخيارات</p>
           </div>
         ) : (
-          <div className="space-y-5">
-            {Object.entries(groupedOptions).map(([type, opts]) => {
-              const isColor = isColorType(type);
-              const selectedOfType = opts!.filter(o => selectedVariationIds.has(o.id));
-
-              return (
-                <div key={type}>
-                  <Label className="font-cairo text-sm font-semibold mb-3 block">{type}</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {opts!.map(o => {
-                      const selected = selectedVariationIds.has(o.id);
-
-                      if (isColor && o.color_code) {
-                        return (
-                          <button
-                            key={o.id}
-                            type="button"
-                            onClick={() => toggleVariation(o.id)}
-                            title={o.variation_value}
-                            className="flex flex-col items-center gap-1 group"
-                          >
-                            <div
-                              className={`w-10 h-10 rounded-full border-2 transition-all ring-2 ring-offset-2 ${
-                                selected ? 'ring-primary border-primary' : 'ring-transparent border-muted-foreground/30 hover:border-muted-foreground/50'
-                              }`}
-                              style={{ backgroundColor: o.color_code }}
-                            />
-                            <span className={`font-cairo text-[11px] ${selected ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                              {o.variation_value}
-                            </span>
-                          </button>
-                        );
-                      }
-
-                      return (
-                        <button
-                          key={o.id}
-                          type="button"
-                          onClick={() => toggleVariation(o.id)}
-                          className={`px-4 py-2 rounded-lg border-2 transition-all text-sm font-cairo font-medium ${
-                            selected
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-muted-foreground/20 hover:border-muted-foreground/40'
-                          }`}
-                        >
-                          {o.variation_value}
-                          {selected && <span className="mr-1">✓</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {selectedOfType.length > 0 && (
-                    <div className="mt-3 border rounded-lg overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50">
-                          <tr>
-                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المتغير</th>
-                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">الصورة</th>
-                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">فرق السعر (دج)</th>
-                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المخزون</th>
-                            <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-10"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {selectedOfType.map(o => (
-                            <tr key={o.id} className="hover:bg-muted/20">
-                              <td className="p-2.5">
-                                <div className="flex items-center gap-2">
-                                  {isColor && o.color_code && (
-                                    <div className="w-6 h-6 rounded-full border border-muted-foreground/30 shrink-0" style={{ backgroundColor: o.color_code }} />
-                                  )}
-                                  <span className="font-cairo font-medium">{o.variation_value}</span>
-                                </div>
-                              </td>
-                              <td className="p-2.5">
-                                <div className="flex items-center gap-2">
-                                  {variationImages[o.id] ? (
-                                    <div className="relative group/img">
-                                      <img src={variationImages[o.id]} alt="" className="w-10 h-10 rounded-lg object-cover border" />
-                                      <button
-                                        type="button"
-                                        onClick={() => setVariationImages(prev => { const n = { ...prev }; delete n[o.id]; return n; })}
-                                        className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
-                                      >
-                                        <X className="w-2.5 h-2.5" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <label className="cursor-pointer">
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={e => {
-                                          const file = e.target.files?.[0];
-                                          if (file) handleVariationImageUpload(o.id, file);
-                                          e.target.value = '';
-                                        }}
-                                        disabled={uploadingVariationImage === o.id}
-                                      />
-                                      <div className="w-10 h-10 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors">
-                                        {uploadingVariationImage === o.id ? (
-                                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                                        ) : (
-                                          <Upload className="w-3.5 h-3.5 text-muted-foreground/50" />
-                                        )}
-                                      </div>
-                                    </label>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-2.5">
-                                <Input
-                                  type="number"
-                                  value={variationPriceAdj[o.id] || '0'}
-                                  onChange={e => setVariationPriceAdj(prev => ({ ...prev, [o.id]: e.target.value }))}
-                                  className="font-roboto h-8 w-28"
-                                />
-                              </td>
-                              <td className="p-2.5">
-                                <Input
-                                  type="number"
-                                  value={variationStock[o.id] || '0'}
-                                  onChange={e => setVariationStock(prev => ({ ...prev, [o.id]: e.target.value }))}
-                                  className="font-roboto h-8 w-24"
-                                />
-                              </td>
-                              <td className="p-2.5">
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/60 hover:text-destructive" onClick={() => toggleVariation(o.id)}>
-                                  <X className="w-3.5 h-3.5" />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+          <div className="space-y-4">
+            {optionGroups.map((group, gIdx) => (
+              <div key={gIdx} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="font-cairo text-xs">اسم الخيار</Label>
+                      <Input
+                        value={group.name}
+                        onChange={e => updateOptionGroup(gIdx, 'name', e.target.value)}
+                        placeholder="مثال: اللون، المقاس"
+                        className="font-cairo h-9 mt-1"
+                        list="option-suggestions"
+                      />
+                      <datalist id="option-suggestions">
+                        <option value="اللون" />
+                        <option value="المقاس" />
+                        <option value="المادة" />
+                        <option value="النمط" />
+                      </datalist>
                     </div>
-                  )}
+                    <div>
+                      <Label className="font-cairo text-xs">نوع العرض</Label>
+                      <Select value={group.displayType} onValueChange={v => updateOptionGroup(gIdx, 'displayType', v)}>
+                        <SelectTrigger className="font-cairo h-9 mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="button" className="font-cairo">أزرار</SelectItem>
+                          <SelectItem value="color_swatch" className="font-cairo">ألوان</SelectItem>
+                          <SelectItem value="dropdown" className="font-cairo">قائمة منسدلة</SelectItem>
+                          <SelectItem value="radio" className="font-cairo">أزرار راديو</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/60 hover:text-destructive shrink-0 mt-4" onClick={() => removeOptionGroup(gIdx)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
-              );
-            })}
+
+                {/* Values */}
+                <div>
+                  <Label className="font-cairo text-xs">القيم</Label>
+                  <div className="flex flex-wrap gap-2 mt-1.5">
+                    {group.values.map((val, vIdx) => (
+                      <div key={vIdx} className="flex items-center gap-1.5 bg-muted rounded-lg px-2.5 py-1.5">
+                        {group.displayType === 'color_swatch' && (
+                          <input
+                            type="color"
+                            value={val.colorHex || '#000000'}
+                            onChange={e => updateValueColor(gIdx, vIdx, e.target.value)}
+                            className="w-5 h-5 rounded border-0 cursor-pointer p-0"
+                          />
+                        )}
+                        <span className="font-cairo text-sm">{val.label}</span>
+                        <button onClick={() => removeValueFromGroup(gIdx, vIdx)} className="text-muted-foreground hover:text-destructive">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={newValueInputs[gIdx] || ''}
+                        onChange={e => setNewValueInputs(prev => ({ ...prev, [gIdx]: e.target.value }))}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addValueToGroup(gIdx, newValueInputs[gIdx] || '');
+                          }
+                        }}
+                        placeholder="أضف قيمة + Enter"
+                        className="font-cairo h-8 w-36"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* ─── Variant Matrix Table ─── */}
+      {variantRows.length > 0 && (
+        <div className="bg-card border rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-accent/50 flex items-center justify-center">
+                <Layers className="w-4 h-4 text-accent-foreground" />
+              </div>
+              المتغيرات ({variantRows.length})
+            </h3>
+            <Button variant="outline" size="sm" onClick={autoGenerateSKUs} className="font-cairo gap-1.5">
+              <Tag className="w-4 h-4" /> توليد SKU تلقائي
+            </Button>
+          </div>
+
+          <div className="border rounded-lg overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المتغير</th>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-28">SKU</th>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-28">السعر (دج)</th>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-24">المخزون</th>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-16">نشط</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {variantRows.map((row, idx) => (
+                  <tr key={idx} className={`hover:bg-muted/20 ${!row.isActive ? 'opacity-50' : ''}`}>
+                    <td className="p-2.5">
+                      <span className="font-cairo font-medium text-sm">{variantComboLabel(row.optionValues)}</span>
+                    </td>
+                    <td className="p-2.5">
+                      <Input
+                        value={row.sku}
+                        onChange={e => updateVariantRow(idx, 'sku', e.target.value)}
+                        className="font-roboto h-8"
+                        placeholder="SKU"
+                      />
+                    </td>
+                    <td className="p-2.5">
+                      <Input
+                        type="number"
+                        value={row.price}
+                        onChange={e => updateVariantRow(idx, 'price', e.target.value)}
+                        className="font-roboto h-8"
+                      />
+                    </td>
+                    <td className="p-2.5">
+                      <Input
+                        type="number"
+                        value={row.quantity}
+                        onChange={e => updateVariantRow(idx, 'quantity', e.target.value)}
+                        className="font-roboto h-8"
+                        min="0"
+                      />
+                    </td>
+                    <td className="p-2.5">
+                      <Switch
+                        checked={row.isActive}
+                        onCheckedChange={v => updateVariantRow(idx, 'isActive', v)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3 justify-end">

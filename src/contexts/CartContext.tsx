@@ -15,13 +15,17 @@ export interface CartItem {
   stock: number;
   shippingPrice?: number;
   variation?: CartItemVariation;
+  // New variant system
+  variantId?: string;
+  variantSku?: string;
+  variantOptionValues?: Record<string, string>;
 }
 
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
-  removeItem: (id: string, variation?: CartItemVariation) => void;
-  updateQuantity: (id: string, quantity: number, variation?: CartItemVariation) => void;
+  removeItem: (id: string, variation?: CartItemVariation, variantId?: string) => void;
+  updateQuantity: (id: string, quantity: number, variation?: CartItemVariation, variantId?: string) => void;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
@@ -31,7 +35,8 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const CART_KEY = 'dz-store-cart';
 
-function getCartKey(item: { id: string; variation?: CartItemVariation }) {
+function getCartKey(item: { id: string; variation?: CartItemVariation; variantId?: string }) {
+  if (item.variantId) return `${item.id}__variant:${item.variantId}`;
   if (item.variation) return `${item.id}__${item.variation.type}:${item.variation.value}`;
   return item.id;
 }
@@ -60,14 +65,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const removeItem = (id: string, variation?: CartItemVariation) => {
-    const key = getCartKey({ id, variation });
+  const removeItem = (id: string, variation?: CartItemVariation, variantId?: string) => {
+    const key = getCartKey({ id, variation, variantId });
     setItems(prev => prev.filter(i => getCartKey(i) !== key));
   };
 
-  const updateQuantity = (id: string, quantity: number, variation?: CartItemVariation) => {
-    const key = getCartKey({ id, variation });
-    if (quantity <= 0) return removeItem(id, variation);
+  const updateQuantity = (id: string, quantity: number, variation?: CartItemVariation, variantId?: string) => {
+    const key = getCartKey({ id, variation, variantId });
+    if (quantity <= 0) return removeItem(id, variation, variantId);
     setItems(prev => prev.map(i => getCartKey(i) === key ? { ...i, quantity: Math.min(quantity, i.stock) } : i));
   };
 
