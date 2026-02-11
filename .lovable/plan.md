@@ -1,112 +1,80 @@
 
-# Apply Translations to Remaining Admin Pages
+# Fix Payment Methods + Add COD + Complete Translations
 
-## Overview
-Replace all hardcoded Arabic text in the 10 remaining admin pages with `t()` translation calls from the existing `useTranslation` hook. The translation keys are already defined in the locale files (ar.ts, fr.ts, en.ts).
+## Problems Identified
 
-## Pages to Update (10 files)
+### 1. Payment methods not showing in checkout
+The checkout page only renders payment options when `baridimob_enabled` or `flexy_enabled` is `'true'` in settings. Since no payment settings exist in the database, **zero payment options appear** -- the customer sees an empty payment section and cannot place an order.
 
-### 1. AdminProductsPage.tsx (1646 lines)
-- Import `useTranslation` hook
-- Replace ~50+ hardcoded strings: page title, KPI labels, tab names, search placeholder, filter options, bulk action labels, toast messages, dialog titles, form labels
-- Status filter labels ("كل الحالات", "نشط", "معطّل")
-- CSV export/import messages
-- Product form labels (handled inside `ProductForm` sub-component)
+### 2. Missing "Cash on Delivery" (COD) option
+The user wants "توصيل عن الاستلام" (Cash on Delivery / الدفع عند الاستلام) as a payment method. Currently only BaridiMob and Flexy exist.
 
-### 2. AdminOrdersPage.tsx (495 lines)
-- Import `useTranslation`
-- Replace table headers, filter labels, status names, payment method labels
-- Advanced filter section labels
-- Bulk action bar text
-- Order detail dialog labels
-- Toast messages
+### 3. Remaining pages still have hardcoded Arabic
+Products, Settings, Confirmers, and Returns pages still use hardcoded Arabic strings instead of translation keys.
 
-### 3. AdminSettingsPage.tsx (863 lines)
-- Import `useTranslation`
-- Replace tab labels, section headers, form labels
-- Store identity, payment, telegram, returns, security tab content
-- Upload buttons, color picker labels
-- Hero slides section
-- Admin user management labels
-- Password change labels
+---
 
-### 4. AdminLeadsPage.tsx (278 lines)
-- Import `useTranslation`
-- Replace page header, search placeholder, table headers
-- Status and source option labels (translate display labels, keep DB values in Arabic)
-- Dialog titles and form labels
-- Toast messages, empty state text
+## Solution
 
-### 5. AdminConfirmersPage.tsx (738 lines)
-- Import `useTranslation`
-- Replace tab labels, form labels, table headers
-- Payment mode labels, type labels
-- Settings tab labels
-- Toast messages, dialog titles
+### A. Add COD Payment Method + Fix Payment Visibility
 
-### 6. AdminAbandonedPage.tsx (338 lines)
-- Import `useTranslation`
-- Replace KPI card labels, status labels
-- Search placeholder, filter options
-- Action buttons (call, convert, note, delete)
-- Dialog titles and messages
-- Toast messages
+**Settings Page (`AdminSettingsPage.tsx`)** -- Payment tab:
+- Add a COD toggle: `cod_enabled` setting with switch to enable/disable
+- Keep existing BaridiMob and Flexy toggles
+- All three payment methods controllable from settings
 
-### 7. AdminReturnsPage.tsx (726 lines)
-- Import `useTranslation`
-- Replace KPI labels, status labels, resolution type labels
-- Table headers, search placeholder
-- Detail dialog content
-- Action buttons (approve, reject, mark received, complete)
-- Status history labels
+**Checkout Page (`CheckoutPage.tsx`)**:
+- Add COD option: when `cod_enabled === 'true'`, show a "الدفع عند الاستلام" radio button (no receipt upload needed)
+- COD does not require receipt -- just selects `paymentMethod = 'cod'`
+- Skip receipt validation when payment method is COD
+- If no payment methods are enabled at all, show a message like "لا توجد طرق دفع متاحة"
 
-### 8. AdminCostsPage.tsx (345 lines)
-- Import `useTranslation`
-- Replace page title, KPI labels, table headers
-- Cost edit dialog labels
-- Profit preview labels
-- Toast messages
+**Locale files** -- Add keys for COD:
+- `orders.cod` already exists as "Cash on Delivery" / "Paiement a la livraison" / "الدفع عند الاستلام"
 
-### 9. AdminInventoryPage.tsx (583 lines)
-- Import `useTranslation`
-- Replace KPI labels, filter tab labels
-- Column labels, status labels
-- Search placeholder, display settings
-- Variant detail labels
-- Pagination labels
+### B. Translate Remaining Admin Pages
 
-### 10. AdminVariationsPage.tsx (304 lines)
-- Import `useTranslation`
-- Replace page title, search placeholder
-- Form labels (type, value, color code)
-- Status labels (active/inactive)
-- Dialog titles, toast messages
-- Empty state text
+Replace all hardcoded Arabic text with `t()` calls in:
 
-## Implementation Pattern
-Each page follows the same pattern:
-1. Add `import { useTranslation } from '@/i18n';`
-2. Add `const { t } = useTranslation();` at top of component
-3. Replace each hardcoded Arabic string with `t('section.key')`
-4. For dynamic strings with counts, use `.replace('{n}', String(value))`
+1. **AdminProductsPage.tsx** (~1648 lines) -- page header, KPI cards, tabs, search/filter, table headers, bulk actions, delete dialogs, pagination, and the `ProductForm` sub-component (form labels, image section, offers, variants)
 
-## Technical Notes
-- All translation keys already exist in ar.ts, fr.ts, and en.ts
-- Database values (order statuses, lead statuses) remain in Arabic -- only display labels get translated
-- The `useTranslation` hook is already set up and working in the previously updated pages
-- Direction (RTL/LTR) is handled globally by the LanguageProvider
-- AdminUserManagement component (used inside Settings) also needs the `t` prop or its own `useTranslation` call
-- Search icon positioning uses `right-3` for RTL -- may need conditional `left-3`/`right-3` based on `dir`, but this can be handled as a follow-up refinement
+2. **AdminSettingsPage.tsx** (~865 lines) -- all 5 tab labels, store identity section, payment section (including new COD), telegram section, returns section, security section, footer settings
+
+3. **AdminConfirmersPage.tsx** (~740 lines) -- header, 3 tab labels, add form labels, team table headers, filter options, edit dialog, settings tab, toast messages
+
+4. **AdminReturnsPage.tsx** (~728 lines) -- KPI cards, status labels, resolution labels, table headers, detail dialog, action buttons, status history
+
+---
 
 ## Files Changed
-- `src/pages/admin/AdminProductsPage.tsx`
-- `src/pages/admin/AdminOrdersPage.tsx`
-- `src/pages/admin/AdminSettingsPage.tsx`
-- `src/pages/admin/AdminLeadsPage.tsx`
-- `src/pages/admin/AdminConfirmersPage.tsx`
-- `src/pages/admin/AdminAbandonedPage.tsx`
-- `src/pages/admin/AdminReturnsPage.tsx`
-- `src/pages/admin/AdminCostsPage.tsx`
-- `src/pages/admin/AdminInventoryPage.tsx`
-- `src/pages/admin/AdminVariationsPage.tsx`
-- `src/components/admin/AdminUserManagement.tsx` (minor -- add useTranslation)
+
+- `src/i18n/locales/ar.ts` -- add COD and missing product form keys
+- `src/i18n/locales/en.ts` -- add COD and missing product form keys
+- `src/i18n/locales/fr.ts` -- add COD and missing product form keys
+- `src/pages/CheckoutPage.tsx` -- add COD payment option, handle empty state
+- `src/pages/admin/AdminSettingsPage.tsx` -- add COD toggle in payment tab, apply translations
+- `src/pages/admin/AdminProductsPage.tsx` -- apply translations to all hardcoded text
+- `src/pages/admin/AdminConfirmersPage.tsx` -- apply translations
+- `src/pages/admin/AdminReturnsPage.tsx` -- apply translations
+
+## Technical Details
+
+### COD in Checkout
+```text
+- Read `settings.cod_enabled`
+- If 'true', render a simple radio button for COD
+- COD skips receipt validation in handleSubmit
+- Payment method value stored as 'cod' in orders table
+```
+
+### Payment Settings Section (Admin)
+```text
+Add before BaridiMob section:
+- Switch for "الدفع عند الاستلام" (cod_enabled)
+- Simple toggle, no extra fields needed
+
+All 3 methods (COD, BaridiMob, Flexy) independently toggleable
+```
+
+### Translation Pattern
+Each page: import `useTranslation`, call `const { t } = useTranslation()`, replace Arabic strings with `t('key')`. Dynamic values use `.replace('{n}', String(value))`.
