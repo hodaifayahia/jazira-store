@@ -151,39 +151,39 @@ export default function AdminReturnsPage() {
     <div className="space-y-4">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="إجمالي الاسترجاعات" value={stats.total} icon={RotateCcw} color="text-foreground" />
-        <KpiCard label="بانتظار المراجعة" value={stats.pending} icon={Clock} color="text-orange-600" />
-        <KpiCard label="قيد المعالجة" value={stats.inProgress} icon={Truck} color="text-blue-600" />
-        <KpiCard label="مكتملة" value={stats.completed} icon={PackageCheck} color="text-primary" />
+        <KpiCard label={t('returns.totalReturns')} value={stats.total} icon={RotateCcw} color="text-foreground" />
+        <KpiCard label={t('returns.pendingReview')} value={stats.pending} icon={Clock} color="text-orange-600" />
+        <KpiCard label={t('returns.inProgress')} value={stats.inProgress} icon={Truck} color="text-blue-600" />
+        <KpiCard label={t('returns.completed')} value={stats.completed} icon={PackageCheck} color="text-primary" />
       </div>
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث برقم الاسترجاع أو الطلب أو العميل..." className="pr-10 font-cairo" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('returns.searchPlaceholder')} className="pr-10 font-cairo" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-44 font-cairo"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="الكل" className="font-cairo">كل الحالات</SelectItem>
+            <SelectItem value="الكل" className="font-cairo">{t('returns.allStatuses')}</SelectItem>
             {RETURN_STATUSES.map(s => (
-              <SelectItem key={s} value={s} className="font-cairo">{STATUS_LABELS[s]}</SelectItem>
+              <SelectItem key={s} value={s} className="font-cairo">{t(`returns.status${s.charAt(0).toUpperCase() + s.slice(1).replace('_', '')}`)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-full sm:w-36 font-cairo"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="الكل" className="font-cairo">كل الأنواع</SelectItem>
-            <SelectItem value="refund" className="font-cairo">استرجاع</SelectItem>
-            <SelectItem value="exchange" className="font-cairo">استبدال</SelectItem>
-            <SelectItem value="store_credit" className="font-cairo">رصيد متجر</SelectItem>
+            <SelectItem value="الكل" className="font-cairo">{t('returns.allTypes')}</SelectItem>
+            <SelectItem value="refund" className="font-cairo">{t('returns.refund')}</SelectItem>
+            <SelectItem value="exchange" className="font-cairo">{t('returns.exchange')}</SelectItem>
+            <SelectItem value="store_credit" className="font-cairo">{t('returns.storeCredit')}</SelectItem>
           </SelectContent>
         </Select>
         <Button className="font-cairo gap-2" onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4" />
-          إنشاء استرجاع
+          {t('returns.createReturn')}
         </Button>
       </div>
 
@@ -192,22 +192,22 @@ export default function AdminReturnsPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
-              <th className="p-3 text-right font-cairo">رقم الاسترجاع</th>
-              <th className="p-3 text-right font-cairo">الطلب</th>
-              <th className="p-3 text-right font-cairo">العميل</th>
-              <th className="p-3 text-right font-cairo hidden md:table-cell">السبب</th>
-              <th className="p-3 text-right font-cairo">النوع</th>
-              <th className="p-3 text-right font-cairo hidden md:table-cell">المبلغ</th>
-              <th className="p-3 text-right font-cairo">الحالة</th>
-              <th className="p-3 text-right font-cairo hidden md:table-cell">التاريخ</th>
-              <th className="p-3 text-right font-cairo">إجراءات</th>
+              <th className="p-3 text-right font-cairo">{t('returns.returnNumber')}</th>
+              <th className="p-3 text-right font-cairo">{t('returns.order')}</th>
+              <th className="p-3 text-right font-cairo">{t('returns.customer')}</th>
+              <th className="p-3 text-right font-cairo hidden md:table-cell">{t('returns.reason')}</th>
+              <th className="p-3 text-right font-cairo">{t('returns.resolutionType')}</th>
+              <th className="p-3 text-right font-cairo hidden md:table-cell">{t('returns.amount')}</th>
+              <th className="p-3 text-right font-cairo">{t('common.status')}</th>
+              <th className="p-3 text-right font-cairo hidden md:table-cell">{t('common.date')}</th>
+              <th className="p-3 text-right font-cairo">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={9} className="p-8 text-center font-cairo text-muted-foreground">جاري التحميل...</td></tr>
+              <tr><td colSpan={9} className="p-8 text-center font-cairo text-muted-foreground">{t('common.loading')}</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={9} className="p-8 text-center font-cairo text-muted-foreground">لا توجد طلبات استرجاع</td></tr>
+              <tr><td colSpan={9} className="p-8 text-center font-cairo text-muted-foreground">{t('returns.noReturns')}</td></tr>
             ) : filtered.map(r => {
               const style = STATUS_STYLE[r.status] || STATUS_STYLE.requested;
               const StatusIcon = style.icon;

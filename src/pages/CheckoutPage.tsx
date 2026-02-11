@@ -306,6 +306,8 @@ export default function CheckoutPage() {
 
   const baridimobEnabled = settings?.baridimob_enabled === 'true';
   const flexyEnabled = settings?.flexy_enabled === 'true';
+  const codEnabled = settings?.cod_enabled === 'true';
+  const hasAnyPayment = baridimobEnabled || flexyEnabled || codEnabled;
 
   return (
     <div className="container py-8 max-w-4xl">
@@ -412,6 +414,23 @@ export default function CheckoutPage() {
           <div className="bg-card border rounded-lg p-6 space-y-4">
             <h2 className="font-cairo font-bold text-xl">طريقة الدفع</h2>
             <div className="space-y-3">
+              {!hasAnyPayment && settings && (
+                <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground font-cairo">
+                  لا توجد طرق دفع متاحة حالياً
+                </div>
+              )}
+              {codEnabled && (
+                <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'hover:bg-muted/30'}`}>
+                  <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1 accent-primary" />
+                  <div className="flex-1">
+                    <p className="font-cairo font-semibold flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-primary" />
+                      الدفع عند الاستلام
+                    </p>
+                    <p className="font-cairo text-xs text-muted-foreground mt-1">الدفع نقداً عند استلام الطلبية</p>
+                  </div>
+                </label>
+              )}
               {baridimobEnabled && (
                 <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'baridimob' ? 'border-primary bg-accent' : ''}`}>
                   <input type="radio" name="payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />

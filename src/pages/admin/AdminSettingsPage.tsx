@@ -251,23 +251,23 @@ export default function AdminSettingsPage() {
         <TabsList className="w-full grid grid-cols-5 h-auto">
           <TabsTrigger value="identity" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
             <Store className="w-4 h-4 hidden sm:block" />
-            هوية المتجر
+            {t('settings.storeIdentity')}
           </TabsTrigger>
           <TabsTrigger value="payment" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
             <CreditCard className="w-4 h-4 hidden sm:block" />
-            الدفع والتوصيل
+            {t('settings.paymentDelivery')}
           </TabsTrigger>
           <TabsTrigger value="telegram" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
             <Bot className="w-4 h-4 hidden sm:block" />
-            بوت تلغرام
+            {t('settings.telegram')}
           </TabsTrigger>
           <TabsTrigger value="returns" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
             <RotateCcw className="w-4 h-4 hidden sm:block" />
-            الاسترجاع
+            {t('settings.returnsTab')}
           </TabsTrigger>
           <TabsTrigger value="security" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
             <Shield className="w-4 h-4 hidden sm:block" />
-            الأمان
+            {t('settings.security')}
           </TabsTrigger>
         </TabsList>
 
@@ -499,22 +499,53 @@ export default function AdminSettingsPage() {
           <div className="bg-card border rounded-lg p-6 space-y-4">
             <h2 className="font-cairo font-bold text-xl">إعدادات الدفع</h2>
             <div className="space-y-4 border-b pb-4">
-              <h3 className="font-cairo font-semibold">بريدي موب</h3>
-              <div className="flex items-center gap-2">
-                <Switch checked={mergedSettings.baridimob_enabled === 'true'} onCheckedChange={v => setField('baridimob_enabled', String(v))} />
-                <Label className="font-cairo">مفعّل</Label>
+              <h3 className="font-cairo font-semibold">{t('settings.paymentSettings')}</h3>
+              
+              {/* COD */}
+              <div className="flex items-center gap-2 bg-muted/20 p-3 rounded-lg">
+                <Switch checked={mergedSettings.cod_enabled === 'true'} onCheckedChange={v => setField('cod_enabled', String(v))} />
+                <Label className="font-cairo font-medium cursor-pointer">{t('settings.codPayment')}</Label>
               </div>
-              <div><Label className="font-cairo">رقم الحساب CCP</Label><Input value={mergedSettings.ccp_number || ''} onChange={e => setField('ccp_number', e.target.value)} className="font-roboto mt-1" dir="ltr" /></div>
-              <div><Label className="font-cairo">اسم صاحب الحساب</Label><Input value={mergedSettings.ccp_name || ''} onChange={e => setField('ccp_name', e.target.value)} className="font-cairo mt-1" /></div>
-            </div>
-            <div className="space-y-4">
-              <h3 className="font-cairo font-semibold">فليكسي</h3>
-              <div className="flex items-center gap-2">
-                <Switch checked={mergedSettings.flexy_enabled === 'true'} onCheckedChange={v => setField('flexy_enabled', String(v))} />
-                <Label className="font-cairo">مفعّل</Label>
+
+              {/* BaridiMob */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2">
+                  <Switch checked={mergedSettings.baridimob_enabled === 'true'} onCheckedChange={v => setField('baridimob_enabled', String(v))} />
+                  <Label className="font-cairo font-medium">{t('orders.baridimob')}</Label>
+                </div>
+                {mergedSettings.baridimob_enabled === 'true' && (
+                  <div className="mr-8 space-y-3 pl-2 border-r-2 border-muted pr-4">
+                    <div>
+                      <Label className="font-cairo text-sm text-muted-foreground">{t('settings.ccpNumber')}</Label>
+                      <Input value={mergedSettings.ccp_number || ''} onChange={e => setField('ccp_number', e.target.value)} className="font-roboto mt-1" dir="ltr" />
+                    </div>
+                    <div>
+                      <Label className="font-cairo text-sm text-muted-foreground">{t('settings.ccpName')}</Label>
+                      <Input value={mergedSettings.ccp_name || ''} onChange={e => setField('ccp_name', e.target.value)} className="font-cairo mt-1" />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div><Label className="font-cairo">رقم الهاتف</Label><Input value={mergedSettings.flexy_number || ''} onChange={e => setField('flexy_number', e.target.value)} className="font-roboto mt-1" dir="ltr" /></div>
-              <div><Label className="font-cairo">مبلغ التعبئة (دج)</Label><Input type="number" value={mergedSettings.flexy_deposit_amount || ''} onChange={e => setField('flexy_deposit_amount', e.target.value)} className="font-roboto mt-1" /></div>
+
+              {/* Flexy */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2">
+                  <Switch checked={mergedSettings.flexy_enabled === 'true'} onCheckedChange={v => setField('flexy_enabled', String(v))} />
+                  <Label className="font-cairo font-medium">{t('orders.flexy')}</Label>
+                </div>
+                {mergedSettings.flexy_enabled === 'true' && (
+                  <div className="mr-8 space-y-3 pl-2 border-r-2 border-muted pr-4">
+                    <div>
+                      <Label className="font-cairo text-sm text-muted-foreground">{t('settings.flexyPhone')}</Label>
+                      <Input value={mergedSettings.flexy_number || ''} onChange={e => setField('flexy_number', e.target.value)} className="font-roboto mt-1" dir="ltr" />
+                    </div>
+                    <div>
+                      <Label className="font-cairo text-sm text-muted-foreground">{t('settings.flexyAmount')}</Label>
+                      <Input type="number" value={mergedSettings.flexy_deposit_amount || ''} onChange={e => setField('flexy_deposit_amount', e.target.value)} className="font-roboto mt-1" />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </TabsContent>
