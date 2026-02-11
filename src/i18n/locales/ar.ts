@@ -96,6 +96,12 @@ export const ar: Record<string, string> = {
   'common.deletedSuccess': 'تم الحذف',
   'common.errorOccurred': 'حدث خطأ',
   'common.description': 'الوصف',
+  'common.enabled': 'مفعّل',
+  'common.back': '← العودة',
+  'common.apply': 'تطبيق',
+  'common.deleteAll': 'حذف الكل',
+  'common.adding': 'جاري الإضافة...',
+  'common.page': 'صفحة',
 
   // ═══ Order Statuses ═══
   'status.new': 'جديد',
@@ -164,6 +170,61 @@ export const ar: Record<string, string> = {
   'products.oldPrice': 'السعر القديم',
   'products.freeShipping': 'شحن مجاني',
   'products.sku': 'رمز SKU',
+  'products.image': 'الصورة',
+  'products.preview': 'معاينة',
+  'products.addFirst': 'إضافة أول منتج',
+  'products.editProduct': 'تعديل المنتج',
+  'products.addNewProduct': 'إضافة منتج جديد',
+  'products.editHint': 'قم بتعديل بيانات المنتج',
+  'products.addHint': 'أدخل بيانات المنتج الجديد',
+  'products.productImages': 'صور المنتج',
+  'products.uploadImages': 'رفع صور',
+  'products.uploading': 'جاري الرفع...',
+  'products.mainImage': 'رئيسية',
+  'products.noImages': 'لا توجد صور — ارفع صوراً للمنتج',
+  'products.imageHint': 'JPG, PNG — الحد الأقصى 5MB لكل صورة',
+  'products.clickStarHint': 'انقر على النجمة لاختيار الصورة الرئيسية',
+  'products.productName': 'اسم المنتج',
+  'products.shortDesc': 'وصف مختصر',
+  'products.fullDesc': 'الوصف الكامل',
+  'products.pricing': 'التسعير',
+  'products.newPrice': 'السعر الجديد (دج)',
+  'products.newCategory': 'الفئة الجديدة',
+  'products.slugLabel': 'الرابط (Slug)',
+  'products.productSaved': 'تم حفظ المنتج ✅',
+  'products.productEdited': 'تم تعديل المنتج ✅',
+  'products.productAdded': 'تمت إضافة المنتج ✅',
+  'products.nameRequired': 'اسم المنتج مطلوب',
+  'products.priceRequired': 'السعر مطلوب',
+  'products.saveProduct': 'حفظ المنتج',
+  'products.bundleOffers': 'عروض الباقات',
+  'products.addOffer': 'إضافة عرض',
+  'products.offerDesc': 'وصف العرض',
+  'products.offerQty': 'الكمية',
+  'products.offerPrice': 'سعر العرض',
+  'products.variants': 'المتغيرات',
+  'products.addOptionGroup': 'إضافة مجموعة خيارات',
+  'products.optionGroupName': 'اسم المجموعة',
+  'products.displayType': 'نوع العرض',
+  'products.button': 'أزرار',
+  'products.color': 'لون',
+  'products.dropdown': 'قائمة',
+  'products.addValue': 'أضف قيمة...',
+  'products.variantMatrix': 'جدول المتغيرات',
+  'products.autoSKU': 'توليد SKU تلقائي',
+  'products.variant': 'المتغير',
+  'products.variantImageUploaded': 'تم رفع صورة المتغير ✅',
+  'products.maxVariants': 'عدد المتغيرات ({n}) يتجاوز الحد الأقصى (100)',
+  'products.maxValues': 'الحد الأقصى 20 قيمة لكل مجموعة',
+  'products.valueExists': 'هذه القيمة موجودة بالفعل',
+  'products.imagesUploaded': 'تم رفع {n} صورة ✅',
+  'products.imageTooLarge': 'حجم الصورة كبير جداً (الحد الأقصى 5MB)',
+  'products.imageUploadFailed': 'فشل رفع الصور',
+  'products.bulkDeleteConfirm': 'حذف {n} منتج',
+  'products.bulkDeleteMessage': 'هل أنت متأكد من حذف {n} منتج محدد؟',
+  'products.bulkPriceTitle': 'تغيير سعر {n} منتج',
+  'products.bulkCategoryTitle': 'تغيير فئة {n} منتج',
+  'products.copyName': '(نسخة)',
 
   // ═══ Orders ═══
   'orders.title': 'الطلبات',
@@ -184,7 +245,7 @@ export const ar: Record<string, string> = {
   'orders.status': 'الحالة',
   'orders.date': 'التاريخ',
   'orders.highCancelRate': 'نسبة إلغاء مرتفعة ({n}%)',
-  'orders.cod': 'الدفع عند التسليم',
+  'orders.cod': 'الدفع عند الاستلام',
   'orders.baridimob': 'بريدي موب',
   'orders.flexy': 'فليكسي',
   'orders.orderDetails': 'تفاصيل الطلب',
@@ -325,6 +386,19 @@ export const ar: Record<string, string> = {
   'confirmers.enableChat': 'تفعيل المحادثة',
   'confirmers.workingHoursStart': 'بداية ساعات العمل',
   'confirmers.workingHoursEnd': 'نهاية ساعات العمل',
+  'confirmers.allConfirmers': 'كل المؤكدين',
+  'confirmers.privateConfirmers': 'مؤكدين خاصين',
+  'confirmers.externalConfirmers': 'مؤكدين خارجيين',
+  'confirmers.joinDate': 'تاريخ الانضمام',
+  'confirmers.distributionMode': 'طريقة التوزيع',
+  'confirmers.roundRobin': 'دوري',
+  'confirmers.loadBalanced': 'حسب الحمل',
+  'confirmers.confirmationTimeout': 'مهلة التأكيد (دقائق)',
+  'confirmers.maxAttempts': 'محاولات الاتصال القصوى',
+  'confirmers.enableAutoConfirm': 'تفعيل التأكيد التلقائي (Confirm Chat)',
+  'confirmers.autoConfirmHint': 'تأكيد الطلبات تلقائيا عبر الرسائل قبل توجيهها للمؤكدين',
+  'confirmers.saveSettings': 'حفظ الإعدادات',
+  'confirmers.perMonth': '/شهر',
 
   // ═══ Abandoned ═══
   'abandoned.title': 'السلات المتروكة',
@@ -394,6 +468,42 @@ export const ar: Record<string, string> = {
   'returns.statusHistory': 'سجل الحالات',
   'returns.updated': 'تم التحديث ✅',
   'returns.merchantFault': 'خطأ التاجر',
+  'returns.financialSummary': 'الملخص المالي',
+  'returns.totalProducts': 'إجمالي المنتجات',
+  'returns.shippingCost': 'تكلفة الشحن',
+  'returns.onMerchant': 'على التاجر',
+  'returns.onCustomer': 'على العميل',
+  'returns.netRefund': 'صافي الاسترجاع',
+  'returns.confirmReject': 'تأكيد الرفض',
+  'returns.confirmReceived': 'تأكيد الاستلام',
+  'returns.completeReturn': 'إتمام الاسترجاع',
+  'returns.createNewReturn': 'إنشاء طلب استرجاع جديد',
+  'returns.searchOrder': 'البحث عن الطلب (رقم الطلب أو الهاتف)',
+  'returns.selectItems': 'اختر المنتجات للاسترجاع',
+  'returns.resolutionTypeLabel': 'نوع الحل',
+  'returns.orderNotFound': 'لم يتم العثور على طلب مسلّم بهذا الرقم',
+  'returns.fillRequired': 'يرجى ملء جميع الحقول المطلوبة',
+  'returns.returnCreated': 'تم إنشاء طلب الاسترجاع {n} ✅',
+  'returns.createFailed': 'فشل إنشاء الاسترجاع',
+  'returns.createdFromPanel': 'تم إنشاء طلب الاسترجاع من لوحة التحكم',
+  'returns.returnSettings': 'إعدادات الاسترجاع',
+  'returns.enableReturns': 'تفعيل نظام الاسترجاع',
+  'returns.returnWindow': 'مهلة الاسترجاع (أيام)',
+  'returns.maxPhotos': 'الحد الأقصى للصور',
+  'returns.allowRefund': 'السماح بالاسترجاع النقدي',
+  'returns.allowExchange': 'السماح بالاستبدال',
+  'returns.allowStoreCredit': 'السماح برصيد المتجر',
+  'returns.autoApprove': 'موافقة تلقائية على الطلبات',
+  'returns.requirePhotos': 'إلزام العميل بإرفاق صور',
+  'returns.policyText': 'نص سياسة الاسترجاع',
+  'returns.reasons': 'أسباب الاسترجاع',
+  'returns.addReason': 'إضافة سبب جديد',
+  'returns.reasonName': 'اسم السبب بالعربية...',
+  'returns.customerFault': 'خطأ العميل',
+  'returns.reasonAdded': 'تمت إضافة السبب ✅',
+  'returns.reasonUpdated': 'تم تحديث السبب ✅',
+  'returns.reasonDeleted': 'تم حذف السبب',
+  'returns.disabled': 'معطّل',
 
   // ═══ Costs ═══
   'costs.title': 'إدارة التكاليف',
@@ -530,4 +640,44 @@ export const ar: Record<string, string> = {
   'settings.addAdminByEmail': 'إضافة مسؤول جديد (بالبريد الإلكتروني)',
   'settings.currentAdmins': 'المسؤولون الحاليون',
   'settings.userMustExist': 'يجب أن يكون المستخدم مسجلاً مسبقاً',
+  'settings.paymentSettings': 'إعدادات الدفع',
+  'settings.codPayment': 'الدفع عند الاستلام',
+  'settings.ccpNumber': 'رقم الحساب CCP',
+  'settings.ccpName': 'اسم صاحب الحساب',
+  'settings.flexyPhone': 'رقم الهاتف',
+  'settings.flexyAmount': 'مبلغ التعبئة (دج)',
+  'settings.footerDesc': 'وصف المتجر',
+  'settings.footerPhone': 'رقم الهاتف',
+  'settings.footerEmail': 'البريد الإلكتروني',
+  'settings.footerAddress': 'العنوان',
+  'settings.facebookUrl': 'رابط صفحة فيسبوك',
+  'settings.copyrightText': 'نص حقوق النشر',
+  'settings.productsPerPage': 'عدد المنتجات في كل صفحة',
+  'settings.additionalSettings': 'إعدادات إضافية',
+  'settings.heroSlider': 'سلايدر الصفحة الرئيسية',
+  'settings.heroSliderHint': 'حد أقصى 5 صور — كل صورة بحجم أقصى 2MB',
+  'settings.addImage': 'إضافة صورة',
+  'settings.optionalLink': 'رابط اختياري (مثال: /products)',
+  'settings.telegramBot': 'بوت تلغرام',
+  'settings.telegramDesc': 'إدارة المتجر عبر تلغرام واستقبال إشعارات الطلبات الجديدة',
+  'settings.enableTelegram': 'تفعيل بوت تلغرام',
+  'settings.tokenSettings': '🔑 إعدادات التوكن (اضغط للعرض)',
+  'settings.botToken': 'Bot Token (من @BotFather)',
+  'settings.chatIds': 'معرّفات المسؤولين (Chat IDs)',
+  'settings.addChatIdPlaceholder': 'أضف Chat ID',
+  'settings.notifyOnOrder': 'إشعار عند طلب جديد',
+  'settings.sendTest': 'إرسال رسالة تجريبية',
+  'settings.sending': 'جاري الإرسال...',
+  'settings.linking': 'جاري الربط...',
+  'settings.linkWebhook': 'ربط الويب هوك',
+  'settings.passwordMinLength': 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
+  'settings.wrongPassword': 'كلمة المرور الحالية غير صحيحة',
+  'settings.passwordChangeFailed': 'فشل تغيير كلمة المرور',
+  'settings.changingPassword': 'جاري التغيير...',
+  'settings.primaryBtn': 'زر أساسي',
+  'settings.secondaryBtn': 'زر ثانوي',
+  'settings.announcement': 'إعلان',
+  'settings.announcementPlaceholder': 'نص الإعلان...',
+  'settings.announcementPreview': 'معاينة شريط الإعلانات',
+  'settings.noPaymentMethods': 'لا توجد طرق دفع مفعّلة',
 };

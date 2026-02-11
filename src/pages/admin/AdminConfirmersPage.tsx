@@ -281,13 +281,13 @@ export default function AdminConfirmersPage() {
       <Tabs defaultValue="team" dir="rtl" className="w-full">
         <TabsList className="w-full grid grid-cols-3 h-11">
           <TabsTrigger value="add" className="font-cairo gap-1.5 text-xs sm:text-sm">
-            <UserPlus className="w-4 h-4 hidden sm:block" /> إضافة مؤكد جديد
+            <UserPlus className="w-4 h-4 hidden sm:block" /> {t('confirmers.addTab')}
           </TabsTrigger>
           <TabsTrigger value="team" className="font-cairo gap-1.5 text-xs sm:text-sm">
-            <Users className="w-4 h-4 hidden sm:block" /> فريق المؤكدين
+            <Users className="w-4 h-4 hidden sm:block" /> {t('confirmers.teamTab')}
           </TabsTrigger>
           <TabsTrigger value="settings" className="font-cairo gap-1.5 text-xs sm:text-sm">
-            <Settings className="w-4 h-4 hidden sm:block" /> إعدادات التأكيد
+            <Settings className="w-4 h-4 hidden sm:block" /> {t('confirmers.settingsTab')}
           </TabsTrigger>
         </TabsList>
 

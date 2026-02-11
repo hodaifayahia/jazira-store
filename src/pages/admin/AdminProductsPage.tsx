@@ -275,19 +275,19 @@ export default function AdminProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="font-cairo font-bold text-2xl text-foreground">المنتجات</h2>
-          <p className="font-cairo text-sm text-muted-foreground mt-1">{products?.length || 0} منتج</p>
+          <h2 className="font-cairo font-bold text-2xl text-foreground">{t('products.title')}</h2>
+          <p className="font-cairo text-sm text-muted-foreground mt-1">{products?.length || 0} {t('common.product')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={exportCSV} className="font-cairo gap-1.5" size="sm">
-            <Download className="w-4 h-4" /> تصدير
+            <Download className="w-4 h-4" /> {t('common.export')}
           </Button>
           <input ref={importRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
           <Button variant="outline" onClick={() => importRef.current?.click()} className="font-cairo gap-1.5" size="sm">
-            <FileUp className="w-4 h-4" /> استيراد
+            <FileUp className="w-4 h-4" /> {t('common.import')}
           </Button>
           <Button onClick={openCreate} className="font-cairo gap-1.5" size="sm">
-            <Plus className="w-4 h-4" /> إضافة منتج
+            <Plus className="w-4 h-4" /> {t('products.addProduct')}
           </Button>
         </div>
       </div>
@@ -300,7 +300,7 @@ export default function AdminProductsPage() {
               <Package className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="font-cairo text-xs text-muted-foreground">كل المنتجات</p>
+              <p className="font-cairo text-xs text-muted-foreground">{t('products.allProducts')}</p>
               <p className="font-roboto font-bold text-xl text-foreground">{kpis.total}</p>
             </div>
           </CardContent>
@@ -311,7 +311,7 @@ export default function AdminProductsPage() {
               <PackageX className="w-5 h-5 text-destructive" />
             </div>
             <div>
-              <p className="font-cairo text-xs text-muted-foreground">نفذت الكمية</p>
+              <p className="font-cairo text-xs text-muted-foreground">{t('products.outOfStock')}</p>
               <p className="font-roboto font-bold text-xl text-foreground">{kpis.outOfStock}</p>
             </div>
           </CardContent>
@@ -322,7 +322,7 @@ export default function AdminProductsPage() {
               <AlertTriangle className="w-5 h-5 text-orange-500" />
             </div>
             <div>
-              <p className="font-cairo text-xs text-muted-foreground">كمية منخفضة</p>
+              <p className="font-cairo text-xs text-muted-foreground">{t('products.lowStock')}</p>
               <p className="font-roboto font-bold text-xl text-foreground">{kpis.lowStock}</p>
             </div>
           </CardContent>
@@ -333,7 +333,7 @@ export default function AdminProductsPage() {
               <EyeOff className="w-5 h-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="font-cairo text-xs text-muted-foreground">مخفية</p>
+              <p className="font-cairo text-xs text-muted-foreground">{t('products.hidden')}</p>
               <p className="font-roboto font-bold text-xl text-foreground">{kpis.hidden}</p>
             </div>
           </CardContent>
@@ -343,9 +343,9 @@ export default function AdminProductsPage() {
       {/* Smart Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setCurrentPage(1); }}>
         <TabsList className="font-cairo">
-          <TabsTrigger value="all" className="font-cairo">كل المنتجات</TabsTrigger>
-          <TabsTrigger value="recent" className="font-cairo">المضافة حديثاً</TabsTrigger>
-          <TabsTrigger value="bestsellers" className="font-cairo">الأكثر مبيعاً</TabsTrigger>
+          <TabsTrigger value="all" className="font-cairo">{t('products.allProducts')}</TabsTrigger>
+          <TabsTrigger value="recent" className="font-cairo">{t('products.recentlyAdded')}</TabsTrigger>
+          <TabsTrigger value="bestsellers" className="font-cairo">{t('products.bestSellers')}</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -353,21 +353,21 @@ export default function AdminProductsPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="ابحث باسم المنتج أو رمز SKU..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="pr-10 font-cairo h-10" />
+          <Input placeholder={t('products.searchPlaceholder')} value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="pr-10 font-cairo h-10" />
         </div>
         <Select value={filterCategory} onValueChange={handleFilterChange(setFilterCategory)}>
-          <SelectTrigger className="w-full sm:w-44 font-cairo h-10"><SelectValue placeholder="الفئة" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44 font-cairo h-10"><SelectValue placeholder={t('products.category')} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="الكل" className="font-cairo">كل الفئات</SelectItem>
+            <SelectItem value="الكل" className="font-cairo">{t('common.allCategories')}</SelectItem>
             {categoryNames.map(c => <SelectItem key={c} value={c} className="font-cairo">{c}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={handleFilterChange(setFilterStatus)}>
-          <SelectTrigger className="w-full sm:w-36 font-cairo h-10"><SelectValue placeholder="الحالة" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36 font-cairo h-10"><SelectValue placeholder={t('common.status')} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="font-cairo">كل الحالات</SelectItem>
-            <SelectItem value="active" className="font-cairo">نشط</SelectItem>
-            <SelectItem value="inactive" className="font-cairo">معطّل</SelectItem>
+            <SelectItem value="all" className="font-cairo">{t('common.allStatuses')}</SelectItem>
+            <SelectItem value="active" className="font-cairo">{t('common.active')}</SelectItem>
+            <SelectItem value="inactive" className="font-cairo">{t('common.inactive')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -404,14 +404,14 @@ export default function AdminProductsPage() {
               <thead className="bg-muted/50 border-b">
                 <tr>
                   <th className="p-3 text-right"><Checkbox checked={allPageSelected} onCheckedChange={toggleSelectAll} /></th>
-                  <th className="p-3 text-right font-cairo font-semibold">الصورة</th>
-                  <th className="p-3 text-right font-cairo font-semibold">المنتج</th>
-                  <th className="p-3 text-right font-cairo font-semibold">SKU</th>
-                  <th className="p-3 text-right font-cairo font-semibold">معاينة</th>
-                  <th className="p-3 text-right font-cairo font-semibold">الكمية</th>
-                  <th className="p-3 text-right font-cairo font-semibold">السعر</th>
-                  <th className="p-3 text-right font-cairo font-semibold">الحالة</th>
-                  <th className="p-3 text-right font-cairo font-semibold">إجراءات</th>
+                  <th className="p-3 text-right font-cairo font-semibold">{t('products.image')}</th>
+                  <th className="p-3 text-right font-cairo font-semibold">{t('products.productName')}</th>
+                  <th className="p-3 text-right font-cairo font-semibold">{t('products.sku')}</th>
+                  <th className="p-3 text-right font-cairo font-semibold">{t('products.preview')}</th>
+                  <th className="p-3 text-right font-cairo font-semibold">{t('common.quantity')}</th>
+                  <th className="p-3 text-right font-cairo font-semibold">{t('common.price')}</th>
+                  <th className="p-3 text-right font-cairo font-semibold">{t('common.status')}</th>
+                  <th className="p-3 text-right font-cairo font-semibold">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
