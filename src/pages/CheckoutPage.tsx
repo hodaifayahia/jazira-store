@@ -34,6 +34,8 @@ export default function CheckoutPage() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [abandonedSaved, setAbandonedSaved] = useState(false);
 
   const validatePhone = (v: string) => /^0[567]\d{8}$/.test(v);
 
@@ -72,10 +74,6 @@ export default function CheckoutPage() {
     setReceiptPreview(null);
   };
 
-  useEffect(() => {
-    if (items.length === 0) navigate('/cart');
-  }, [items, navigate]);
-
   const { data: wilayas } = useQuery({
     queryKey: ['wilayas'],
     queryFn: async () => {
@@ -83,6 +81,61 @@ export default function CheckoutPage() {
       return data || [];
     },
   });
+
+  useEffect(() => {
+    if (items.length === 0 && !orderSubmitted) navigate('/cart');
+  }, [items, navigate, orderSubmitted]);
+
+  // Debounced abandoned cart capture
+  useEffect(() => {
+    if (orderSubmitted || submitting) return;
+    if (name.trim().length < 2 || phone.length < 10 || items.length === 0) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const cartSnapshot = items.map(item => ({
+          product_id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image || null,
+          variant_id: item.variantId || null,
+          variant_label: item.variantOptionValues ? Object.values(item.variantOptionValues).join(' / ') : item.variation?.value || null,
+        }));
+        const cartTotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+
+        const { data: existing } = await supabase
+          .from('abandoned_orders')
+          .select('id')
+          .eq('customer_phone', phone.trim())
+          .eq('status', 'abandoned')
+          .maybeSingle();
+
+        if (existing) {
+          await supabase.from('abandoned_orders').update({
+            customer_name: name.trim(),
+            customer_wilaya: wilayas?.find(w => w.id === wilayaId)?.name || null,
+            cart_items: cartSnapshot,
+            cart_total: cartTotal,
+            item_count: items.length,
+            updated_at: new Date().toISOString(),
+          }).eq('id', existing.id);
+        } else {
+          await supabase.from('abandoned_orders').insert({
+            customer_name: name.trim(),
+            customer_phone: phone.trim(),
+            customer_wilaya: wilayas?.find(w => w.id === wilayaId)?.name || null,
+            cart_items: cartSnapshot,
+            cart_total: cartTotal,
+            item_count: items.length,
+          });
+        }
+        setAbandonedSaved(true);
+      } catch {}
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [name, phone, items, wilayaId, orderSubmitted, submitting, wilayas]);
 
   const { data: baladiyat } = useQuery({
     queryKey: ['baladiyat', wilayaId],
@@ -228,8 +281,15 @@ export default function CheckoutPage() {
       });
       await supabase.from('order_items').insert(orderItems);
 
+      // Auto-resolve abandoned cart
+      await supabase.from('abandoned_orders')
+        .update({ status: 'recovered', recovered_order_id: order.id, updated_at: new Date().toISOString() })
+        .eq('customer_phone', phone.trim())
+        .in('status', ['abandoned', 'contacted']);
+
       supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
 
+      setOrderSubmitted(true);
       clearCart();
       navigate(`/order-confirmation/${order.order_number}`);
     } catch (err) {
