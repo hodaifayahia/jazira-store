@@ -28,6 +28,7 @@ import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminLeadsPage from "./pages/admin/AdminLeadsPage";
 import AdminVariationsPage from "./pages/admin/AdminVariationsPage";
 import AdminAbandonedPage from "./pages/admin/AdminAbandonedPage";
+import AdminInventoryPage from "./pages/admin/AdminInventoryPage";
 import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import { useStoreTheme } from "@/hooks/useStoreTheme";
@@ -84,6 +85,7 @@ const App = () => (
             <Route path="/admin/variations" element={<AdminLayout><AdminVariationsPage /></AdminLayout>} />
             <Route path="/admin/leads" element={<AdminLayout><AdminLeadsPage /></AdminLayout>} />
             <Route path="/admin/abandoned" element={<AdminLayout><AdminAbandonedPage /></AdminLayout>} />
+            <Route path="/admin/inventory" element={<AdminLayout><AdminInventoryPage /></AdminLayout>} />
             <Route path="/admin/settings" element={<AdminLayout><AdminSettingsPage /></AdminLayout>} />
 
             <Route path="*" element={<NotFound />} />
