@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import AnnouncementBar from "@/components/AnnouncementBar";
 import AdminLayout from "@/components/AdminLayout";
 import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
@@ -29,12 +30,21 @@ import AdminVariationsPage from "./pages/admin/AdminVariationsPage";
 import AdminAbandonedPage from "./pages/admin/AdminAbandonedPage";
 import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
+import { useStoreTheme } from "@/hooks/useStoreTheme";
+import { useFavicon } from "@/hooks/useFavicon";
 
 const queryClient = new QueryClient();
+
+function StoreThemeProvider({ children }: { children: React.ReactNode }) {
+  useStoreTheme();
+  useFavicon();
+  return <>{children}</>;
+}
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col min-h-screen">
+      <AnnouncementBar />
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
@@ -45,6 +55,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <CartProvider>
+      <StoreThemeProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -79,6 +90,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </StoreThemeProvider>
     </CartProvider>
   </QueryClientProvider>
 );

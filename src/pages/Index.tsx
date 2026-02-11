@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import useEmblaCarousel from 'embla-carousel-react';
+import Autoplay from 'embla-carousel-autoplay';
 import { Home, Sparkles, Watch, ArrowLeft, ShoppingBag, Gift, Star, Heart, Shirt,
   Laptop, Smartphone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette,
   Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
@@ -40,6 +42,18 @@ export default function IndexPage() {
       return data;
     },
   });
+
+  // Fetch hero slides
+  const { data: heroSlides } = useQuery({
+    queryKey: ['hero-slides'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('value').eq('key', 'hero_slides').maybeSingle();
+      try { return JSON.parse(data?.value || '[]') as { url: string; link?: string; alt?: string }[]; } catch { return []; }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const [emblaRef] = useEmblaCarousel({ direction: 'rtl', loop: true }, [Autoplay({ delay: 5000 })]);
 
   const newestProducts = allProducts?.slice(0, 8) || [];
   const mostExpensive = [...(allProducts || [])].sort((a, b) => Number(b.price) - Number(a.price)).slice(0, 4);
@@ -88,62 +102,80 @@ export default function IndexPage() {
     <div className="min-h-screen bg-background">
 
       {/* ─── Hero Section ─── */}
-      <section className="relative isolate overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={heroBannerNew} alt="" aria-hidden className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-transparent" />
-        </div>
-
-        <div className="container relative z-10 py-20 md:py-28 lg:py-36 flex justify-center">
-          <div className="max-w-2xl text-center space-y-6">
-            <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/20 backdrop-blur-sm rounded-full px-4 py-1.5 animate-fade-in">
-              🇩🇿 أفضل المنتجات في الجزائر
-            </span>
-            <h1 className="font-cairo font-extrabold text-4xl sm:text-5xl lg:text-6xl text-background leading-[1.15] tracking-tight animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              تسوّق بثقة مع{' '}
-              <span className="text-primary">DZ Store</span>
-            </h1>
-            <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              أفضل المنتجات المنزلية، الزينة والإكسسوارات بأسعار مناسبة مع التوصيل لجميع الولايات.
-            </p>
-
-            {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex gap-2 max-w-md mx-auto animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <div className="relative flex-1 group">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
-                <Input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن منتج..."
-                  className="pr-11 font-cairo bg-background/95 backdrop-blur-sm border-background/20 rounded-2xl h-14 text-base shadow-lg"
-                />
+      {heroSlides && heroSlides.length > 0 ? (
+        <section className="relative isolate overflow-hidden" ref={emblaRef}>
+          <div className="flex">
+            {heroSlides.map((slide, i) => (
+              <div key={i} className="flex-[0_0_100%] min-w-0 relative">
+                {slide.link ? (
+                  <Link to={slide.link}>
+                    <img src={slide.url} alt={slide.alt || `Slide ${i + 1}`} className="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover" />
+                  </Link>
+                ) : (
+                  <img src={slide.url} alt={slide.alt || `Slide ${i + 1}`} className="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover" />
+                )}
               </div>
-              <Button type="submit" size="lg" className="font-cairo font-bold rounded-2xl h-14 px-8 shadow-lg">
-                بحث
-              </Button>
-            </form>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="relative isolate overflow-hidden">
+          <div className="absolute inset-0">
+            <img src={heroBannerNew} alt="" aria-hidden className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-transparent" />
+          </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-              <Link to="/products">
-                <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg hover:scale-[1.02] transition-all">
-                  تسوّق الآن
-                  <ArrowLeft className="w-5 h-5" />
+          <div className="container relative z-10 py-20 md:py-28 lg:py-36 flex justify-center">
+            <div className="max-w-2xl text-center space-y-6">
+              <span className="inline-block font-cairo text-sm font-semibold tracking-wide text-primary bg-primary/20 backdrop-blur-sm rounded-full px-4 py-1.5 animate-fade-in">
+                🇩🇿 أفضل المنتجات في الجزائر
+              </span>
+              <h1 className="font-cairo font-extrabold text-4xl sm:text-5xl lg:text-6xl text-background leading-[1.15] tracking-tight animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                تسوّق بثقة مع{' '}
+                <span className="text-primary">DZ Store</span>
+              </h1>
+              <p className="font-cairo text-background/75 text-lg sm:text-xl leading-relaxed max-w-md mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                أفضل المنتجات المنزلية، الزينة والإكسسوارات بأسعار مناسبة مع التوصيل لجميع الولايات.
+              </p>
+
+              {/* Search Bar */}
+              <form onSubmit={handleSearch} className="flex gap-2 max-w-md mx-auto animate-fade-in" style={{ animationDelay: '0.3s' }}>
+                <div className="relative flex-1 group">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                  <Input
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="ابحث عن منتج..."
+                    className="pr-11 font-cairo bg-background/95 backdrop-blur-sm border-background/20 rounded-2xl h-14 text-base shadow-lg"
+                  />
+                </div>
+                <Button type="submit" size="lg" className="font-cairo font-bold rounded-2xl h-14 px-8 shadow-lg">
+                  بحث
                 </Button>
-              </Link>
-              <Link to="/track">
-                <Button size="lg" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg hover:scale-[1.02] transition-all">
-                  تتبع طلبك
-                </Button>
-              </Link>
-              {allProducts && allProducts.length > 0 && (
-                <span className="font-cairo text-sm text-background/60 bg-background/10 backdrop-blur-sm rounded-full px-3 py-1.5">
-                  +{allProducts.length} منتج
-                </span>
-              )}
+              </form>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                <Link to="/products">
+                  <Button size="lg" className="font-cairo font-bold text-base px-8 h-12 gap-2 rounded-xl shadow-lg hover:scale-[1.02] transition-all">
+                    تسوّق الآن
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                </Link>
+                <Link to="/track">
+                  <Button size="lg" className="font-cairo font-semibold text-base px-8 h-12 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg hover:scale-[1.02] transition-all">
+                    تتبع طلبك
+                  </Button>
+                </Link>
+                {allProducts && allProducts.length > 0 && (
+                  <span className="font-cairo text-sm text-background/60 bg-background/10 backdrop-blur-sm rounded-full px-3 py-1.5">
+                    +{allProducts.length} منتج
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ─── Trust Bar ─── */}
       <section className="border-b bg-card">
