@@ -1,90 +1,128 @@
 
 
-# تحسين صفحة إدارة المنتجات (Admin Products Page)
+# تطوير نموذج إضافة/تعديل المنتج (Product Form Enhancement)
 
 ## ملخص
-ترقية صفحة المنتجات في لوحة التحكم لتتوافق مع تصميم Foorweb المرجعي، مع إضافة بطاقات KPI، تبويبات ذكية، وحقل SKU.
+ترقية نموذج المنتج الحالي ليتوافق مع تصميم Foorweb المرجعي، بإضافة حقول جديدة (السعر القديم، الوصف القصير، التوصيل المجاني، رابط المنتج) ونظام عروض الحزم (Bundle Offers).
+
+## الوضع الحالي
+النموذج الحالي يحتوي على:
+- اسم المنتج، SKU، الوصف، السعر، المخزون، الفئة، الحالة
+- رفع صور متعددة مع اختيار الصورة الرئيسية
+- نظام متغيرات (ألوان/مقاسات) مع سعر وصورة ومخزون لكل متغير
 
 ## التغييرات المطلوبة
 
-### 1. بطاقات KPI (إحصائيات سريعة)
-أربع بطاقات في أعلى الصفحة:
-- **كل المنتجات**: العدد الإجمالي
-- **نفذت الكمية**: المنتجات التي مخزونها = 0
-- **كمية منخفضة**: المنتجات التي مخزونها بين 1 و 5
-- **مخفية**: المنتجات المعطلة (is_active = false)
+### 1. حقول جديدة في قاعدة البيانات (Migration)
+إضافة أعمدة جديدة لجدول `products`:
+- `old_price` (numeric, nullable) -- السعر القديم قبل الخصم
+- `short_description` (text, nullable) -- وصف قصير يظهر تحت اسم المنتج
+- `is_free_shipping` (boolean, default false) -- توصيل مجاني
+- `slug` (text, nullable, unique) -- رابط مخصص للمنتج
 
-### 2. تبويبات ذكية (Smart Tabs)
-ثلاث تبويبات فوق الجدول:
-- **كل المنتجات**: عرض الكل (الافتراضي)
-- **المضافة حديثاً**: مرتبة حسب created_at (آخر 7 أيام)
-- **الأكثر مبيعاً**: مرتبة حسب عدد مرات الطلب (يتطلب استعلام من جدول order_items)
+إنشاء جدول جديد `product_offers` لعروض الحزم:
+- `id` (uuid, primary key)
+- `product_id` (uuid, FK to products)
+- `description` (text) -- وصف العرض مثل "قميصان"
+- `quantity` (integer) -- الكمية في الحزمة
+- `price` (numeric) -- سعر الحزمة
+- `position` (integer, default 0) -- ترتيب العرض
+- `created_at` (timestamptz)
 
-### 3. إضافة حقل SKU
-- إضافة عمود `sku` في جدول `products` عبر migration
-- عرض SKU في الجدول وحقل إدخاله في نموذج المنتج
-- البحث يشمل الاسم + SKU
+مع سياسات RLS مطابقة لجدول products (قراءة عامة + إدارة للأدمن).
 
-### 4. رابط معاينة المنتج
-- عمود "معاينة" في الجدول يفتح صفحة المنتج في المتجر (`/product/{id}`) في تبويب جديد
+### 2. تعديل نموذج المنتج (ProductForm)
+تنظيم النموذج في أقسام واضحة:
 
-### 5. تحسين عمود الحالة
-- استخدام Checkbox/Toggle بدلاً من الزر النصي الحالي (مطابقة للتصميم المرجعي)
+**قسم الصور** (موجود بالفعل -- بدون تغيير)
+
+**قسم البيانات الأساسية:**
+- اسم المنتج (موجود)
+- SKU (موجود)
+- رابط المنتج (slug) -- حقل جديد مع placeholder "/product/your-slug"
+- الفئة (موجود)
+- الحالة (موجود)
+
+**قسم الوصف:**
+- وصف قصير (حقل جديد - Input عادي)
+- وصف تفصيلي (الحقل الحالي - Textarea)
+
+**قسم التسعير والمخزون:**
+- السعر الحالي (موجود)
+- السعر القديم (حقل جديد -- يظهر كسعر مشطوب)
+- المخزون (موجود)
+- التوصيل المجاني (Toggle جديد)
+
+**قسم عروض الحزم (جديد):**
+- قائمة ديناميكية من العروض (وصف + كمية + سعر)
+- زر "إضافة عرض" لإضافة حزمة جديدة
+- زر حذف لكل عرض
+- تحقق: سعر الحزمة يجب أن يكون اقل من (الكمية * سعر الوحدة)
+
+**قسم المتغيرات** (موجود بالفعل -- بدون تغيير)
+
+### 3. تحديث منطق الحفظ (saveMutation)
+- إضافة الحقول الجديدة (old_price, short_description, is_free_shipping, slug) في payload
+- بعد حفظ المنتج: حذف العروض القديمة ثم إدراج العروض الجديدة في `product_offers`
 
 ---
 
 ## التفاصيل التقنية
 
-### تعديل قاعدة البيانات (Migration)
+### Migration SQL
 ```sql
-ALTER TABLE products ADD COLUMN IF NOT EXISTS sku text;
-CREATE UNIQUE INDEX IF NOT EXISTS products_sku_unique ON products(sku) WHERE sku IS NOT NULL AND sku != '';
+-- New columns on products
+ALTER TABLE products ADD COLUMN IF NOT EXISTS old_price numeric;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS short_description text;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_free_shipping boolean DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS slug text;
+CREATE UNIQUE INDEX IF NOT EXISTS products_slug_unique 
+  ON products(slug) WHERE slug IS NOT NULL AND slug != '';
+
+-- Bundle offers table
+CREATE TABLE product_offers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  description text NOT NULL,
+  quantity integer NOT NULL,
+  price numeric NOT NULL,
+  position integer DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE product_offers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Product offers publicly readable"
+  ON product_offers FOR SELECT USING (true);
+
+CREATE POLICY "Admin can manage product offers"
+  ON product_offers FOR ALL
+  USING (has_role(auth.uid(), 'admin'))
+  WITH CHECK (has_role(auth.uid(), 'admin'));
 ```
 
 ### الملفات المتأثرة
-- `src/pages/admin/AdminProductsPage.tsx` -- التعديل الرئيسي:
-  1. إضافة مكون KPI cards (4 بطاقات) تحسب من بيانات المنتجات المحملة
-  2. إضافة Tabs component (كل المنتجات / المضافة حديثاً / الأكثر مبيعاً)
-  3. إضافة استعلام لجلب بيانات "الأكثر مبيعاً" من order_items مع group by product_id
-  4. إضافة عمود SKU في الجدول + حقل SKU في ProductForm
-  5. إضافة عمود "معاينة" مع رابط خارجي
-  6. تحديث البحث ليشمل SKU
-  7. تحديث ProductForm لتشمل حقل SKU
+- `src/pages/admin/AdminProductsPage.tsx` -- تعديل ProductForm:
+  1. إضافة state جديد: `oldPrice`, `shortDescription`, `isFreeShipping`, `slug`, `offers[]`
+  2. تحميل العروض الحالية عند التعديل (useQuery على product_offers)
+  3. إضافة أقسام الحقول الجديدة في JSX
+  4. قسم عروض الحزم مع repeatable rows (وصف + كمية + سعر + حذف)
+  5. تحديث saveMutation لحفظ الحقول الجديدة + sync offers
 
-### حسابات KPI (من البيانات المحملة مسبقاً)
-```text
-totalProducts = products.length
-outOfStock = products.filter(p => p.stock <= 0).length
-lowStock = products.filter(p => p.stock > 0 && p.stock <= 5).length
-hidden = products.filter(p => !p.is_active).length
-```
-
-### استعلام "الأكثر مبيعاً"
-استعلام منفصل يجلب product_id مع عدد مرات الطلب من order_items:
-```sql
-SELECT product_id, SUM(quantity) as total_sold
-FROM order_items
-GROUP BY product_id
-ORDER BY total_sold DESC
-```
-
-### ترتيب العناصر في الصفحة
+### هيكل قسم عروض الحزم في الواجهة
 ```text
 +--------------------------------------------------+
-| عنوان الصفحة          | [تصدير] [استيراد] [إضافة] |
+| عروض الحزم                          [+ إضافة عرض] |
 +--------------------------------------------------+
-| [كل المنتجات] [كل] [نفذت] [منخفضة] [مخفية]       |
-+--------------------------------------------------+
-| [كل المنتجات | المضافة حديثاً | الأكثر مبيعاً]     |
-+--------------------------------------------------+
-| [بحث بالاسم أو SKU]  [فئة]  [حالة]               |
-+--------------------------------------------------+
-| [شريط العمليات الجماعية إن وجد]                   |
-+--------------------------------------------------+
-| الجدول: ☐ | صورة | المنتج | SKU | معاينة |       |
-|           | الكمية | السعر | الحالة | إجراءات      |
-+--------------------------------------------------+
-| الترقيم                                           |
+| وصف العرض    | الكمية | السعر (دج) |    [حذف]     |
+| قميصان       |   2    |   5000     |      X       |
+| ثلاث قمصان   |   3    |   8000     |      X       |
 +--------------------------------------------------+
 ```
+
+### تحقق من المدخلات (Validation)
+- السعر القديم (إن وجد) يجب أن يكون اكبر من السعر الحالي
+- سعر الحزمة يجب أن يكون اقل من (الكمية * سعر الوحدة) -- تحذير فقط وليس منعاً
+- الـ slug يقبل فقط حروف لاتينية وأرقام وشرطات
+- الوصف القصير محدود بـ 200 حرف
 
