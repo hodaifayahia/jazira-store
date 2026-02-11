@@ -1,142 +1,90 @@
 
 
-# تحسين شريط التنقل العلوي للوحة التحكم (Admin Header)
+# تحسين صفحة إدارة المنتجات (Admin Products Page)
 
-## ملخص التغييرات
+## ملخص
+ترقية صفحة المنتجات في لوحة التحكم لتتوافق مع تصميم Foorweb المرجعي، مع إضافة بطاقات KPI، تبويبات ذكية، وحقل SKU.
 
-سنقوم بتطوير الشريط العلوي (Header) في لوحة التحكم ليشمل ميزات جديدة مستوحاة من التصميم المرجعي.
+## التغييرات المطلوبة
 
-## الميزات الجديدة
+### 1. بطاقات KPI (إحصائيات سريعة)
+أربع بطاقات في أعلى الصفحة:
+- **كل المنتجات**: العدد الإجمالي
+- **نفذت الكمية**: المنتجات التي مخزونها = 0
+- **كمية منخفضة**: المنتجات التي مخزونها بين 1 و 5
+- **مخفية**: المنتجات المعطلة (is_active = false)
 
-### 1. بحث عالمي عن الطلبات في الشريط العلوي
-- حقل بحث مدمج في الـ Header بنص "البحث عن طلبية..."
-- البحث يعمل برقم الطلب أو اسم العميل أو الهاتف
-- عند البحث يتم التوجيه لصفحة الطلبات مع تمرير الاستعلام
+### 2. تبويبات ذكية (Smart Tabs)
+ثلاث تبويبات فوق الجدول:
+- **كل المنتجات**: عرض الكل (الافتراضي)
+- **المضافة حديثاً**: مرتبة حسب created_at (آخر 7 أيام)
+- **الأكثر مبيعاً**: مرتبة حسب عدد مرات الطلب (يتطلب استعلام من جدول order_items)
 
-### 2. شارة الطلبات المعلقة (Pending Orders Badge)
-- عرض عدد الطلبات بحالة "جديد" كشارة ملونة بجانب البحث
-- رابط سريع لصفحة الطلبات الجديدة
+### 3. إضافة حقل SKU
+- إضافة عمود `sku` في جدول `products` عبر migration
+- عرض SKU في الجدول وحقل إدخاله في نموذج المنتج
+- البحث يشمل الاسم + SKU
 
-### 3. قسم ملف المستخدم في الشريط العلوي
-- عرض اسم/بريد المسؤول المتصل
-- قائمة منسدلة تحتوي: عرض المتجر، إعدادات الحساب، تسجيل الخروج
+### 4. رابط معاينة المنتج
+- عمود "معاينة" في الجدول يفتح صفحة المنتج في المتجر (`/product/{id}`) في تبويب جديد
 
-### 4. تحسينات عامة على Header
-- تنظيم العناصر: قائمة الجوال > عنوان الصفحة > بحث > شارة الطلبات > الإشعارات > ملف المستخدم
+### 5. تحسين عمود الحالة
+- استخدام Checkbox/Toggle بدلاً من الزر النصي الحالي (مطابقة للتصميم المرجعي)
 
 ---
 
 ## التفاصيل التقنية
 
-### الملفات المتأثرة:
-- `src/components/AdminLayout.tsx` -- تعديل رئيسي على الـ header section
+### تعديل قاعدة البيانات (Migration)
+```sql
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sku text;
+CREATE UNIQUE INDEX IF NOT EXISTS products_sku_unique ON products(sku) WHERE sku IS NOT NULL AND sku != '';
+```
 
-### التعديلات على AdminLayout.tsx:
+### الملفات المتأثرة
+- `src/pages/admin/AdminProductsPage.tsx` -- التعديل الرئيسي:
+  1. إضافة مكون KPI cards (4 بطاقات) تحسب من بيانات المنتجات المحملة
+  2. إضافة Tabs component (كل المنتجات / المضافة حديثاً / الأكثر مبيعاً)
+  3. إضافة استعلام لجلب بيانات "الأكثر مبيعاً" من order_items مع group by product_id
+  4. إضافة عمود SKU في الجدول + حقل SKU في ProductForm
+  5. إضافة عمود "معاينة" مع رابط خارجي
+  6. تحديث البحث ليشمل SKU
+  7. تحديث ProductForm لتشمل حقل SKU
 
-1. **إضافة state جديدة:**
-   - `headerSearch` للبحث
-   - `pendingOrdersCount` لعدد الطلبات الجديدة
-   - `userMenuOpen` لقائمة المستخدم
+### حسابات KPI (من البيانات المحملة مسبقاً)
+```text
+totalProducts = products.length
+outOfStock = products.filter(p => p.stock <= 0).length
+lowStock = products.filter(p => p.stock > 0 && p.stock <= 5).length
+hidden = products.filter(p => !p.is_active).length
+```
 
-2. **إضافة useEffect لجلب عدد الطلبات المعلقة:**
-   - استعلام من جدول `orders` حيث `status = 'جديد'`
-   - يتحدث تلقائيا مع الـ realtime subscription الموجود
+### استعلام "الأكثر مبيعاً"
+استعلام منفصل يجلب product_id مع عدد مرات الطلب من order_items:
+```sql
+SELECT product_id, SUM(quantity) as total_sold
+FROM order_items
+GROUP BY product_id
+ORDER BY total_sold DESC
+```
 
-3. **تعديل الـ header JSX:**
-   ```text
-   +----------------------------------------------------------+
-   | [Menu] | عنوان الصفحة | [بحث عن طلبية] | [30 طلب] | [Bell] | [User] |
-   +----------------------------------------------------------+
-   ```
-   - حقل البحث: مخفي على الجوال، يظهر على الشاشات المتوسطة+
-   - شارة الطلبات: زر مع عداد يوجه إلى `/admin/orders?status=جديد`
-   - قائمة المستخدم: Popover يعرض البريد + روابط سريعة
-
-4. **قائمة المستخدم المنسدلة تشمل:**
-   - البريد الإلكتروني للمسؤول
-   - "عرض المتجر" -- رابط خارجي للصفحة الرئيسية
-   - "الإعدادات" -- رابط لـ `/admin/settings`
-   - "تسجيل الخروج" -- نفس الوظيفة الحالية
-
-### لا حاجة لتعديلات على قاعدة البيانات
-- كل البيانات المطلوبة متوفرة من الجداول الحالية (`orders`, `auth`)
-
-ad make sure Based on my analysis of the Foorweb e-commerce platform's add product interface, here's a comprehensive evaluation:
-
-Product Form Structure
-The add product form appears as a modal/sidebar overlay on the products page with organized sections:
-​
-
-Basic Product Information
-Product Name: Required text field for the product title
-
-Product Category: Dropdown selector with 5 categories (All Products, Category-1, Category-2, Category-3, Category-4)
-
-SKU Code: Required field for inventory tracking
-
-Product URL Slug: Required field for creating SEO-friendly URLs with example guidance
-
-Product Rating: Numeric input (1-5 scale) for setting display ratings
-
-Pricing Fields
-The pricing section includes three distinct fields:
-​
-
-Product Price: Main selling price (required)
-
-Before Discount: Original price field for showing savings
-
-Profit Margin: Separate field for tracking profit calculations
-
-Offer Comment: Text field for promotional labels (example: "Sale")
-
-Inventory Management
-The platform includes sophisticated stock control:
-​
-
-Stock Quantity: Numeric input for available units
-
-Limited Quantity Toggle: Checkbox to enable stock limitations
-
-Shipping Company Stock Consideration: Toggle for coordinating with delivery services
-
-Content Features
-Media Upload
-Supports image and video uploads for product visuals
-​
-
-Product Descriptions
-Two separate description fields:
-​
-
-Short Description: Brief product summary
-
-Full Description: Detailed product information with rich text editor (includes heading formatting options)
-
-Strengths
-Comprehensive pricing options: The separate fields for original price, sale price, and profit margin allow for flexible pricing strategies
-
-SEO-friendly URLs: Dedicated slug field helps with search optimization
-
-Rating system integration: Built-in rating field enables merchants to display social proof
-
-Stock coordination: The shipping company stock consideration feature is unique and useful for dropshipping
-
-Bilingual interface: Arabic interface serves the target market effectively
-
-Areas for Improvement
-Limited category depth: Only 5 categories with basic naming (Category-1, Category-2, etc.) suggests limited categorization flexibility
-
-Manual rating input: Allowing merchants to manually set ratings could mislead customers; authentic customer reviews would be more trustworthy
-
-No variant support visible: No apparent options for product variations (sizes, colors)
-
-Missing fields: No visible fields for dimensions, weight, shipping details, or tags
-
-Single media upload: Interface suggests limited media management compared to platforms that support galleries
-
-No bulk operations: Must add products individually; bulk import option exists but individual form lacks efficiency features
-
-The add product interface provides essential e-commerce functionality but could benefit from expanded categorization, product variant support, and more robust media management capabilities.
-​
+### ترتيب العناصر في الصفحة
+```text
++--------------------------------------------------+
+| عنوان الصفحة          | [تصدير] [استيراد] [إضافة] |
++--------------------------------------------------+
+| [كل المنتجات] [كل] [نفذت] [منخفضة] [مخفية]       |
++--------------------------------------------------+
+| [كل المنتجات | المضافة حديثاً | الأكثر مبيعاً]     |
++--------------------------------------------------+
+| [بحث بالاسم أو SKU]  [فئة]  [حالة]               |
++--------------------------------------------------+
+| [شريط العمليات الجماعية إن وجد]                   |
++--------------------------------------------------+
+| الجدول: ☐ | صورة | المنتج | SKU | معاينة |       |
+|           | الكمية | السعر | الحالة | إجراءات      |
++--------------------------------------------------+
+| الترقيم                                           |
++--------------------------------------------------+
+```
 
