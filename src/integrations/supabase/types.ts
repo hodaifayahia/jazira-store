@@ -715,6 +715,368 @@ export type Database = {
         }
         Relationships: []
       }
+      return_items: {
+        Row: {
+          created_at: string
+          exchange_product_id: string | null
+          exchange_product_name: string | null
+          exchange_unit_price: number | null
+          id: string
+          item_condition: string | null
+          item_total: number
+          order_item_id: string
+          price_difference: number | null
+          product_id: string
+          product_name: string
+          quantity_ordered: number
+          quantity_returned: number
+          restock_decision: string | null
+          restocked: boolean
+          return_request_id: string
+          unit_price: number
+          variant_id: string | null
+          variant_label: string | null
+        }
+        Insert: {
+          created_at?: string
+          exchange_product_id?: string | null
+          exchange_product_name?: string | null
+          exchange_unit_price?: number | null
+          id?: string
+          item_condition?: string | null
+          item_total: number
+          order_item_id: string
+          price_difference?: number | null
+          product_id: string
+          product_name: string
+          quantity_ordered: number
+          quantity_returned: number
+          restock_decision?: string | null
+          restocked?: boolean
+          return_request_id: string
+          unit_price: number
+          variant_id?: string | null
+          variant_label?: string | null
+        }
+        Update: {
+          created_at?: string
+          exchange_product_id?: string | null
+          exchange_product_name?: string | null
+          exchange_unit_price?: number | null
+          id?: string
+          item_condition?: string | null
+          item_total?: number
+          order_item_id?: string
+          price_difference?: number | null
+          product_id?: string
+          product_name?: string
+          quantity_ordered?: number
+          quantity_returned?: number
+          restock_decision?: string | null
+          restocked?: boolean
+          return_request_id?: string
+          unit_price?: number
+          variant_id?: string | null
+          variant_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_items_exchange_product_id_fkey"
+            columns: ["exchange_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_items_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_items_return_request_id_fkey"
+            columns: ["return_request_id"]
+            isOneToOne: false
+            referencedRelation: "return_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          return_item_id: string | null
+          return_request_id: string
+          uploaded_by: string
+          url: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          return_item_id?: string | null
+          return_request_id: string
+          uploaded_by?: string
+          url: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          return_item_id?: string | null
+          return_request_id?: string
+          uploaded_by?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_photos_return_item_id_fkey"
+            columns: ["return_item_id"]
+            isOneToOne: false
+            referencedRelation: "return_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_photos_return_request_id_fkey"
+            columns: ["return_request_id"]
+            isOneToOne: false
+            referencedRelation: "return_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_reasons: {
+        Row: {
+          created_at: string
+          fault_type: string
+          id: string
+          is_active: boolean
+          label_ar: string
+          position: number
+          requires_photos: boolean
+        }
+        Insert: {
+          created_at?: string
+          fault_type?: string
+          id?: string
+          is_active?: boolean
+          label_ar: string
+          position?: number
+          requires_photos?: boolean
+        }
+        Update: {
+          created_at?: string
+          fault_type?: string
+          id?: string
+          is_active?: boolean
+          label_ar?: string
+          position?: number
+          requires_photos?: boolean
+        }
+        Relationships: []
+      }
+      return_requests: {
+        Row: {
+          approved_at: string | null
+          completed_at: string | null
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          item_received_at: string | null
+          merchant_notes: string | null
+          net_refund_amount: number
+          order_id: string
+          pickup_scheduled_at: string | null
+          pickup_tracking_number: string | null
+          reason_id: string | null
+          reason_notes: string | null
+          refund_method: string | null
+          refund_reference: string | null
+          refunded_at: string | null
+          rejection_reason: string | null
+          requested_at: string
+          resolution_type: string
+          return_number: string
+          return_shipping_cost: number
+          shipping_paid_by: string
+          status: string
+          total_refund_amount: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          id?: string
+          item_received_at?: string | null
+          merchant_notes?: string | null
+          net_refund_amount?: number
+          order_id: string
+          pickup_scheduled_at?: string | null
+          pickup_tracking_number?: string | null
+          reason_id?: string | null
+          reason_notes?: string | null
+          refund_method?: string | null
+          refund_reference?: string | null
+          refunded_at?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          resolution_type: string
+          return_number: string
+          return_shipping_cost?: number
+          shipping_paid_by?: string
+          status?: string
+          total_refund_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          item_received_at?: string | null
+          merchant_notes?: string | null
+          net_refund_amount?: number
+          order_id?: string
+          pickup_scheduled_at?: string | null
+          pickup_tracking_number?: string | null
+          reason_id?: string | null
+          reason_notes?: string | null
+          refund_method?: string | null
+          refund_reference?: string | null
+          refunded_at?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          resolution_type?: string
+          return_number?: string
+          return_shipping_cost?: number
+          shipping_paid_by?: string
+          status?: string
+          total_refund_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_requests_reason_id_fkey"
+            columns: ["reason_id"]
+            isOneToOne: false
+            referencedRelation: "return_reasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_settings: {
+        Row: {
+          allow_exchange: boolean
+          allow_refund: boolean
+          allow_store_credit: boolean
+          auto_approve_returns: boolean
+          created_at: string
+          id: string
+          is_returns_enabled: boolean
+          max_photos_per_return: number
+          require_return_photos: boolean
+          return_policy_text: string | null
+          return_window_days: number
+          updated_at: string
+        }
+        Insert: {
+          allow_exchange?: boolean
+          allow_refund?: boolean
+          allow_store_credit?: boolean
+          auto_approve_returns?: boolean
+          created_at?: string
+          id?: string
+          is_returns_enabled?: boolean
+          max_photos_per_return?: number
+          require_return_photos?: boolean
+          return_policy_text?: string | null
+          return_window_days?: number
+          updated_at?: string
+        }
+        Update: {
+          allow_exchange?: boolean
+          allow_refund?: boolean
+          allow_store_credit?: boolean
+          auto_approve_returns?: boolean
+          created_at?: string
+          id?: string
+          is_returns_enabled?: boolean
+          max_photos_per_return?: number
+          require_return_photos?: boolean
+          return_policy_text?: string | null
+          return_window_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      return_status_history: {
+        Row: {
+          change_reason: string | null
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          return_request_id: string
+          to_status: string
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          return_request_id: string
+          to_status: string
+        }
+        Update: {
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          return_request_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_status_history_return_request_id_fkey"
+            columns: ["return_request_id"]
+            isOneToOne: false
+            referencedRelation: "return_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           comment: string | null
