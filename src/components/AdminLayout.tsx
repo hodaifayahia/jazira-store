@@ -210,7 +210,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex bg-muted">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-card border-l transform transition-transform md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
+      <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-card border-l transform transition-transform flex flex-col lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
         <div className="flex items-center justify-between p-4 border-b">
           <Link to="/admin" className="flex items-center gap-2">
             {logoUrl ? (
@@ -222,11 +222,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             )}
             <span className="font-cairo font-bold text-lg">لوحة التحكم</span>
           </Link>
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(false)}>
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </Button>
         </div>
-        <nav className="p-3 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {NAV_ITEMS.map(item => (
             <Link
               key={item.href}
@@ -250,17 +250,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 md:mr-64">
+      <div className="flex-1 lg:mr-64">
         <header className="sticky top-0 z-40 bg-card border-b h-14 flex items-center px-4 gap-2">
-          <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
+          <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
-          <h1 className="font-cairo font-bold text-lg shrink-0 hidden md:block">
+          <h1 className="font-cairo font-bold text-lg shrink-0 hidden lg:block">
             {NAV_ITEMS.find(i => i.href === location.pathname)?.label || 'لوحة التحكم'}
           </h1>
 
           {/* Global Order Search */}
-          <form onSubmit={handleHeaderSearch} className="flex-1 max-w-xs hidden md:flex items-center gap-1 mr-auto">
+          <form onSubmit={handleHeaderSearch} className="flex-1 max-w-xs hidden lg:flex items-center gap-1 mr-auto">
             <div className="relative w-full">
               <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
@@ -386,7 +386,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Overlay */}
-      {sidebarOpen && <div className="fixed inset-0 bg-foreground/30 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 bg-foreground/30 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
     </div>
   );
 }
