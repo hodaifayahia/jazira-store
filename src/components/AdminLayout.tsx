@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ const NAV_ITEMS = [
   { href: '/admin/categories', label: 'الفئات', icon: Layers },
   { href: '/admin/orders', label: 'الطلبات', icon: ShoppingCart },
   { href: '/admin/leads', label: 'العملاء المحتملون', icon: Users },
+  { href: '/admin/abandoned', label: 'السلات المتروكة', icon: PackageX },
   { href: '/admin/wilayas', label: 'الولايات', icon: MapPin },
   { href: '/admin/coupons', label: 'كوبونات', icon: Tag },
   { href: '/admin/settings', label: 'الإعدادات', icon: Settings },

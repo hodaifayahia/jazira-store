@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_orders: {
+        Row: {
+          abandoned_at: string
+          cart_items: Json
+          cart_total: number
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          customer_wilaya: string | null
+          id: string
+          item_count: number
+          notes: string | null
+          recovered_order_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          abandoned_at?: string
+          cart_items?: Json
+          cart_total?: number
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          customer_wilaya?: string | null
+          id?: string
+          item_count?: number
+          notes?: string | null
+          recovered_order_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          abandoned_at?: string
+          cart_items?: Json
+          cart_total?: number
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          customer_wilaya?: string | null
+          id?: string
+          item_count?: number
+          notes?: string | null
+          recovered_order_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_orders_recovered_order_id_fkey"
+            columns: ["recovered_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       baladiyat: {
         Row: {
           id: string
