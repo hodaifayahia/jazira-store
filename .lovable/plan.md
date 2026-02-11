@@ -1,117 +1,109 @@
 
 
-# Store Settings Page Enhancement
+# Inventory Management Page (`/admin/inventory`)
 
 ## Overview
-Reorganize the existing settings page into a tabbed interface with 4 tabs, adding new features: primary/secondary color pickers, announcement bar, hero slider (multiple images), favicon upload, and social media links. All settings continue using the existing `settings` key-value table -- no new database tables needed.
+Create a dedicated stock management page that provides a product-level table with expandable per-variant inventory details, inline stock editing, search, filtering, and column customization. This separates inventory concerns from product catalog management.
 
 ## Current State
-- Settings are stored as key-value pairs in the `settings` table
-- Existing settings: store_logo, hero_banner, footer_description, footer_phone, footer_email, footer_address, store_name, facebook_url, payment methods, telegram bot config
-- Categories managed separately in `AdminCategoriesPage.tsx`
-- CSS theme colors are hardcoded in `src/index.css`
-- No announcement bar, no favicon, no color customization exists yet
+- Product stock is stored in `products.stock` (integer, for simple products)
+- Variant stock is in `product_variants.quantity` (integer, per variant row)
+- Products with `has_variants=true` use the variant system; others use the product-level `stock` field
+- No dedicated inventory page exists -- stock is edited via the product form
+- Low stock notifications already exist in AdminLayout (threshold: 5)
 
-## Tab Structure
+## What Gets Built
 
-### Tab 1: هوية المتجر (Store Identity)
-- **Store Name** (existing `store_name` field)
-- **Store Logo** (existing `store_logo` upload -- move here)
-- **Favicon** (new `store_favicon` setting -- 32x32px upload, rendered in `index.html` via a hook)
-- **Primary Color** (new `primary_color` setting -- hex color picker, default `#2ecc71` matching current CSS)
-- **Secondary Color** (new `secondary_color` setting -- hex color picker, default `#3498db`)
-  - Warning text: "تجنب اللون الأبيض لضمان وضوح النصوص"
-  - Live preview swatch showing both colors together
-- **Announcement Bar** (new settings: `announcement_1` through `announcement_4`)
-  - 4 text input slots with enable/disable toggle (`announcements_enabled`)
-  - Preview strip showing how announcements rotate
-- **Hero Slider** (upgrade from single `hero_banner` to multi-image)
-  - New setting `hero_slides` storing JSON array: `[{ url, link?, alt? }]`
-  - Upload up to 5 images, reorder with drag handles, delete individual slides
-  - Each slide can optionally link to a URL
-- **Copyright Text** (new `copyright_text` setting, rendered in Footer)
-- **Products Per Page** (new `products_per_page` setting -- dropdown: 5, 10, 25, 50)
+### New Page: `src/pages/admin/AdminAbandonedPage.tsx` -> `src/pages/admin/AdminInventoryPage.tsx`
 
-### Tab 2: الدفع والتوصيل (Payment and Shipping)
-- Move existing payment settings here (BaridiMob, Flexy)
-- Keep as-is, just relocated under this tab
+**KPI Summary Cards** (4 cards at top):
+- Total Products (count of all active products)
+- Out of Stock (products where stock = 0 or all variants have quantity = 0)
+- Low Stock (stock between 1-5, or any variant with quantity 1-5)
+- Total Inventory Value (SUM of stock x price across all products/variants)
 
-### Tab 3: بوت تلغرام (Telegram Bot)
-- Move existing Telegram bot settings here
-- Keep as-is, just relocated under this tab
+**Product Table** with columns:
+- Product Image (first image from `images` array)
+- Product Name
+- SKU Code
+- Total Quantity (product.stock for simple, SUM of variant quantities for variant products)
+- Price (DZD)
+- Status indicator (color dot: green = in stock, yellow = low, red = out of stock)
 
-### Tab 4: الأمان (Security)
-- Move existing password change section here
-- Move admin user management here
+**Column Display Settings**:
+- A "Display Settings" button opening a popover with checkboxes to toggle each column's visibility
+- Preference saved in localStorage
 
-## Settings Keys (New)
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `primary_color` | hex string | `#2ecc71` | Store primary color |
-| `secondary_color` | hex string | `#3498db` | Store secondary color |
-| `store_favicon` | URL string | empty | Favicon image URL |
-| `announcements_enabled` | `true`/`false` | `false` | Show announcement bar |
-| `announcement_1` to `announcement_4` | text | empty | Announcement texts |
-| `hero_slides` | JSON string | `[]` | Array of slider images |
-| `copyright_text` | text | empty | Footer copyright |
-| `products_per_page` | number string | `10` | Products per page on storefront |
+**Search**: Filter by product name or SKU
 
-## Storefront Integration
+**Filter Tabs**: All / In Stock / Low Stock (1-5) / Out of Stock (0)
 
-### Dynamic Colors
-- Create `useStoreTheme` hook that fetches `primary_color` and `secondary_color` from settings
-- In `App.tsx`, apply colors as CSS custom properties on `<html>` element:
-  ```
-  document.documentElement.style.setProperty('--primary', hslFromHex(color))
-  ```
-- This makes all existing Tailwind `primary` / `secondary` classes respond dynamically
+**Expandable Variant Details** per product row:
+- For products with `has_variants=true`: Shows variant matrix table with columns: Variant Label (from `option_values` JSONB), Price, Quantity, Actions
+- For simple products: Shows single row labeled "المنتج الأساسي" (Base Product) with "قياس موحد" (Unified Size)
 
-### Announcement Bar
-- New `AnnouncementBar` component rendered above `Navbar`
-- Fetches `announcements_enabled` + `announcement_1..4`
-- Rotates between non-empty texts every 4 seconds with fade animation
-- Compact strip: colored background (primary), white text, ~36px height
+**Per-Row Actions**:
+- **Edit** (inline quantity/price editing with save/cancel)
+- **Add Stock** (increment dialog: enter amount to add)
 
-### Hero Slider
-- Update `Index.tsx` hero section to use `hero_slides` setting
-- If slides exist, render with Embla Carousel (already installed)
-- Auto-play, dots navigation, swipe on mobile
-- Fallback to current static hero if no slides configured
+**Pagination**: 15 items per page with Previous/Next navigation
 
-### Favicon
-- Create `useFavicon` hook that updates `<link rel="icon">` in document head
-- Called in `App.tsx`
+## Database Changes
+No database migration needed. The page reads and writes to existing `products` and `product_variants` tables.
 
-### Products Per Page
-- Update `ProductsPage.tsx` to fetch `products_per_page` setting and use it as page size
+## Stock Update Logic
 
-### Copyright
-- Update `Footer.tsx` to use `copyright_text` setting if set, otherwise keep default
+### Simple Products (has_variants = false)
+- Edit: `UPDATE products SET stock = :newValue WHERE id = :id`
+- Add Stock: `UPDATE products SET stock = stock + :amount WHERE id = :id`
+
+### Variant Products (has_variants = true)
+- Edit: `UPDATE product_variants SET quantity = :newValue WHERE id = :variantId`
+- Add Stock: `UPDATE product_variants SET quantity = quantity + :amount WHERE id = :variantId`
+- After any variant update, sync the parent `products.stock` = SUM of all variant quantities
 
 ## Technical Details
 
 ### Files to Create
-- `src/hooks/useStoreTheme.ts` -- Fetches colors and applies CSS variables
-- `src/hooks/useFavicon.ts` -- Updates document favicon
-- `src/components/AnnouncementBar.tsx` -- Rotating announcement strip
+- `src/pages/admin/AdminInventoryPage.tsx` -- Complete inventory management page
 
 ### Files to Modify
-- `src/pages/admin/AdminSettingsPage.tsx` -- Complete restructure into 4 tabs
-- `src/pages/Index.tsx` -- Hero slider using Embla
-- `src/components/Footer.tsx` -- Copyright text from settings
-- `src/pages/ProductsPage.tsx` -- Dynamic products per page
-- `src/App.tsx` -- Add `useStoreTheme`, `useFavicon`, `AnnouncementBar`
+- `src/App.tsx` -- Add route `/admin/inventory`
+- `src/components/AdminLayout.tsx` -- Add "إدارة المخزون" nav item with `Package` or `Layers` icon, placed after "المنتجات"
 
-### No Database Migration Needed
-All new settings use the existing `settings` key-value table with upsert logic already in place.
+### Data Fetching
+- Fetch all products: `supabase.from('products').select('*').order('created_at', { ascending: false })`
+- Fetch all variants: `supabase.from('product_variants').select('*')` -- loaded once and grouped by `product_id` client-side
+- This avoids N+1 queries (one per product expansion)
 
-### Color Picker Implementation
-- Use native HTML `<input type="color">` alongside a text input for hex value
-- Validate hex format on save
-- Show live preview swatches
+### Variant Label Display
+The `option_values` JSONB in `product_variants` stores the combination (e.g., `{ "Color": "Red", "Size": "XL" }`). The variant label will be generated by joining the values: "Red / XL".
 
-### Hero Slider Storage
-- Images uploaded to existing `store` bucket
-- URLs stored as JSON array in `hero_slides` setting
-- Max 5 slides enforced in UI
+### Inline Editing UX
+1. Click "تعديل" (Edit) on a variant row
+2. Quantity and price cells become editable inputs
+3. Show Save (check icon) and Cancel (X icon) buttons
+4. On save: update the database, invalidate query cache, show success toast
+5. On cancel: revert to original values
+
+### Add Stock Dialog
+1. Click "إضافة مخزون" on a variant row
+2. Small inline input appears with a number field (default: 1)
+3. Confirm adds the amount atomically
+4. Toast shows: "تم إضافة X وحدة" (Added X units)
+
+### Column Visibility
+- Stored in `localStorage` key `inventory_column_prefs`
+- Default: all columns visible
+- Toggle via a popover with checkboxes for each column
+
+### Stock Status Calculation
+- Out of Stock: quantity = 0
+- Low Stock: quantity > 0 AND quantity <= 5
+- In Stock: quantity > 5
+- For variant products: status based on the total SUM of variant quantities
+
+### Mobile Responsive
+- On mobile, table switches to card layout (same pattern used in other admin pages)
+- Each card shows product image, name, total stock with status badge, and expand button for variants
 
