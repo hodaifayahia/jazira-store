@@ -1,229 +1,95 @@
 
 
-# Product Return & Exchange Management (RMA) -- Phase 1
+# Seed All Tables with Fake Test Data
 
 ## Overview
-Build the foundation of a Return/Exchange management system for the Algerian COD e-commerce platform. Phase 1 covers database schema, return settings configuration, return reasons management, and the admin return list/detail views with basic approve/reject workflow.
+Insert comprehensive fake data across all empty tables to populate the entire admin dashboard for testing. The data will include realistic Algerian names, phone numbers, and Arabic content.
 
-This is scoped as an incremental build. Future phases will add the customer-facing return portal, pickup scheduling, inspection workflow, store credit system, and analytics.
+## Data Insertion Order (respecting foreign keys)
 
-## Important Scope Decisions
-- **Single-tenant**: This project has no `stores` table. All `store_id` columns from the spec are omitted.
-- **No customer portal yet**: Phase 1 is admin-only. Customers will request returns via a public page in Phase 2.
-- **No carrier integration**: Pickup scheduling is manual (text fields) in Phase 1.
-- **No store credit system yet**: Deferred to Phase 3.
-- **No financial processing**: Refund amounts are recorded but no wallet debit in Phase 1.
-- **Photos stored in Supabase Storage**: Using the existing `products` bucket pattern, a new `returns` bucket will be created.
+Since RLS policies restrict inserts to admin users, and we don't have an admin session from the migration tool, we'll use a database migration with raw SQL to bypass RLS. The migration will insert data in the correct dependency order.
 
-## Database Migration
+## Seed Data Summary
 
-### Table 1: `return_settings` (single row, global config)
-```text
-id                    UUID PK (gen_random_uuid)
-return_window_days    INTEGER DEFAULT 7
-allow_refund          BOOLEAN DEFAULT true
-allow_exchange        BOOLEAN DEFAULT true
-allow_store_credit    BOOLEAN DEFAULT true
-auto_approve_returns  BOOLEAN DEFAULT false
-require_return_photos BOOLEAN DEFAULT true
-max_photos_per_return INTEGER DEFAULT 5
-return_policy_text    TEXT nullable
-is_returns_enabled    BOOLEAN DEFAULT true
-created_at            TIMESTAMPTZ DEFAULT now()
-updated_at            TIMESTAMPTZ DEFAULT now()
-```
-RLS: Admin-only ALL policy. Public SELECT policy (needed for customer portal later).
+### 1. Settings (store configuration)
+- Store name, logo URL, currency, announcements, categories, and other global settings (~15 rows)
 
-### Table 2: `return_reasons` (configurable list)
-```text
-id                UUID PK (gen_random_uuid)
-label_ar          TEXT NOT NULL
-fault_type        TEXT NOT NULL DEFAULT 'customer_fault'  -- 'merchant_fault' or 'customer_fault'
-requires_photos   BOOLEAN DEFAULT true
-is_active         BOOLEAN DEFAULT true
-position          INTEGER DEFAULT 0
-created_at        TIMESTAMPTZ DEFAULT now()
-```
-RLS: Admin ALL + public SELECT.
+### 2. Products (10 products)
+- Mix of clothing, electronics, accessories, and home goods
+- Arabic names and descriptions
+- Varying prices (500 - 15,000 DZD), stock levels, categories
+- Some with `has_variants = true`
 
-### Table 3: `return_requests`
-```text
-id                    UUID PK (gen_random_uuid)
-order_id              UUID NOT NULL (FK orders.id)
-return_number         TEXT NOT NULL UNIQUE
-customer_name         TEXT NOT NULL
-customer_phone        TEXT NOT NULL
-resolution_type       TEXT NOT NULL  -- 'refund', 'exchange', 'store_credit'
-status                TEXT DEFAULT 'requested'
-                      -- requested, approved, rejected, pickup_scheduled,
-                      -- in_transit, received, inspected, completed, cancelled, disputed
-reason_id             UUID (FK return_reasons.id)
-reason_notes          TEXT nullable
-merchant_notes        TEXT nullable
-rejection_reason      TEXT nullable
-total_refund_amount   NUMERIC DEFAULT 0
-return_shipping_cost  NUMERIC DEFAULT 0
-shipping_paid_by      TEXT DEFAULT 'customer'  -- 'merchant' or 'customer'
-net_refund_amount     NUMERIC DEFAULT 0
-refund_method         TEXT nullable  -- 'baridimob', 'ccp', 'cash', 'store_credit'
-refund_reference      TEXT nullable
-refunded_at           TIMESTAMPTZ nullable
-pickup_tracking_number TEXT nullable
-pickup_scheduled_at   TIMESTAMPTZ nullable
-item_received_at      TIMESTAMPTZ nullable
-requested_at          TIMESTAMPTZ DEFAULT now()
-approved_at           TIMESTAMPTZ nullable
-completed_at          TIMESTAMPTZ nullable
-created_at            TIMESTAMPTZ DEFAULT now()
-updated_at            TIMESTAMPTZ DEFAULT now()
-```
-RLS: Admin ALL + public INSERT (for future customer portal) + public SELECT.
+### 3. Product Variants (for 3 products with variants)
+- Size/color combinations with different prices and stock
+- ~12 variant rows
 
-### Table 4: `return_items`
-```text
-id                  UUID PK (gen_random_uuid)
-return_request_id   UUID NOT NULL (FK return_requests.id ON DELETE CASCADE)
-order_item_id       UUID NOT NULL (FK order_items.id)
-product_id          UUID NOT NULL (FK products.id)
-variant_id          UUID nullable (FK product_variants.id)
-product_name        TEXT NOT NULL
-variant_label       TEXT nullable
-quantity_ordered    INTEGER NOT NULL
-quantity_returned   INTEGER NOT NULL
-unit_price          NUMERIC NOT NULL
-item_total          NUMERIC NOT NULL
-item_condition      TEXT nullable  -- set during inspection
-restock_decision    TEXT nullable  -- 'restock', 'write_off'
-restocked           BOOLEAN DEFAULT false
-exchange_product_id UUID nullable (FK products.id)
-exchange_product_name TEXT nullable
-exchange_unit_price NUMERIC nullable
-price_difference    NUMERIC nullable
-created_at          TIMESTAMPTZ DEFAULT now()
-```
-RLS: Admin ALL + public SELECT.
+### 4. Product Costs (for all 10 products)
+- Realistic purchase costs (40-60% of selling price)
+- Packaging costs (30-100 DZD)
+- Some with storage and other costs
 
-### Table 5: `return_photos`
-```text
-id                UUID PK (gen_random_uuid)
-return_request_id UUID NOT NULL (FK return_requests.id ON DELETE CASCADE)
-return_item_id    UUID nullable (FK return_items.id)
-url               TEXT NOT NULL
-caption           TEXT nullable
-uploaded_by       TEXT DEFAULT 'customer'  -- 'customer' or 'merchant'
-created_at        TIMESTAMPTZ DEFAULT now()
-```
-RLS: Admin ALL + public INSERT + public SELECT.
+### 5. Coupons (3 coupons)
+- Percentage and fixed discount types
+- Active and expired examples
 
-### Table 6: `return_status_history`
-```text
-id                UUID PK (gen_random_uuid)
-return_request_id UUID NOT NULL (FK return_requests.id ON DELETE CASCADE)
-from_status       TEXT nullable
-to_status         TEXT NOT NULL
-changed_by        UUID nullable
-change_reason     TEXT nullable
-created_at        TIMESTAMPTZ DEFAULT now()
-```
-RLS: Admin ALL + public SELECT.
+### 6. Confirmers (3 confirmers)
+- Mix of per_order and monthly payment modes
+- Arabic names, Algerian phone numbers (05xx, 06xx, 07xx)
 
-### Storage Bucket
-- Create `returns` bucket (public) for return proof photos.
+### 7. Orders (25 orders)
+- Various statuses: جديد, مؤكد, قيد التوصيل, تم التوصيل, ملغي, مرتجع
+- Spread across different wilayas
+- Different delivery types (office/home)
+- Dates spread over the last 30 days
 
-### Database Function
-- `generate_return_number()`: Trigger on `return_requests` INSERT that generates `RET-YYYYMMDD-NNN` format.
+### 8. Order Items (40+ items across the 25 orders)
+- 1-3 items per order
+- Linked to real product IDs and prices
 
-## Admin UI
+### 9. Leads (8 leads)
+- Various statuses and sources
+- Algerian names and phone numbers
 
-### 1. Return Settings (new tab in AdminSettingsPage)
+### 10. Reviews (15 reviews)
+- Ratings 1-5, Arabic comments
+- Linked to products
 
-Add a 5th tab "الاسترجاع" (Returns) to the existing settings page with:
-- Return window days (number input)
-- Toggle switches: allow refund, allow exchange, allow store credit
-- Auto-approve toggle
-- Require photos toggle
-- Max photos per return (number input)
-- Return policy text (textarea)
-- Enable/disable returns master toggle
+### 11. Abandoned Orders (5 abandoned carts)
+- With cart_items JSON, customer info
 
-### 2. Return Reasons Manager (within settings tab)
+### 12. Return Requests (4 returns)
+- Against delivered orders
+- Various statuses: requested, approved, completed, rejected
+- Linked to return_reasons
 
-Below the settings form, a list of return reasons:
-- Add reason: label (Arabic), fault type (merchant/customer), requires photos
-- Edit/delete existing reasons
-- Reorder by position
-- Seed default reasons on first load:
-  - "منتج معيب / تالف" (merchant_fault)
-  - "منتج خاطئ" (merchant_fault)
-  - "لا يطابق الوصف" (merchant_fault)
-  - "مقاس خاطئ" (merchant_fault)
-  - "غير راضٍ عن المنتج" (customer_fault)
-  - "أخرى" (customer_fault)
+### 13. Return Items (linked to return requests)
+- Specific products being returned with quantities
 
-### 3. Admin Returns Page (`/admin/returns`)
+### 14. Return Status History (audit trail for returns)
+- Status transitions for each return request
 
-New page with:
+### 15. Product Offers (bundle deals for 2 products)
+- "Buy 2 get discount" type offers
 
-**KPI Cards:**
-- Total returns count
-- Pending review (status = 'requested')
-- In progress (approved through inspected)
-- Completed count
+## Technical Approach
 
-**Table:**
-| Return # | Order # | Customer | Reason | Type | Amount | Status | Date | Actions |
+A single SQL migration file that:
+1. Uses `DO $$ ... $$` block with variables for generated UUIDs
+2. Inserts in FK-dependency order
+3. The `order_number` trigger fires automatically (we pass empty string)
+4. The `return_number` trigger fires automatically
+5. Uses `gen_random_uuid()` inline for IDs, storing them in variables for FK references
+6. Dates spread across the last 30 days using `now() - interval 'X days'`
 
-**Filters:** status, resolution type, date range, search by return/order number or phone.
+## Files
+- One new database migration file (SQL) -- no code changes needed
 
-**Detail Dialog (or inline expand):**
-- Return info: items, quantities, reason, notes, photos gallery
-- Action buttons based on status:
-  - Requested: [Approve] [Reject] (reject requires reason text)
-  - Approved: [Mark as Received] + tracking number input
-  - Received: [Mark Completed] (simplified -- no inspection step in Phase 1)
-- Status history timeline at bottom
-- Financial summary: item total, shipping, net refund
-
-### 4. Create Return (Admin-initiated)
-
-A dialog/form where admin can create a return on behalf of a customer:
-- Select order (by order number or search)
-- Select items to return with quantities
-- Choose resolution type
-- Choose reason
-- Add notes
-- This creates the return_request + return_items records
-
-## Navigation
-
-Add to `AdminLayout.tsx` NAV_ITEMS:
-```text
-{ href: '/admin/returns', label: 'الاسترجاع', icon: RotateCcw }
-```
-Placed after "الطلبات" (Orders).
-
-## Files to Create
-- `src/pages/admin/AdminReturnsPage.tsx` -- Return list + detail + create return
-
-## Files to Modify
-- `src/App.tsx` -- Add `/admin/returns` route
-- `src/components/AdminLayout.tsx` -- Add nav item
-- `src/pages/admin/AdminSettingsPage.tsx` -- Add returns settings tab (5th tab)
-
-## Data Patterns
-- Same `useQuery`/`useMutation` pattern as existing admin pages
-- Return requests query joins with `return_reasons`, `return_items`, `orders`
-- Client-side search and filtering with `useMemo`
-- Status transitions are simple updates with status history logging
-
-## What Phase 1 Does NOT Include
-- Customer-facing return portal (Phase 2)
-- Pickup scheduling with carrier APIs (Phase 2)
-- Item inspection workflow with condition grading (Phase 3)
-- Store credit system (Phase 3)
-- Exchange order creation (Phase 3)
-- Inventory restock on return completion (Phase 3)
-- Return analytics dashboard (Phase 4)
-- Anti-fraud detection rules (Phase 4)
-- SMS/WhatsApp notifications (Phase 4)
-
+## What You'll See After Seeding
+- Products page populated with 10 products
+- Orders page with 25 orders in various statuses
+- Costs page showing margins for all products
+- Returns page with 4 return requests
+- Leads page with 8 leads
+- Abandoned orders page with 5 carts
+- Settings populated with store configuration
