@@ -650,6 +650,40 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [mainImageIndex, setMainImageIndex] = useState<number>(product?.main_image_index ?? 0);
   const [uploading, setUploading] = useState(false);
 
+  // New fields
+  const [oldPrice, setOldPrice] = useState(product?.old_price ? String(product.old_price) : '');
+  const [shortDescription, setShortDescription] = useState(product?.short_description || '');
+  const [isFreeShipping, setIsFreeShipping] = useState(product?.is_free_shipping ?? false);
+  const [slug, setSlug] = useState(product?.slug || '');
+
+  // Bundle offers
+  type Offer = { description: string; quantity: string; price: string };
+  const [offers, setOffers] = useState<Offer[]>([]);
+
+  // Load existing offers
+  const { data: existingOffers } = useQuery({
+    queryKey: ['product-offers', product?.id],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      const { data } = await supabase.from('product_offers').select('*').eq('product_id', product.id).order('position');
+      return data || [];
+    },
+    enabled: !!product?.id,
+  });
+
+  // Sync existing offers into state
+  useMemo(() => {
+    if (existingOffers && existingOffers.length > 0 && offers.length === 0) {
+      setOffers(existingOffers.map((o: any) => ({ description: o.description, quantity: String(o.quantity), price: String(o.price) })));
+    }
+  }, [existingOffers]);
+
+  const addOffer = () => setOffers(prev => [...prev, { description: '', quantity: '2', price: '' }]);
+  const removeOffer = (idx: number) => setOffers(prev => prev.filter((_, i) => i !== idx));
+  const updateOffer = (idx: number, field: keyof Offer, value: string) => {
+    setOffers(prev => prev.map((o, i) => i === idx ? { ...o, [field]: value } : o));
+  };
+
   // Variation options (abstract templates)
   const { data: variationOptions } = useQuery({
     queryKey: ['variation-options'],
@@ -789,6 +823,10 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         images,
         main_image_index: mainImageIndex,
         sku: sku.trim() || null,
+        old_price: oldPrice ? Number(oldPrice) : null,
+        short_description: shortDescription.trim() || null,
+        is_free_shipping: isFreeShipping,
+        slug: slug.trim() || null,
       };
 
       let productId = product?.id;
@@ -817,6 +855,21 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             image_url: variationImages[o.id] || null,
           }));
           const { error } = await supabase.from('product_variations').insert(inserts);
+          if (error) throw error;
+        }
+
+        // Sync bundle offers
+        await supabase.from('product_offers').delete().eq('product_id', productId);
+        const validOffers = offers.filter(o => o.description.trim() && Number(o.quantity) > 0 && Number(o.price) > 0);
+        if (validOffers.length > 0) {
+          const offerInserts = validOffers.map((o, i) => ({
+            product_id: productId!,
+            description: o.description.trim(),
+            quantity: Number(o.quantity),
+            price: Number(o.price),
+            position: i,
+          }));
+          const { error } = await supabase.from('product_offers').insert(offerInserts);
           if (error) throw error;
         }
       }
@@ -939,7 +992,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Package className="w-4 h-4 text-primary" />
           </div>
-          بيانات المنتج
+          البيانات الأساسية
         </h3>
 
         <div className="space-y-4">
@@ -954,18 +1007,15 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             </div>
           </div>
           <div>
-            <Label className="font-cairo">الوصف</Label>
-            <Textarea value={description} onChange={e => setDescription(e.target.value)} className="font-cairo mt-1.5 min-h-[100px]" placeholder="أضف وصفاً تفصيلياً للمنتج..." />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="font-cairo">السعر (دج) <span className="text-destructive">*</span></Label>
-              <Input type="number" value={price} onChange={e => setPrice(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
-            </div>
-            <div>
-              <Label className="font-cairo">المخزون</Label>
-              <Input type="number" value={stock} onChange={e => setStock(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
-            </div>
+            <Label className="font-cairo">رابط المنتج (Slug)</Label>
+            <Input
+              value={slug}
+              onChange={e => setSlug(e.target.value.replace(/[^a-zA-Z0-9-]/g, ''))}
+              className="font-roboto mt-1.5 h-11 text-left"
+              dir="ltr"
+              placeholder="product-name"
+            />
+            <p className="font-cairo text-xs text-muted-foreground mt-1">/product/{slug || 'your-slug'} — حروف لاتينية وأرقام وشرطات فقط</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -985,6 +1035,146 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Description Section */}
+      <div className="bg-card border rounded-xl p-5 space-y-4">
+        <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Tag className="w-4 h-4 text-primary" />
+          </div>
+          الوصف
+        </h3>
+        <div className="space-y-4">
+          <div>
+            <Label className="font-cairo">وصف قصير</Label>
+            <Input
+              value={shortDescription}
+              onChange={e => setShortDescription(e.target.value.slice(0, 200))}
+              className="font-cairo mt-1.5 h-11"
+              placeholder="وصف مختصر يظهر تحت اسم المنتج..."
+            />
+            <p className="font-cairo text-xs text-muted-foreground mt-1">{shortDescription.length}/200</p>
+          </div>
+          <div>
+            <Label className="font-cairo">وصف تفصيلي</Label>
+            <Textarea value={description} onChange={e => setDescription(e.target.value)} className="font-cairo mt-1.5 min-h-[100px]" placeholder="أضف وصفاً تفصيلياً للمنتج..." />
+          </div>
+        </div>
+      </div>
+
+      {/* Pricing & Stock Section */}
+      <div className="bg-card border rounded-xl p-5 space-y-4">
+        <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <DollarSign className="w-4 h-4 text-primary" />
+          </div>
+          التسعير والمخزون
+        </h3>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="font-cairo">السعر الحالي (دج) <span className="text-destructive">*</span></Label>
+              <Input type="number" value={price} onChange={e => setPrice(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
+            </div>
+            <div>
+              <Label className="font-cairo">السعر القديم (دج)</Label>
+              <Input type="number" value={oldPrice} onChange={e => setOldPrice(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="يظهر كسعر مشطوب" />
+              {oldPrice && price && Number(oldPrice) <= Number(price) && (
+                <p className="font-cairo text-xs text-destructive mt-1">⚠ السعر القديم يجب أن يكون أكبر من السعر الحالي</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="font-cairo">المخزون</Label>
+              <Input type="number" value={stock} onChange={e => setStock(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
+            </div>
+            <div className="flex items-end pb-1">
+              <div className="flex items-center gap-2">
+                <Switch checked={isFreeShipping} onCheckedChange={setIsFreeShipping} />
+                <Label className="font-cairo">توصيل مجاني</Label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bundle Offers Section */}
+      <div className="bg-card border rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Package className="w-4 h-4 text-primary" />
+            </div>
+            عروض الحزم
+          </h3>
+          <Button variant="outline" size="sm" onClick={addOffer} className="font-cairo gap-1.5">
+            <Plus className="w-4 h-4" /> إضافة عرض
+          </Button>
+        </div>
+
+        {offers.length === 0 ? (
+          <div className="border-2 border-dashed border-muted-foreground/20 rounded-xl py-8 text-center">
+            <p className="font-cairo text-muted-foreground text-sm">لا توجد عروض حزم — أضف عرضاً لتقديم خصومات على الكميات</p>
+          </div>
+        ) : (
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">وصف العرض</th>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-24">الكمية</th>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-32">السعر (دج)</th>
+                  <th className="p-2.5 w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {offers.map((offer, idx) => {
+                  const bundleWarning = price && offer.price && offer.quantity && Number(offer.price) >= Number(offer.quantity) * Number(price);
+                  return (
+                    <tr key={idx} className="hover:bg-muted/20">
+                      <td className="p-2.5">
+                        <Input
+                          value={offer.description}
+                          onChange={e => updateOffer(idx, 'description', e.target.value)}
+                          className="font-cairo h-8"
+                          placeholder="مثال: قميصان"
+                        />
+                      </td>
+                      <td className="p-2.5">
+                        <Input
+                          type="number"
+                          value={offer.quantity}
+                          onChange={e => updateOffer(idx, 'quantity', e.target.value)}
+                          className="font-roboto h-8"
+                          min="1"
+                        />
+                      </td>
+                      <td className="p-2.5">
+                        <Input
+                          type="number"
+                          value={offer.price}
+                          onChange={e => updateOffer(idx, 'price', e.target.value)}
+                          className="font-roboto h-8"
+                          placeholder="0"
+                        />
+                        {bundleWarning && (
+                          <p className="font-cairo text-xs text-destructive mt-0.5">⚠ السعر أعلى من المجموع</p>
+                        )}
+                      </td>
+                      <td className="p-2.5">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/60 hover:text-destructive" onClick={() => removeOffer(idx)}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* ─── Variations Picker (WooCommerce-style) ─── */}
