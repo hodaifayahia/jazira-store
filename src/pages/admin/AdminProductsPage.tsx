@@ -716,6 +716,8 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [optionGroups, setOptionGroups] = useState<OptionGroupState[]>([]);
   const [variantRows, setVariantRows] = useState<VariantRow[]>([]);
   const [newValueInputs, setNewValueInputs] = useState<Record<number, string>>({});
+  const [variantImagePicker, setVariantImagePicker] = useState<number | null>(null); // which variant row is picking an image
+  const variantImageInputRef = useRef<HTMLInputElement>(null);
 
   // Load existing option groups, values, and variants
   const { data: existingOptionGroups } = useQuery({
@@ -887,6 +889,32 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
       ...r,
       sku: `${baseSku}-${Object.values(r.optionValues).join('-')}`.slice(0, 100),
     })));
+  };
+
+  // Variant image upload
+  const handleVariantImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || variantImagePicker === null) return;
+    if (file.size > 5 * 1024 * 1024) { toast({ title: 'حجم الصورة كبير جداً (الحد الأقصى 5MB)', variant: 'destructive' }); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('products').upload(path, file);
+      if (error) throw error;
+      const { data } = supabase.storage.from('products').getPublicUrl(path);
+      const newUrl = data.publicUrl;
+      // Also add to product images gallery
+      setImages(prev => [...prev, newUrl]);
+      updateVariantRow(variantImagePicker, 'imageUrl', newUrl);
+      setVariantImagePicker(null);
+      toast({ title: 'تم رفع صورة المتغير ✅' });
+    } catch {
+      toast({ title: 'فشل رفع الصورة', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   // ─── Save ───
@@ -1381,7 +1409,8 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                             type="color"
                             value={val.colorHex || '#000000'}
                             onChange={e => updateValueColor(gIdx, vIdx, e.target.value)}
-                            className="w-5 h-5 rounded border-0 cursor-pointer p-0"
+                            className="w-6 h-6 rounded-full border border-border cursor-pointer p-0 appearance-none"
+                            style={{ backgroundColor: val.colorHex || '#000000' }}
                           />
                         )}
                         <span className="font-cairo text-sm">{val.label}</span>
@@ -1390,20 +1419,54 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                         </button>
                       </div>
                     ))}
-                    <div className="flex items-center gap-1">
-                      <Input
-                        value={newValueInputs[gIdx] || ''}
-                        onChange={e => setNewValueInputs(prev => ({ ...prev, [gIdx]: e.target.value }))}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addValueToGroup(gIdx, newValueInputs[gIdx] || '');
-                          }
-                        }}
-                        placeholder="أضف قيمة + Enter"
-                        className="font-cairo h-8 w-36"
-                      />
-                    </div>
+                    {group.displayType === 'color_swatch' ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="color"
+                          value={newValueInputs[`color_${gIdx}`] || '#000000'}
+                          onChange={e => setNewValueInputs(prev => ({ ...prev, [`color_${gIdx}`]: e.target.value }))}
+                          className="w-8 h-8 rounded border border-border cursor-pointer p-0"
+                        />
+                        <Input
+                          value={newValueInputs[gIdx] || ''}
+                          onChange={e => setNewValueInputs(prev => ({ ...prev, [gIdx]: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const label = (newValueInputs[gIdx] || '').trim();
+                              if (!label) return;
+                              const colorHex = newValueInputs[`color_${gIdx}`] || '#000000';
+                              const group = optionGroups[gIdx];
+                              if (group.values.length >= 20) { toast({ title: 'الحد الأقصى 20 قيمة', variant: 'destructive' }); return; }
+                              if (group.values.some(v => v.label === label)) { toast({ title: 'هذه القيمة موجودة', variant: 'destructive' }); return; }
+                              const newGroups = optionGroups.map((g, i) =>
+                                i === gIdx ? { ...g, values: [...g.values, { label, colorHex }] } : g
+                              );
+                              setOptionGroups(newGroups);
+                              regenerateVariants(newGroups);
+                              setNewValueInputs(prev => ({ ...prev, [gIdx]: '', [`color_${gIdx}`]: '#000000' }));
+                            }
+                          }}
+                          placeholder="اسم اللون + Enter"
+                          className="font-cairo h-8 w-32"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={newValueInputs[gIdx] || ''}
+                          onChange={e => setNewValueInputs(prev => ({ ...prev, [gIdx]: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addValueToGroup(gIdx, newValueInputs[gIdx] || '');
+                            }
+                          }}
+                          placeholder="أضف قيمة + Enter"
+                          className="font-cairo h-8 w-36"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1432,6 +1495,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
               <thead className="bg-muted/50">
                 <tr>
                   <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">المتغير</th>
+                  <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-16">الصورة</th>
                   <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-28">SKU</th>
                   <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-28">السعر (دج)</th>
                   <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground w-24">المخزون</th>
@@ -1443,6 +1507,25 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                   <tr key={idx} className={`hover:bg-muted/20 ${!row.isActive ? 'opacity-50' : ''}`}>
                     <td className="p-2.5">
                       <span className="font-cairo font-medium text-sm">{variantComboLabel(row.optionValues)}</span>
+                    </td>
+                    <td className="p-2.5">
+                      <div className="relative">
+                        {row.imageUrl ? (
+                          <div className="w-10 h-10 rounded border border-border overflow-hidden cursor-pointer group relative" onClick={() => setVariantImagePicker(idx)}>
+                            <img src={row.imageUrl} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <Pencil className="w-3 h-3 text-background" />
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setVariantImagePicker(idx)}
+                            className="w-10 h-10 rounded border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors"
+                          >
+                            <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="p-2.5">
                       <Input
@@ -1480,6 +1563,73 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
               </tbody>
             </table>
           </div>
+
+          {/* Variant Image Picker Dialog */}
+          <Dialog open={variantImagePicker !== null} onOpenChange={open => { if (!open) setVariantImagePicker(null); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-cairo text-center">اختر صورة للمتغير</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {images.length > 0 && (
+                  <div>
+                    <Label className="font-cairo text-sm">اختر من صور المنتج الحالية</Label>
+                    <div className="grid grid-cols-4 gap-2 mt-2">
+                      {images.map((url, imgIdx) => (
+                        <button
+                          key={imgIdx}
+                          onClick={() => {
+                            if (variantImagePicker !== null) {
+                              updateVariantRow(variantImagePicker, 'imageUrl', url);
+                              setVariantImagePicker(null);
+                            }
+                          }}
+                          className={`aspect-square rounded-lg border-2 overflow-hidden transition-all hover:border-primary ${
+                            variantImagePicker !== null && variantRows[variantImagePicker]?.imageUrl === url
+                              ? 'border-primary ring-2 ring-primary/30'
+                              : 'border-border'
+                          }`}
+                        >
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="border-t pt-3">
+                  <input
+                    ref={variantImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleVariantImageUpload}
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full font-cairo gap-2"
+                    onClick={() => variantImageInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {uploading ? 'جاري الرفع...' : 'رفع صورة جديدة'}
+                  </Button>
+                </div>
+                {variantImagePicker !== null && variantRows[variantImagePicker]?.imageUrl && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full font-cairo text-destructive hover:text-destructive"
+                    onClick={() => {
+                      updateVariantRow(variantImagePicker, 'imageUrl', '');
+                      setVariantImagePicker(null);
+                    }}
+                  >
+                    <X className="w-4 h-4 ml-1" /> إزالة الصورة
+                  </Button>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
