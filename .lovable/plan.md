@@ -1,78 +1,107 @@
 
-
-# Multi-Language Support for Admin Dashboard (Arabic, French, English)
+# Apply Translations to Remaining Admin Pages
 
 ## Overview
-Add a language switcher to the admin dashboard that supports Arabic, French, and English. All hardcoded Arabic text across 15+ admin pages and the layout will be replaced with translation keys.
+Replace all hardcoded Arabic text in the 10 remaining admin pages with `t()` translation calls from the existing `useTranslation` hook. The translation keys are already defined in the locale files (ar.ts, fr.ts, en.ts).
 
-## Approach
+## Pages to Update (10 files)
 
-### 1. Create i18n Infrastructure
-- Create a `LanguageContext` with React Context + localStorage persistence
-- Create translation files for all three languages (ar, fr, en)
-- Create a `useTranslation` hook that returns the `t()` function
-- Arabic and French remain RTL-aware (Arabic = RTL, French/English = LTR)
+### 1. AdminProductsPage.tsx (1646 lines)
+- Import `useTranslation` hook
+- Replace ~50+ hardcoded strings: page title, KPI labels, tab names, search placeholder, filter options, bulk action labels, toast messages, dialog titles, form labels
+- Status filter labels ("كل الحالات", "نشط", "معطّل")
+- CSV export/import messages
+- Product form labels (handled inside `ProductForm` sub-component)
 
-### 2. Translation Files Structure
+### 2. AdminOrdersPage.tsx (495 lines)
+- Import `useTranslation`
+- Replace table headers, filter labels, status names, payment method labels
+- Advanced filter section labels
+- Bulk action bar text
+- Order detail dialog labels
+- Toast messages
 
-```text
-src/
-  i18n/
-    index.ts          -- LanguageProvider, useTranslation hook
-    locales/
-      ar.ts           -- Arabic translations (current text)
-      fr.ts           -- French translations
-      en.ts           -- English translations
-```
+### 3. AdminSettingsPage.tsx (863 lines)
+- Import `useTranslation`
+- Replace tab labels, section headers, form labels
+- Store identity, payment, telegram, returns, security tab content
+- Upload buttons, color picker labels
+- Hero slides section
+- Admin user management labels
+- Password change labels
 
-Each file exports a flat object with ~300+ keys covering:
-- **Layout**: sidebar nav labels, notifications, logout, search, user menu
-- **Dashboard**: stat cards, chart labels, alerts, table headers
-- **Products**: form labels, tabs, KPI labels, bulk actions, CSV import/export
-- **Orders**: statuses, filters, table headers, advanced filters, bulk actions
-- **Categories**: form fields, icon labels
-- **Wilayas**: table headers, form fields, stats
-- **Coupons**: form fields, types
-- **Leads**: statuses, sources, form fields
-- **Confirmers**: form fields, payment modes
-- **Abandoned**: statuses, recovery actions
-- **Returns**: statuses, form fields, history
-- **Costs**: cost types, profit labels
-- **Inventory**: stock labels
-- **Variations**: option groups, values
-- **Settings**: all tab labels, form fields, sections
-- **Login**: form labels, buttons
-- **Common**: save, delete, cancel, edit, search, loading, etc.
+### 4. AdminLeadsPage.tsx (278 lines)
+- Import `useTranslation`
+- Replace page header, search placeholder, table headers
+- Status and source option labels (translate display labels, keep DB values in Arabic)
+- Dialog titles and form labels
+- Toast messages, empty state text
 
-### 3. Language Switcher
-- Add a language toggle button in the admin header (AdminLayout.tsx)
-- Shows current language flag/code (AR/FR/EN)
-- Dropdown to switch between languages
-- Selection saved to localStorage
+### 5. AdminConfirmersPage.tsx (738 lines)
+- Import `useTranslation`
+- Replace tab labels, form labels, table headers
+- Payment mode labels, type labels
+- Settings tab labels
+- Toast messages, dialog titles
 
-### 4. RTL/LTR Direction Handling
-- Arabic: `dir="rtl"` (current behavior)
-- French and English: `dir="ltr"`
-- The `LanguageProvider` will set `document.documentElement.dir` and `document.documentElement.lang` dynamically
-- Font: keep Cairo for Arabic, use system font or Cairo for French/English
+### 6. AdminAbandonedPage.tsx (338 lines)
+- Import `useTranslation`
+- Replace KPI card labels, status labels
+- Search placeholder, filter options
+- Action buttons (call, convert, note, delete)
+- Dialog titles and messages
+- Toast messages
 
-### 5. Files to Modify
+### 7. AdminReturnsPage.tsx (726 lines)
+- Import `useTranslation`
+- Replace KPI labels, status labels, resolution type labels
+- Table headers, search placeholder
+- Detail dialog content
+- Action buttons (approve, reject, mark received, complete)
+- Status history labels
 
-**New files (4):**
-- `src/i18n/index.ts` -- Context, Provider, hook
-- `src/i18n/locales/ar.ts` -- Arabic translations
-- `src/i18n/locales/fr.ts` -- French translations  
-- `src/i18n/locales/en.ts` -- English translations
+### 8. AdminCostsPage.tsx (345 lines)
+- Import `useTranslation`
+- Replace page title, KPI labels, table headers
+- Cost edit dialog labels
+- Profit preview labels
+- Toast messages
 
-**Modified files (17):**
-- `src/components/AdminLayout.tsx` -- use translations + add language switcher
-- `src/pages/admin/AdminLoginPage.tsx`
-- `src/pages/admin/AdminDashboardPage.tsx`
+### 9. AdminInventoryPage.tsx (583 lines)
+- Import `useTranslation`
+- Replace KPI labels, filter tab labels
+- Column labels, status labels
+- Search placeholder, display settings
+- Variant detail labels
+- Pagination labels
+
+### 10. AdminVariationsPage.tsx (304 lines)
+- Import `useTranslation`
+- Replace page title, search placeholder
+- Form labels (type, value, color code)
+- Status labels (active/inactive)
+- Dialog titles, toast messages
+- Empty state text
+
+## Implementation Pattern
+Each page follows the same pattern:
+1. Add `import { useTranslation } from '@/i18n';`
+2. Add `const { t } = useTranslation();` at top of component
+3. Replace each hardcoded Arabic string with `t('section.key')`
+4. For dynamic strings with counts, use `.replace('{n}', String(value))`
+
+## Technical Notes
+- All translation keys already exist in ar.ts, fr.ts, and en.ts
+- Database values (order statuses, lead statuses) remain in Arabic -- only display labels get translated
+- The `useTranslation` hook is already set up and working in the previously updated pages
+- Direction (RTL/LTR) is handled globally by the LanguageProvider
+- AdminUserManagement component (used inside Settings) also needs the `t` prop or its own `useTranslation` call
+- Search icon positioning uses `right-3` for RTL -- may need conditional `left-3`/`right-3` based on `dir`, but this can be handled as a follow-up refinement
+
+## Files Changed
 - `src/pages/admin/AdminProductsPage.tsx`
 - `src/pages/admin/AdminOrdersPage.tsx`
-- `src/pages/admin/AdminCategoriesPage.tsx`
-- `src/pages/admin/AdminWilayasPage.tsx`
-- `src/pages/admin/AdminCouponsPage.tsx`
+- `src/pages/admin/AdminSettingsPage.tsx`
 - `src/pages/admin/AdminLeadsPage.tsx`
 - `src/pages/admin/AdminConfirmersPage.tsx`
 - `src/pages/admin/AdminAbandonedPage.tsx`
@@ -80,36 +109,4 @@ Each file exports a flat object with ~300+ keys covering:
 - `src/pages/admin/AdminCostsPage.tsx`
 - `src/pages/admin/AdminInventoryPage.tsx`
 - `src/pages/admin/AdminVariationsPage.tsx`
-- `src/pages/admin/AdminSettingsPage.tsx`
-- `src/App.tsx` -- wrap admin routes with LanguageProvider
-
-### 6. Order Status Translations
-Order statuses stored in the database are in Arabic. The display will be translated but the database values remain Arabic. A mapping will handle this:
-- "جديد" -> "New" / "Nouveau"
-- "قيد المعالجة" -> "Processing" / "En cours"
-- "تم الشحن" -> "Shipped" / "Expedie"
-- "تم التسليم" -> "Delivered" / "Livre"
-- "ملغي" -> "Cancelled" / "Annule"
-
-## Technical Details
-
-### Translation Hook Usage
-```typescript
-const { t, language, setLanguage, dir } = useTranslation();
-// t('sidebar.dashboard') -> "Dashboard" / "Tableau de bord" / "لوحة القيادة"
-```
-
-### Language Switcher Component
-A small dropdown in the header bar showing flags/codes: 🇩🇿 AR | 🇫🇷 FR | 🇬🇧 EN
-
-### Direction Switching
-When language changes:
-- Set `document.documentElement.dir` to "rtl" or "ltr"
-- Set `document.documentElement.lang` to "ar", "fr", or "en"
-- Tailwind's RTL classes (`rtl:` prefix) can be used where needed, but since the current layout is RTL-first, we'll swap CSS logical properties where needed (e.g., sidebar position, margins, text alignment)
-
-### Sidebar Position
-- Arabic: sidebar on the right (current)
-- French/English: sidebar on the left
-- This requires conditional classes based on language direction
-
+- `src/components/admin/AdminUserManagement.tsx` (minor -- add useTranslation)
