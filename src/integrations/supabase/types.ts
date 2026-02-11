@@ -243,6 +243,44 @@ export type Database = {
           },
         ]
       }
+      product_offers: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          position: number | null
+          price: number
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          position?: number | null
+          price: number
+          product_id: string
+          quantity: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          position?: number | null
+          price?: number
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variations: {
         Row: {
           created_at: string | null
@@ -295,11 +333,15 @@ export type Database = {
           id: string
           images: string[] | null
           is_active: boolean | null
+          is_free_shipping: boolean | null
           main_image_index: number | null
           name: string
+          old_price: number | null
           price: number
           shipping_price: number | null
+          short_description: string | null
           sku: string | null
+          slug: string | null
           stock: number | null
         }
         Insert: {
@@ -309,11 +351,15 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_active?: boolean | null
+          is_free_shipping?: boolean | null
           main_image_index?: number | null
           name: string
+          old_price?: number | null
           price: number
           shipping_price?: number | null
+          short_description?: string | null
           sku?: string | null
+          slug?: string | null
           stock?: number | null
         }
         Update: {
@@ -323,11 +369,15 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_active?: boolean | null
+          is_free_shipping?: boolean | null
           main_image_index?: number | null
           name?: string
+          old_price?: number | null
           price?: number
           shipping_price?: number | null
+          short_description?: string | null
           sku?: string | null
+          slug?: string | null
           stock?: number | null
         }
         Relationships: []
