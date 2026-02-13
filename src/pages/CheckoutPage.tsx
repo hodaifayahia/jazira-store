@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Copy, Upload, CheckCircle, LogIn, Truck, Building2, Home, X } from 'lucide-react';
+import { parseFormConfig, type CheckoutFormConfig } from '@/components/admin/FormSettingsTab';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
@@ -172,6 +173,7 @@ export default function CheckoutPage() {
   });
 
   const selectedWilaya = wilayas?.find(w => w.id === wilayaId);
+  const formConfig = parseFormConfig(settings?.checkout_form_config);
   const wilayaBaseRate = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
   const wilayaHomeRate = selectedWilaya ? Number(selectedWilaya.shipping_price_home) : 0;
   const shippingCost = productShippingMap
@@ -222,11 +224,11 @@ export default function CheckoutPage() {
 
   const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};
-    if (!name.trim()) newErrors.name = 'الاسم مطلوب';
+    if (formConfig.name?.visible !== false && formConfig.name?.required !== false && !name.trim()) newErrors.name = 'الاسم مطلوب';
     if (!phone.trim() || !validatePhone(phone)) newErrors.phone = 'رقم الهاتف يجب أن يبدأ بـ 05/06/07 ويتكون من 10 أرقام';
-    if (!wilayaId) newErrors.wilaya = 'يرجى اختيار الولاية';
+    if (formConfig.wilaya?.visible !== false && formConfig.wilaya?.required !== false && !wilayaId) newErrors.wilaya = 'يرجى اختيار الولاية';
     if (!paymentMethod) newErrors.payment = 'يرجى اختيار طريقة الدفع';
-    if (!deliveryType && wilayaId) newErrors.deliveryType = 'يرجى اختيار نوع التوصيل';
+    if (formConfig.delivery_type?.visible !== false && formConfig.delivery_type?.required !== false && !deliveryType && wilayaId) newErrors.deliveryType = 'يرجى اختيار نوع التوصيل';
     if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
       toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة بشكل صحيح', variant: 'destructive' });
@@ -325,35 +327,39 @@ export default function CheckoutPage() {
           {/* Customer Info */}
           <div className="bg-card border rounded-lg p-6 space-y-4">
             <h2 className="font-cairo font-bold text-xl">معلومات العميل</h2>
-            <div>
-              <Label className="font-cairo">الاسم الكامل *</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} onBlur={handleBlurName} placeholder="أدخل اسمك الكامل" className={`font-cairo mt-1 ${errors.name ? 'border-destructive' : ''}`} />
-              {errors.name && <p className="text-destructive text-xs font-cairo mt-1">{errors.name}</p>}
-            </div>
+            {formConfig.name?.visible !== false && (
+              <div>
+                <Label className="font-cairo">الاسم الكامل {formConfig.name?.required !== false ? '*' : ''}</Label>
+                <Input value={name} onChange={e => setName(e.target.value)} onBlur={handleBlurName} placeholder="أدخل اسمك الكامل" className={`font-cairo mt-1 ${errors.name ? 'border-destructive' : ''}`} />
+                {errors.name && <p className="text-destructive text-xs font-cairo mt-1">{errors.name}</p>}
+              </div>
+            )}
             <div>
               <Label className="font-cairo">رقم الهاتف *</Label>
               <Input value={phone} onChange={e => handlePhoneChange(e.target.value)} placeholder="05/06/07XXXXXXXX" className={`font-roboto mt-1 ${errors.phone ? 'border-destructive' : ''}`} dir="ltr" />
               {errors.phone && <p className="text-destructive text-xs font-cairo mt-1">{errors.phone}</p>}
             </div>
-            <div>
-              <Label className="font-cairo">الولاية *</Label>
-              <Select value={wilayaId} onValueChange={handleWilayaChange}>
-                <SelectTrigger className={`font-cairo mt-1 ${errors.wilaya ? 'border-destructive' : ''}`}><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
-                <SelectContent>
-                  {wilayas?.map(w => (
-                    <SelectItem key={w.id} value={w.id} className="font-cairo">
-                      {w.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.wilaya && <p className="text-destructive text-xs font-cairo mt-1">{errors.wilaya}</p>}
-            </div>
+            {formConfig.wilaya?.visible !== false && (
+              <div>
+                <Label className="font-cairo">الولاية {formConfig.wilaya?.required !== false ? '*' : ''}</Label>
+                <Select value={wilayaId} onValueChange={handleWilayaChange}>
+                  <SelectTrigger className={`font-cairo mt-1 ${errors.wilaya ? 'border-destructive' : ''}`}><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                  <SelectContent>
+                    {wilayas?.map(w => (
+                      <SelectItem key={w.id} value={w.id} className="font-cairo">
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.wilaya && <p className="text-destructive text-xs font-cairo mt-1">{errors.wilaya}</p>}
+              </div>
+            )}
 
             {/* Baladiya */}
-            {wilayaId && baladiyat && baladiyat.length > 0 && (
+            {formConfig.baladiya?.visible !== false && wilayaId && baladiyat && baladiyat.length > 0 && (
               <div>
-                <Label className="font-cairo">البلدية</Label>
+                <Label className="font-cairo">البلدية {formConfig.baladiya?.required ? '*' : ''}</Label>
                 <Select value={baladiyaName} onValueChange={setBaladiyaName}>
                   <SelectTrigger className="font-cairo mt-1"><SelectValue placeholder="اختر البلدية" /></SelectTrigger>
                   <SelectContent>
@@ -366,9 +372,9 @@ export default function CheckoutPage() {
             )}
 
             {/* Delivery Type */}
-            {wilayaId && selectedWilaya && (
+            {formConfig.delivery_type?.visible !== false && wilayaId && selectedWilaya && (
               <div>
-                <Label className="font-cairo">نوع التوصيل *</Label>
+                <Label className="font-cairo">نوع التوصيل {formConfig.delivery_type?.required !== false ? '*' : ''}</Label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
                   <button
                     type="button"
@@ -393,22 +399,26 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            <div>
-              <Label className="font-cairo">العنوان التفصيلي</Label>
-              <Textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="اختياري" className="font-cairo mt-1" />
-            </div>
+            {formConfig.address?.visible !== false && (
+              <div>
+                <Label className="font-cairo">العنوان التفصيلي {formConfig.address?.required ? '*' : ''}</Label>
+                <Textarea value={address} onChange={e => setAddress(e.target.value)} placeholder={formConfig.address?.required ? 'أدخل عنوانك' : 'اختياري'} className="font-cairo mt-1" />
+              </div>
+            )}
           </div>
 
           {/* Coupon */}
-          <div className="bg-card border rounded-lg p-6">
-            <h2 className="font-cairo font-bold text-xl mb-4">كود الخصم</h2>
-            <div className="flex gap-2">
-              <Input value={couponCode} onChange={e => setCouponCode(e.target.value)} placeholder="أدخل كود الخصم" className="font-cairo" disabled={couponApplied} />
-              <Button onClick={applyCoupon} disabled={couponApplied} variant="outline" className="font-cairo shrink-0">
-                {couponApplied ? <><CheckCircle className="w-4 h-4 ml-1" /> تم</> : 'تطبيق'}
-              </Button>
+          {formConfig.coupon?.visible !== false && (
+            <div className="bg-card border rounded-lg p-6">
+              <h2 className="font-cairo font-bold text-xl mb-4">كود الخصم</h2>
+              <div className="flex gap-2">
+                <Input value={couponCode} onChange={e => setCouponCode(e.target.value)} placeholder="أدخل كود الخصم" className="font-cairo" disabled={couponApplied} />
+                <Button onClick={applyCoupon} disabled={couponApplied} variant="outline" className="font-cairo shrink-0">
+                  {couponApplied ? <><CheckCircle className="w-4 h-4 ml-1" /> تم</> : 'تطبيق'}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Payment */}
           <div className="bg-card border rounded-lg p-6 space-y-4">
