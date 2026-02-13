@@ -661,118 +661,228 @@ img{max-width:100%}
   const renderOrderForm = () => {
     if (!selectedProduct || !content) return null;
 
+    const trustLabels = {
+      securePayment: selectedLang === 'ar' ? 'دفع آمن' : selectedLang === 'fr' ? 'Paiement sécurisé' : 'Secure Payment',
+      fastDelivery: selectedLang === 'ar' ? 'توصيل سريع' : selectedLang === 'fr' ? 'Livraison rapide' : 'Fast Delivery',
+      guaranteed: selectedLang === 'ar' ? 'جودة مضمونة' : selectedLang === 'fr' ? 'Qualité garantie' : 'Guaranteed',
+      freeReturns: selectedLang === 'ar' ? 'إرجاع مجاني' : selectedLang === 'fr' ? 'Retour gratuit' : 'Free Returns',
+    };
+
     return (
       <div id="order-form" style={{ padding: '4rem 2rem', background: 'linear-gradient(135deg,#0f172a,#1e293b)', color: '#fff', borderRadius: '0 0 1rem 1rem' }} dir={selectedLang === 'ar' ? 'rtl' : 'ltr'}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>📦 {fl.orderNow}</h2>
-          <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '2rem' }}>{fl.subtitle}</p>
-
-          {/* Price */}
-          <div style={{ textAlign: 'center', marginBottom: '2rem', padding: '1.25rem', background: 'rgba(249,115,22,0.1)', borderRadius: '1rem', border: '1px solid rgba(249,115,22,0.2)' }}>
-            <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{selectedProduct.name}</span>
-            <div style={{ marginTop: '0.5rem' }}>
-              {selectedProduct.old_price && (
-                <span style={{ fontSize: '1.1rem', color: '#6b7280', textDecoration: 'line-through', marginRight: '0.75rem' }}>{selectedProduct.old_price} DA</span>
-              )}
-              <span style={{ fontSize: '2rem', fontWeight: 900, color: '#f97316' }}>{displayPrice} DA</span>
-            </div>
-          </div>
-
-          {orderSuccess ? (
-            <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(34,197,94,0.1)', borderRadius: '1rem', border: '1px solid rgba(34,197,94,0.3)' }}>
-              <CheckCircle style={{ width: '3rem', height: '3rem', color: '#22c55e', margin: '0 auto 1rem' }} />
-              <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#22c55e' }}>{fl.success}</p>
-            </div>
-          ) : (
-            <>
-              {/* Variant Selection */}
-              {renderVariantSelection()}
-
-              {/* Name */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.name} *</label>
-                <input type="text" value={orderName} onChange={e => setOrderName(e.target.value)} placeholder={fl.namePh} style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: formErrors.name ? '2px solid #ef4444' : '1px solid #334155', background: '#1e293b', color: '#fff', fontSize: '1rem', outline: 'none' }} />
-                {formErrors.name && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.name}</p>}
-              </div>
-              {/* Phone */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.phone} *</label>
-                <input type="tel" value={orderPhone} onChange={e => setOrderPhone(e.target.value)} placeholder={fl.phonePh} dir="ltr" style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: formErrors.phone ? '2px solid #ef4444' : '1px solid #334155', background: '#1e293b', color: '#fff', fontSize: '1rem', outline: 'none' }} />
-                {formErrors.phone && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.phone}</p>}
-              </div>
-              {/* Wilaya */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.wilaya} *</label>
-                <select value={orderWilayaId} onChange={e => { setOrderWilayaId(e.target.value); setOrderBaladiya(''); setOrderDeliveryType(''); }} style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: formErrors.wilaya ? '2px solid #ef4444' : '1px solid #334155', background: '#1e293b', color: '#fff', fontSize: '1rem', outline: 'none' }}>
-                  <option value="">{fl.wilayaPh}</option>
-                  {wilayas?.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
-                {formErrors.wilaya && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.wilaya}</p>}
-              </div>
-              {/* Baladiya */}
-              {orderWilayaId && baladiyat && baladiyat.length > 0 && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.baladiya}</label>
-                  <select value={orderBaladiya} onChange={e => setOrderBaladiya(e.target.value)} style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid #334155', background: '#1e293b', color: '#fff', fontSize: '1rem', outline: 'none' }}>
-                    <option value="">{fl.baladiyaPh}</option>
-                    {baladiyat.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-                  </select>
+          {/* Glassmorphism form card */}
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: '1.5rem',
+            border: '1px solid rgba(249,115,22,0.3)',
+            boxShadow: '0 0 40px rgba(249,115,22,0.08), 0 25px 50px rgba(0,0,0,0.3)',
+            padding: '2rem 1.5rem',
+            position: 'relative' as const,
+            overflow: 'hidden',
+          }}>
+            {/* Animated glow border */}
+            <div style={{
+              position: 'absolute' as const, inset: '-2px', borderRadius: '1.5rem', zIndex: 0,
+              background: 'linear-gradient(135deg, #f97316, #ea580c, #f97316, #ea580c)',
+              backgroundSize: '300% 300%',
+              animation: 'adminGlowBorder 4s ease infinite',
+              opacity: 0.4,
+            }} />
+            <div style={{
+              position: 'relative' as const, zIndex: 1,
+              background: 'rgba(15,23,42,0.95)',
+              borderRadius: '1.25rem',
+              padding: '2rem 1.5rem',
+            }}>
+              {/* Form Header with product image */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                {selectedProduct.images?.[0] && (
+                  <img src={selectedProduct.images[0]} alt={selectedProduct.name} style={{ width: '60px', height: '60px', borderRadius: '0.75rem', objectFit: 'cover', border: '2px solid rgba(249,115,22,0.3)' }} />
+                )}
+                <div style={{ flex: 1 }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <ShoppingCart style={{ width: '22px', height: '22px', color: '#f97316' }} />
+                    {fl.orderNow}
+                  </h2>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>{fl.subtitle}</p>
                 </div>
-              )}
-              {/* Delivery Type */}
-              {orderWilayaId && selectedWilaya && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.deliveryType}</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => setOrderDeliveryType('office')}
-                      style={{ padding: '1rem', borderRadius: '0.75rem', border: orderDeliveryType === 'office' ? '2px solid #f97316' : '1px solid #334155', background: orderDeliveryType === 'office' ? 'rgba(249,115,22,0.1)' : '#1e293b', color: '#fff', cursor: 'pointer', textAlign: 'center' }}
-                    >
-                      <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>{fl.office}</div>
-                      <div style={{ color: '#f97316', fontWeight: 800 }}>{formatPrice(Number(selectedWilaya.shipping_price))}</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOrderDeliveryType('home')}
-                      style={{ padding: '1rem', borderRadius: '0.75rem', border: orderDeliveryType === 'home' ? '2px solid #f97316' : '1px solid #334155', background: orderDeliveryType === 'home' ? 'rgba(249,115,22,0.1)' : '#1e293b', color: '#fff', cursor: 'pointer', textAlign: 'center' }}
-                    >
-                      <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>{fl.home}</div>
-                      <div style={{ color: '#f97316', fontWeight: 800 }}>{formatPrice(Number(selectedWilaya.shipping_price_home))}</div>
-                    </button>
+              </div>
+
+              {/* Urgency badge */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.85rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '9999px', fontSize: '0.8rem', color: '#fca5a5', fontWeight: 600, marginBottom: '1.25rem' }}>
+                <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', animation: 'adminPulse 2s infinite' }} />
+                🔥 {selectedLang === 'ar' ? 'كمية محدودة' : selectedLang === 'fr' ? 'Stock limité' : 'Limited Stock'}
+              </div>
+
+              {/* Price box */}
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem', padding: '1rem', background: 'rgba(249,115,22,0.08)', borderRadius: '1rem', border: '1px solid rgba(249,115,22,0.2)' }}>
+                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{selectedProduct.name}</span>
+                <div style={{ marginTop: '0.4rem' }}>
+                  {selectedProduct.old_price && (
+                    <span style={{ fontSize: '1.1rem', color: '#6b7280', textDecoration: 'line-through', marginRight: '0.75rem' }}>{selectedProduct.old_price} DA</span>
+                  )}
+                  <span style={{ fontSize: '2rem', fontWeight: 900, color: '#f97316' }}>{displayPrice} DA</span>
+                </div>
+              </div>
+
+              {orderSuccess ? (
+                <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(34,197,94,0.1)', borderRadius: '1rem', border: '1px solid rgba(34,197,94,0.3)' }}>
+                  <CheckCircle style={{ width: '3rem', height: '3rem', color: '#22c55e', margin: '0 auto 1rem' }} />
+                  <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#22c55e' }}>{fl.success}</p>
+                </div>
+              ) : (
+                <>
+                  {renderVariantSelection()}
+
+                  {/* Name with icon */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.name} *</label>
+                    <div style={{ display: 'flex', alignItems: 'center', borderRadius: '0.75rem', border: formErrors.name ? '2px solid #ef4444' : '1px solid #334155', background: '#1e293b', overflow: 'hidden' }}>
+                      <span style={{ padding: '0 0.75rem', display: 'flex', alignItems: 'center' }}><User style={{ width: '18px', height: '18px', color: '#94a3b8' }} /></span>
+                      <input type="text" value={orderName} onChange={e => setOrderName(e.target.value)} placeholder={fl.namePh} style={{ flex: 1, padding: '0.85rem 0.75rem 0.85rem 0', border: 'none', background: 'transparent', color: '#fff', fontSize: '1rem', outline: 'none' }} />
+                    </div>
+                    {formErrors.name && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.name}</p>}
                   </div>
-                </div>
-              )}
-              {/* Address */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.address}</label>
-                <textarea value={orderAddress} onChange={e => setOrderAddress(e.target.value)} placeholder={fl.addressPh} rows={2} style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid #334155', background: '#1e293b', color: '#fff', fontSize: '1rem', outline: 'none', resize: 'vertical' as const }} />
-              </div>
-              {/* Submit */}
-              <button
-                type="button"
-                onClick={handleOrderSubmit}
-                disabled={orderSubmitting}
-                style={{ width: '100%', padding: '1rem', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', border: 'none', borderRadius: '0.75rem', fontSize: '1.15rem', fontWeight: 700, cursor: orderSubmitting ? 'not-allowed' : 'pointer', opacity: orderSubmitting ? 0.7 : 1, marginTop: '0.5rem' }}
-              >
-                {orderSubmitting ? '...' : `✅ ${fl.submit}`}
-              </button>
-            </>
-          )}
 
-          {/* Trust icons */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '1.5rem', fontSize: '0.85rem', color: '#64748b' }}>
-            <span>🔒 {selectedLang === 'ar' ? 'آمن' : 'Secure'}</span>
-            <span>🚚 {selectedLang === 'ar' ? 'سريع' : 'Fast'}</span>
-            <span>💯 {selectedLang === 'ar' ? 'مضمون' : 'Guaranteed'}</span>
+                  {/* Phone with icon */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.phone} *</label>
+                    <div style={{ display: 'flex', alignItems: 'center', borderRadius: '0.75rem', border: formErrors.phone ? '2px solid #ef4444' : '1px solid #334155', background: '#1e293b', overflow: 'hidden' }}>
+                      <span style={{ padding: '0 0.75rem', display: 'flex', alignItems: 'center' }}><Phone style={{ width: '18px', height: '18px', color: '#94a3b8' }} /></span>
+                      <input type="tel" value={orderPhone} onChange={e => setOrderPhone(e.target.value)} placeholder={fl.phonePh} dir="ltr" style={{ flex: 1, padding: '0.85rem 0.75rem 0.85rem 0', border: 'none', background: 'transparent', color: '#fff', fontSize: '1rem', outline: 'none' }} />
+                    </div>
+                    {formErrors.phone && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.phone}</p>}
+                  </div>
+
+                  {/* Wilaya with icon */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.wilaya} *</label>
+                    <div style={{ display: 'flex', alignItems: 'center', borderRadius: '0.75rem', border: formErrors.wilaya ? '2px solid #ef4444' : '1px solid #334155', background: '#1e293b', overflow: 'hidden' }}>
+                      <span style={{ padding: '0 0.75rem', display: 'flex', alignItems: 'center' }}><MapPin style={{ width: '18px', height: '18px', color: '#94a3b8' }} /></span>
+                      <select value={orderWilayaId} onChange={e => { setOrderWilayaId(e.target.value); setOrderBaladiya(''); setOrderDeliveryType(''); }} style={{ flex: 1, padding: '0.85rem 0.75rem 0.85rem 0', border: 'none', background: 'transparent', color: '#fff', fontSize: '1rem', outline: 'none' }}>
+                        <option value="" style={{ background: '#1e293b' }}>{fl.wilayaPh}</option>
+                        {wilayas?.map(w => <option key={w.id} value={w.id} style={{ background: '#1e293b' }}>{w.name}</option>)}
+                      </select>
+                    </div>
+                    {formErrors.wilaya && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>{formErrors.wilaya}</p>}
+                  </div>
+
+                  {/* Baladiya with icon */}
+                  {orderWilayaId && baladiyat && baladiyat.length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.baladiya}</label>
+                      <div style={{ display: 'flex', alignItems: 'center', borderRadius: '0.75rem', border: '1px solid #334155', background: '#1e293b', overflow: 'hidden' }}>
+                        <span style={{ padding: '0 0.75rem', display: 'flex', alignItems: 'center' }}><Building2 style={{ width: '18px', height: '18px', color: '#94a3b8' }} /></span>
+                        <select value={orderBaladiya} onChange={e => setOrderBaladiya(e.target.value)} style={{ flex: 1, padding: '0.85rem 0.75rem 0.85rem 0', border: 'none', background: 'transparent', color: '#fff', fontSize: '1rem', outline: 'none' }}>
+                          <option value="" style={{ background: '#1e293b' }}>{fl.baladiyaPh}</option>
+                          {baladiyat.map(b => <option key={b.id} value={b.name} style={{ background: '#1e293b' }}>{b.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delivery Type Cards with icons */}
+                  {orderWilayaId && selectedWilaya && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.deliveryType}</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <button type="button" onClick={() => setOrderDeliveryType('office')} style={{
+                          padding: '1rem', borderRadius: '0.75rem',
+                          border: orderDeliveryType === 'office' ? '2px solid #f97316' : '1px solid #334155',
+                          background: orderDeliveryType === 'office' ? 'rgba(249,115,22,0.12)' : '#1e293b',
+                          boxShadow: orderDeliveryType === 'office' ? '0 0 15px rgba(249,115,22,0.15)' : 'none',
+                          color: '#fff', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s',
+                        }}>
+                          <Building2 style={{ width: '24px', height: '24px', color: orderDeliveryType === 'office' ? '#f97316' : '#94a3b8', margin: '0 auto 0.4rem' }} />
+                          <div style={{ fontWeight: 700, marginBottom: '0.25rem', fontSize: '0.9rem' }}>{fl.office}</div>
+                          <div style={{ color: '#f97316', fontWeight: 800 }}>{formatPrice(Number(selectedWilaya.shipping_price))}</div>
+                        </button>
+                        <button type="button" onClick={() => setOrderDeliveryType('home')} style={{
+                          padding: '1rem', borderRadius: '0.75rem',
+                          border: orderDeliveryType === 'home' ? '2px solid #f97316' : '1px solid #334155',
+                          background: orderDeliveryType === 'home' ? 'rgba(249,115,22,0.12)' : '#1e293b',
+                          boxShadow: orderDeliveryType === 'home' ? '0 0 15px rgba(249,115,22,0.15)' : 'none',
+                          color: '#fff', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s',
+                        }}>
+                          <Home style={{ width: '24px', height: '24px', color: orderDeliveryType === 'home' ? '#f97316' : '#94a3b8', margin: '0 auto 0.4rem' }} />
+                          <div style={{ fontWeight: 700, marginBottom: '0.25rem', fontSize: '0.9rem' }}>{fl.home}</div>
+                          <div style={{ color: '#f97316', fontWeight: 800 }}>{formatPrice(Number(selectedWilaya.shipping_price_home))}</div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Address with icon */}
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', color: '#cbd5e1' }}>{fl.address}</label>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', borderRadius: '0.75rem', border: '1px solid #334155', background: '#1e293b', overflow: 'hidden' }}>
+                      <span style={{ padding: '0.85rem 0.75rem 0 0.75rem', display: 'flex', alignItems: 'center' }}><Home style={{ width: '18px', height: '18px', color: '#94a3b8' }} /></span>
+                      <textarea value={orderAddress} onChange={e => setOrderAddress(e.target.value)} placeholder={fl.addressPh} rows={2} style={{ flex: 1, padding: '0.85rem 0.75rem 0.85rem 0', border: 'none', background: 'transparent', color: '#fff', fontSize: '1rem', outline: 'none', resize: 'vertical' as const }} />
+                    </div>
+                  </div>
+
+                  {/* Order Summary */}
+                  {orderWilayaId && selectedWilaya && orderDeliveryType && (
+                    <div style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#94a3b8' }}>
+                        <span>{selectedLang === 'ar' ? 'سعر المنتج' : selectedLang === 'fr' ? 'Prix produit' : 'Product price'}</span>
+                        <span style={{ color: '#e2e8f0' }}>{formatPrice(displayPrice)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#94a3b8' }}>
+                        <span>{selectedLang === 'ar' ? 'التوصيل' : selectedLang === 'fr' ? 'Livraison' : 'Shipping'}</span>
+                        <span style={{ color: '#e2e8f0' }}>{formatPrice(orderDeliveryType === 'home' ? Number(selectedWilaya.shipping_price_home) : Number(selectedWilaya.shipping_price))}</span>
+                      </div>
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', fontWeight: 800 }}>
+                        <span style={{ color: '#e2e8f0' }}>{selectedLang === 'ar' ? 'المجموع' : 'Total'}</span>
+                        <span style={{ color: '#f97316' }}>{formatPrice(displayPrice + (orderDeliveryType === 'home' ? Number(selectedWilaya.shipping_price_home) : Number(selectedWilaya.shipping_price)))}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <button type="button" onClick={handleOrderSubmit} disabled={orderSubmitting} style={{
+                    width: '100%', padding: '1.1rem', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', border: 'none', borderRadius: '0.75rem', fontSize: '1.2rem', fontWeight: 800, cursor: orderSubmitting ? 'not-allowed' : 'pointer', opacity: orderSubmitting ? 0.7 : 1, marginTop: '0.5rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+                    boxShadow: '0 4px 20px rgba(249,115,22,0.4)',
+                  }}>
+                    {orderSubmitting ? <Loader2 style={{ width: '22px', height: '22px', animation: 'spin 1s linear infinite' }} /> : <ShoppingCart style={{ width: '22px', height: '22px' }} />}
+                    {orderSubmitting ? '...' : fl.submit}
+                  </button>
+                </>
+              )}
+
+              {/* Trust Badges */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginTop: '1.5rem' }}>
+                {[
+                  { icon: <Shield style={{ width: '18px', height: '18px', color: '#f97316' }} />, label: trustLabels.securePayment },
+                  { icon: <Truck style={{ width: '18px', height: '18px', color: '#f97316' }} />, label: trustLabels.fastDelivery },
+                  { icon: <Package style={{ width: '18px', height: '18px', color: '#f97316' }} />, label: trustLabels.guaranteed },
+                  { icon: <RotateCcw style={{ width: '18px', height: '18px', color: '#f97316' }} />, label: trustLabels.freeReturns },
+                ].map((badge, i) => (
+                  <div key={i} style={{ textAlign: 'center', padding: '0.6rem 0.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.3rem' }}>{badge.icon}</div>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, lineHeight: 1.2, display: 'block' }}>{badge.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
   };
 
+  {/* Admin form animations */}
+  const adminFormStyles = `
+    @keyframes adminGlowBorder { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    @keyframes adminPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  `;
+
   return (
     <div className="space-y-6" dir={dir}>
+      <style>{adminFormStyles}</style>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
