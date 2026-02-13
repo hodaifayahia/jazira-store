@@ -38,6 +38,7 @@ export default function AdminOrdersPage() {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('الكل');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [newStatus, setNewStatus] = useState('');
 
@@ -135,9 +136,10 @@ export default function AdminOrdersPage() {
       const matchDateTo = !dateTo || (o.created_at && o.created_at <= dateTo + 'T23:59:59');
       const matchMinTotal = !minTotal || Number(o.total_amount) >= Number(minTotal);
       const matchMaxTotal = !maxTotal || Number(o.total_amount) <= Number(maxTotal);
-      return matchSearch && matchStatus && matchWilaya && matchPayment && matchDateFrom && matchDateTo && matchMinTotal && matchMaxTotal;
+      const matchSource = sourceFilter === 'all' || (sourceFilter === 'landing' ? !!(o as any).landing_page_id : !(o as any).landing_page_id);
+      return matchSearch && matchStatus && matchWilaya && matchPayment && matchDateFrom && matchDateTo && matchMinTotal && matchMaxTotal && matchSource;
     });
-  }, [orders, search, statusFilter, wilayaFilter, paymentFilter, dateFrom, dateTo, minTotal, maxTotal]);
+  }, [orders, search, statusFilter, wilayaFilter, paymentFilter, dateFrom, dateTo, minTotal, maxTotal, sourceFilter]);
 
   const handleQuickStatus = (orderId: string, status: string) => {
     updateStatus.mutate({ id: orderId, status });
@@ -204,6 +206,14 @@ export default function AdminOrdersPage() {
                   </SelectItem>
                 );
               })}
+            </SelectContent>
+          </Select>
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger className="w-full sm:w-40 font-cairo"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="font-cairo">{t('orders.sourceAll')}</SelectItem>
+              <SelectItem value="website" className="font-cairo">🌐 {t('orders.sourceWebsite')}</SelectItem>
+              <SelectItem value="landing" className="font-cairo">🚀 {t('orders.sourceLanding')}</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -329,7 +339,10 @@ export default function AdminOrdersPage() {
                 return (
                   <tr key={o.id} className={`border-b hover:bg-muted/50 ${selectedIds.has(o.id) ? 'bg-primary/5' : ''}`}>
                     <td className="p-3"><Checkbox checked={selectedIds.has(o.id)} onCheckedChange={() => toggleSelect(o.id)} /></td>
-                    <td className="p-3 font-roboto font-bold text-primary">{o.order_number}</td>
+                    <td className="p-3 font-roboto font-bold text-primary">
+                      {o.order_number}
+                      {(o as any).landing_page_id && <span className="ml-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-cairo">🚀</span>}
+                    </td>
                     <td className="p-3 font-cairo">{o.customer_name}</td>
                     <td className="p-3 font-roboto text-xs">{o.customer_phone}</td>
                     <td className="p-3 font-cairo text-xs">
@@ -396,7 +409,10 @@ export default function AdminOrdersPage() {
             return (
               <div key={o.id} className="bg-card border rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-roboto font-bold text-primary text-sm">{o.order_number}</span>
+                  <span className="font-roboto font-bold text-primary text-sm">
+                    {o.order_number}
+                    {(o as any).landing_page_id && <span className="ml-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-cairo">🚀</span>}
+                  </span>
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-cairo ${statusCfg.bg} ${statusCfg.color}`}>
                     <StatusIcon className="w-3 h-3" /> {t(STATUS_KEYS[o.status || 'جديد'])}
                   </span>
