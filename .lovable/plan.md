@@ -1,43 +1,48 @@
 
 
-# Live Form Preview in Form Settings Tab
+# Fix: Payment Methods Not Showing Correctly on Checkout
 
-## What Changes
-Add a real-time checkout form preview panel next to the field configuration toggles. As the admin toggles fields visible/hidden and required/optional, the preview updates instantly to show exactly how the checkout form will look to customers.
+## Problem
+Two issues found:
 
-## Layout
-The Form Settings tab will be split into two columns on desktop:
-- **Right column**: The existing toggles table (field controls)
-- **Left column**: A live mockup of the checkout form showing only the visible fields, with required fields marked with an asterisk (*)
+1. **RLS policy blocks payment details**: The security policy on the settings table blocks public access to `ccp_number`, `flexy_number`, and related keys. This means even when Baridimob or Flexy is enabled, customers can't see the CCP/Flexy numbers needed to make payment.
 
-On mobile, the preview will appear below the toggles.
+2. **Missing payment settings in database**: The `flexy_enabled` setting doesn't exist in the database yet, so it defaults to falsy. The `cod_enabled` is set to `true` but may not display if there's a rendering issue.
 
-## Preview Details
-The preview will be a read-only visual mockup styled like the real checkout form, containing:
-- Full Name input (if visible)
-- Phone input (always shown, locked)
-- Wilaya dropdown (if visible)
-- Baladiya dropdown (if visible)
-- Delivery type selector (if visible, shown as two cards: office/home)
-- Address textarea (if visible)
-- Coupon code input (if visible)
-- Payment receipt upload area (if visible)
+## Root Cause
+The recent security migration added an RLS policy that excludes these keys from public reads:
+- `ccp_number`
+- `ccp_key`  
+- `flexy_number`
+- `baridimob_rip`
 
-Each visible field will show a "*" if it is marked as required. Hidden fields will not appear in the preview. The preview panel will have a "معاينة النموذج" (Form Preview) header and a subtle border/background to distinguish it from the controls.
+While hiding these from unauthenticated browsing is correct, the **checkout page needs them** to display payment instructions to the customer.
 
----
+## Solution
+
+### 1. Update the RLS policy to allow payment-related keys
+Modify the public read policy on `settings` to only block truly sensitive keys (Telegram credentials), but allow payment detail keys that customers need:
+
+**Block list (keep restricted):**
+- `telegram_bot_token`
+- `telegram_chat_id`
+
+**Allow list (make readable again):**
+- `ccp_number`, `ccp_name`, `ccp_key`
+- `flexy_number`, `flexy_deposit_amount`
+- `baridimob_rip`
+- `baridimob_enabled`, `flexy_enabled`, `cod_enabled`
+
+### 2. Ensure missing settings exist
+Insert default rows for any missing payment settings (`flexy_enabled`, `cod_enabled`, etc.) so the checkout page can reliably check them.
 
 ## Technical Details
 
-### File Modified
-- `src/components/admin/FormSettingsTab.tsx`
+### Database Migration
+- Drop and recreate the `Public can read non-sensitive settings` policy on `settings` table
+- New policy will only block `telegram_bot_token` and `telegram_chat_id`
+- Insert default `flexy_enabled = false` row if it doesn't exist
 
-### Changes
-1. Add a `FormPreview` component inside the file that takes the current `CheckoutFormConfig` and renders a styled read-only mockup of each visible field
-2. Update the main layout from a single column to a two-column grid (`grid md:grid-cols-2`):
-   - Right: existing toggles card
-   - Left: new preview card with `FormPreview`
-3. The preview uses disabled inputs/selects with placeholder text to simulate the real form appearance
-4. Fields hidden in config are not rendered in the preview
-5. Required fields show an asterisk next to their label
-6. The preview updates reactively since it reads directly from the parsed `config` object which changes on every toggle
+### Files Modified
+- No code file changes needed -- the checkout page logic is already correct, it just can't read the settings due to the RLS policy
+
