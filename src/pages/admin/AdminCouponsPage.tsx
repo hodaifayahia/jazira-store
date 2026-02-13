@@ -27,7 +27,7 @@ export default function AdminCouponsPage() {
   const { data: coupons } = useQuery({
     queryKey: ['admin-coupons'],
     queryFn: async () => {
-      const { data } = await supabase.from('coupons').select('*').order('created_at' as any, { ascending: false });
+      const { data } = await supabase.from('coupons').select('*').order('code');
       return data || [];
     },
   });

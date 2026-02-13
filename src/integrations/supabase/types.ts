@@ -697,6 +697,8 @@ export type Database = {
           is_free_shipping: boolean | null
           main_image_index: number | null
           name: string
+          offer_ends_at: string | null
+          offer_title: string | null
           old_price: number | null
           price: number
           product_type: string
@@ -717,6 +719,8 @@ export type Database = {
           is_free_shipping?: boolean | null
           main_image_index?: number | null
           name: string
+          offer_ends_at?: string | null
+          offer_title?: string | null
           old_price?: number | null
           price: number
           product_type?: string
@@ -737,6 +741,8 @@ export type Database = {
           is_free_shipping?: boolean | null
           main_image_index?: number | null
           name?: string
+          offer_ends_at?: string | null
+          offer_title?: string | null
           old_price?: number | null
           price?: number
           product_type?: string

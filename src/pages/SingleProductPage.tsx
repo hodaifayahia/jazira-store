@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard, Building2, Home, X, Tag } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard, Building2, Home, X, Tag, Shield, Zap, RotateCcw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,61 @@ function StarRating({ value, onChange, readonly = false }: { value: number; onCh
   );
 }
 
+function CountdownTimer({ endsAt, title }: { endsAt: string; title?: string }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date().getTime();
+      const end = new Date(endsAt).getTime();
+      const diff = end - now;
+      if (diff <= 0) { setExpired(true); return; }
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+      });
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [endsAt]);
+
+  if (expired) return null;
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-red-500 via-orange-500 to-amber-500 p-[2px]">
+      <div className="rounded-[14px] bg-gradient-to-l from-red-500/10 via-orange-500/10 to-amber-500/10 backdrop-blur-sm px-5 py-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center animate-pulse">
+              <Clock className="w-4 h-4 text-red-500" />
+            </div>
+            {title && <span className="font-cairo font-bold text-sm text-foreground">{title}</span>}
+          </div>
+          <div className="flex gap-2">
+            {[
+              { value: timeLeft.days, label: 'يوم' },
+              { value: timeLeft.hours, label: 'ساعة' },
+              { value: timeLeft.minutes, label: 'دقيقة' },
+              { value: timeLeft.seconds, label: 'ثانية' },
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-xl bg-foreground/10 backdrop-blur-sm flex items-center justify-center border border-foreground/10">
+                  <span className="font-roboto font-bold text-lg text-foreground">{String(item.value).padStart(2, '0')}</span>
+                </div>
+                <span className="font-cairo text-[10px] text-muted-foreground mt-1">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SingleProductPage() {
   const { id } = useParams<{ id: string }>();
   const { addItem } = useCart();
@@ -40,6 +95,8 @@ export default function SingleProductPage() {
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const orderFormRef = useRef<HTMLDivElement>(null);
 
   const [reviewName, setReviewName] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
@@ -56,6 +113,21 @@ export default function SingleProductPage() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Touch swipe for images
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+
+  // Sticky bar IntersectionObserver
+  useEffect(() => {
+    const el = orderFormRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleReceiptFile = (file: File | null) => {
     setReceiptFile(file);
@@ -109,7 +181,6 @@ export default function SingleProductPage() {
     enabled: !!orderWilayaId,
   });
 
-  // NEW: Fetch option groups + values + variants
   const { data: optionGroups } = useQuery({
     queryKey: ['product-option-groups', id],
     queryFn: async () => {
@@ -145,7 +216,6 @@ export default function SingleProductPage() {
     enabled: !!id,
   });
 
-  // Legacy variations (backward compat)
   const { data: variations } = useQuery({
     queryKey: ['product-variations', id],
     queryFn: async () => {
@@ -164,7 +234,6 @@ export default function SingleProductPage() {
     },
   });
 
-  // Bundle offers
   const { data: bundleOffers } = useQuery({
     queryKey: ['product-offers', id],
     queryFn: async () => {
@@ -185,10 +254,8 @@ export default function SingleProductPage() {
     return t.includes('لون') || t.includes('color') || t.includes('colour');
   };
 
-  // Determine if using new variant system or legacy
   const hasNewVariants = (optionGroups || []).length > 0 && (productVariants || []).length > 0;
 
-  // Legacy variation groups
   const variationGroups = useMemo(() => {
     if (hasNewVariants || !variations || variations.length === 0) return {};
     const groups: Record<string, typeof variations> = {};
@@ -199,23 +266,19 @@ export default function SingleProductPage() {
     return groups;
   }, [variations, hasNewVariants]);
 
-  // Selection state
   const [selectedVariations, setSelectedVariations] = useState<Record<string, string>>({});
   const [selectedNewOptions, setSelectedNewOptions] = useState<Record<string, string>>({});
 
-  // Find matching variant for new system
   const matchedVariant = useMemo(() => {
     if (!hasNewVariants || !productVariants) return null;
     const groupCount = (optionGroups || []).length;
     if (Object.keys(selectedNewOptions).length < groupCount) return null;
-
     return productVariants.find((v: any) => {
       const ov = v.option_values || {};
       return Object.entries(selectedNewOptions).every(([key, val]) => ov[key] === val);
     }) || null;
   }, [selectedNewOptions, productVariants, optionGroups, hasNewVariants]);
 
-  // Cross-disable logic: check if a specific value would lead to any available variant
   const isOptionValueAvailable = (groupName: string, valueLabel: string) => {
     if (!productVariants) return true;
     const testSelection = { ...selectedNewOptions, [groupName]: valueLabel };
@@ -253,7 +316,6 @@ export default function SingleProductPage() {
     onError: () => { toast({ title: 'حدث خطأ، حاول مرة أخرى', variant: 'destructive' }); },
   });
 
-  // Facebook Pixel: ViewContent
   useEffect(() => {
     if (product) {
       trackEvent('ViewContent', {
@@ -292,10 +354,8 @@ export default function SingleProductPage() {
     ? (matchedVariant ? matchedVariant.quantity <= 0 : (productVariants || []).every((v: any) => v.quantity <= 0))
     : (product.stock ?? 0) <= 0;
   const avgRating = reviews && reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
-
   const hasLegacyVariations = Object.keys(variationGroups).length > 0;
 
-  // Legacy variation for cart
   const selectedVariationForCart: CartItemVariation | undefined = (() => {
     if (hasNewVariants) return undefined;
     const types = Object.keys(variationGroups);
@@ -310,7 +370,6 @@ export default function SingleProductPage() {
     return undefined;
   })();
 
-  // Compute effective price
   const effectivePrice = hasNewVariants && matchedVariant
     ? Number(matchedVariant.price)
     : Number(product.price) + (selectedVariationForCart?.priceAdjustment || 0);
@@ -333,17 +392,12 @@ export default function SingleProductPage() {
       toast({ title: 'يرجى اختيار جميع الخيارات أولاً', variant: 'destructive' });
       return;
     }
-
     if (hasNewVariants && matchedVariant) {
       for (let i = 0; i < qty; i++) {
         addItem({
-          id: product.id,
-          name: product.name,
-          price: Number(matchedVariant.price),
-          image: matchedVariant.image_url || images[0] || '',
-          stock: matchedVariant.quantity,
-          shippingPrice: Number(product.shipping_price) || 0,
-          variantId: matchedVariant.id,
+          id: product.id, name: product.name, price: Number(matchedVariant.price),
+          image: matchedVariant.image_url || images[0] || '', stock: matchedVariant.quantity,
+          shippingPrice: Number(product.shipping_price) || 0, variantId: matchedVariant.id,
           variantSku: matchedVariant.sku || undefined,
           variantOptionValues: matchedVariant.option_values as Record<string, string>,
         });
@@ -358,17 +412,25 @@ export default function SingleProductPage() {
       }
     }
     trackEvent('AddToCart', {
-      content_name: product.name,
-      content_ids: [product.id],
-      content_type: 'product',
-      value: effectivePrice * qty,
-      currency: 'DZD',
+      content_name: product.name, content_ids: [product.id],
+      content_type: 'product', value: effectivePrice * qty, currency: 'DZD',
     });
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
 
   const goToPrevImage = () => setSelectedImage(i => (i === 0 ? images.length - 1 : i - 1));
   const goToNextImage = () => setSelectedImage(i => (i === images.length - 1 ? 0 : i + 1));
+
+  const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const diff = touchStart - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) goToNextImage();
+      else goToPrevImage();
+    }
+    setTouchStart(null);
+  };
 
   // Inline order calculations
   const selectedWilaya = wilayas?.find(w => w.id === orderWilayaId);
@@ -392,12 +454,16 @@ export default function SingleProductPage() {
     toast({ title: 'تم النسخ' });
   };
 
+  // Offer timer
+  const offerTitle = (product as any).offer_title;
+  const offerEndsAt = (product as any).offer_ends_at;
+  const hasActiveOffer = offerEndsAt && new Date(offerEndsAt).getTime() > Date.now();
+
   const handleDirectOrder = async () => {
     if ((hasNewVariants || hasLegacyVariations) && !allOptionsSelected()) {
       toast({ title: 'يرجى اختيار جميع الخيارات أولاً', variant: 'destructive' });
       return;
     }
-
     const newErrors: Record<string, string> = {};
     if (!orderName.trim()) newErrors.orderName = 'يرجى إدخال الاسم الكامل';
     if (!orderPhone.trim()) newErrors.orderPhone = 'يرجى إدخال رقم الهاتف';
@@ -439,17 +505,18 @@ export default function SingleProductPage() {
       if (hasNewVariants && matchedVariant) {
         orderItemPayload.variant_id = matchedVariant.id;
       }
-
       await supabase.from('order_items').insert(orderItemPayload);
-
       supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
-
       navigate(`/order-confirmation/${order.order_number}`);
     } catch (err) {
       toast({ title: 'خطأ', description: 'حدث خطأ أثناء إرسال الطلب', variant: 'destructive' });
     } finally {
       setSubmittingOrder(false);
     }
+  };
+
+  const scrollToOrderForm = () => {
+    orderFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
@@ -467,7 +534,7 @@ export default function SingleProductPage() {
       </nav>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Images */}
+        {/* Images with touch swipe */}
         <div className="flex flex-col-reverse md:flex-row gap-3">
           {images.length > 1 && (
             <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[500px] md:w-20 shrink-0">
@@ -479,7 +546,9 @@ export default function SingleProductPage() {
               ))}
             </div>
           )}
-          <div className="flex-1 relative group">
+          <div className="flex-1 relative group"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}>
             <div className="aspect-square rounded-2xl overflow-hidden bg-muted cursor-zoom-in" onMouseEnter={() => setIsZoomed(true)} onMouseLeave={() => setIsZoomed(false)}>
               {images[selectedImage] ? (
                 <img src={images[selectedImage]} alt={product.name} className={`w-full h-full object-cover transition-transform duration-500 ${isZoomed ? 'scale-150' : 'scale-100'}`} />
@@ -499,6 +568,11 @@ export default function SingleProductPage() {
 
         {/* Info + Order Form */}
         <div className="space-y-4">
+          {/* Countdown Timer */}
+          {hasActiveOffer && (
+            <CountdownTimer endsAt={offerEndsAt} title={offerTitle} />
+          )}
+
           <div className="bg-card border rounded-2xl p-6 space-y-4">
             <div className="flex flex-wrap gap-2">
               {(Array.isArray(product.category) ? product.category : [product.category]).map((c: string) => (
@@ -511,6 +585,7 @@ export default function SingleProductPage() {
               <p className="font-cairo text-sm text-muted-foreground">{product.short_description}</p>
             )}
 
+            {/* Reviews + Rating prominently near price */}
             {reviews && reviews.length > 0 && (
               <div className="flex items-center gap-2">
                 <StarRating value={Math.round(avgRating)} readonly />
@@ -520,18 +595,46 @@ export default function SingleProductPage() {
             )}
 
             <div className="flex items-baseline gap-3">
-              <p className="font-roboto font-bold text-3xl text-primary">
+              <p className="font-roboto font-bold text-4xl text-primary">
                 {formatPrice(effectivePrice)}
               </p>
               {product.old_price && Number(product.old_price) > effectivePrice && (
-                <span className="font-roboto text-lg text-muted-foreground line-through">{formatPrice(Number(product.old_price))}</span>
+                <>
+                  <span className="font-roboto text-lg text-muted-foreground line-through">{formatPrice(Number(product.old_price))}</span>
+                  <Badge className="bg-red-500/10 text-red-500 border-red-500/20 font-cairo text-xs">
+                    -{Math.round((1 - effectivePrice / Number(product.old_price)) * 100)}%
+                  </Badge>
+                </>
               )}
             </div>
 
+            {/* Trust Signals */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-3">
+              {[
+                { icon: Truck, label: 'توصيل سريع', color: 'text-primary' },
+                { icon: Shield, label: 'دفع آمن', color: 'text-green-600' },
+                { icon: Zap, label: 'شحن سريع', color: 'text-amber-500' },
+                { icon: RotateCcw, label: 'ضمان الاسترجاع', color: 'text-blue-500' },
+              ].map((item, i) => (
+                <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-muted/50 border border-border/50">
+                  <item.icon className={`w-4 h-4 ${item.color}`} />
+                  <span className="font-cairo text-[11px] text-muted-foreground text-center leading-tight">{item.label}</span>
+                </div>
+              ))}
+            </div>
+
             {product.is_free_shipping && (
-              <div className="flex items-center gap-1.5 text-primary">
+              <div className="flex items-center gap-1.5 text-primary bg-primary/5 rounded-lg px-3 py-2">
                 <Truck className="w-4 h-4" />
                 <span className="font-cairo text-sm font-medium">توصيل مجاني</span>
+              </div>
+            )}
+
+            {/* Stock urgency */}
+            {!outOfStock && effectiveStock > 0 && effectiveStock <= 5 && (
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 animate-pulse">
+                <Clock className="w-4 h-4 text-red-500" />
+                <span className="font-cairo text-sm font-bold text-red-500">بقي {effectiveStock} فقط!</span>
               </div>
             )}
 
@@ -569,9 +672,9 @@ export default function SingleProductPage() {
 
             {outOfStock ? (
               <Badge variant="destructive" className="font-cairo">غير متوفر حالياً</Badge>
-            ) : (
+            ) : effectiveStock > 5 ? (
               <p className="font-cairo text-sm text-primary">متوفر في المخزون ({effectiveStock} قطعة)</p>
-            )}
+            ) : null}
 
             {/* NEW Variant Selector */}
             {hasNewVariants && (
@@ -607,7 +710,6 @@ export default function SingleProductPage() {
                             if (!available) return;
                             setSelectedNewOptions(prev => ({ ...prev, [group.name]: isSelected ? '' : val.label }));
                           };
-
                           if (group.display_type === 'color_swatch' && val.color_hex) {
                             return (
                               <button key={val.id} onClick={handleClick} disabled={!available}
@@ -618,7 +720,6 @@ export default function SingleProductPage() {
                               </button>
                             );
                           }
-
                           if (group.display_type === 'radio') {
                             return (
                               <label key={val.id} className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/10' : 'border-border'} ${!available ? 'opacity-30 cursor-not-allowed' : ''}`}>
@@ -627,8 +728,6 @@ export default function SingleProductPage() {
                               </label>
                             );
                           }
-
-                          // Default: button
                           return (
                             <button key={val.id} onClick={handleClick} disabled={!available}
                               className={`relative px-4 py-2 rounded-lg border-2 text-sm font-cairo font-medium transition-all ${isSelected ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/30 text-foreground'} ${!available ? 'opacity-30 cursor-not-allowed' : ''}`}>
@@ -700,9 +799,9 @@ export default function SingleProductPage() {
             )}
           </div>
 
-          {/* Quantity + Add to Cart */}
+          {/* Quantity + Add to Cart + Order Now CTA */}
           {!outOfStock && (
-            <div className="bg-card border rounded-2xl p-6 space-y-3">
+            <div className="bg-card border rounded-2xl p-6 space-y-3" ref={orderFormRef}>
               <div className="flex items-center gap-4">
                 <div className="flex items-center border rounded-xl">
                   <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))} className="rounded-xl"><Minus className="w-4 h-4" /></Button>
@@ -919,8 +1018,8 @@ export default function SingleProductPage() {
               )}
 
               <Button onClick={handleDirectOrder} disabled={submittingOrder}
-                className="w-full font-cairo font-bold text-base gap-2 rounded-xl h-12 bg-gradient-to-l from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground">
-                {submittingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                className="w-full font-cairo font-bold text-base gap-2 rounded-xl h-14 bg-gradient-to-l from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg shadow-primary/25 animate-pulse hover:animate-none">
+                {submittingOrder ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
                 {submittingOrder ? 'جاري الإرسال...' : 'تأكيد الطلب'}
               </Button>
             </div>
@@ -991,10 +1090,32 @@ export default function SingleProductPage() {
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="font-cairo text-muted-foreground">لا توجد تقييمات بعد. كن أول من يقيّم هذا المنتج!</p>
+            <p className="font-cairo text-muted-foreground">لا توجد تقييمات بعد — كن أول من يقيّم هذا المنتج!</p>
           </div>
         )}
       </section>
+
+      {/* Sticky Bottom Buy Bar */}
+      {!outOfStock && showStickyBar && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t shadow-2xl shadow-foreground/10 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="container flex items-center justify-between gap-4 py-3">
+            <div className="flex items-center gap-3 min-w-0">
+              {images[0] && (
+                <img src={images[0]} alt={product.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+              )}
+              <div className="min-w-0">
+                <p className="font-cairo font-semibold text-sm truncate">{product.name}</p>
+                <p className="font-roboto font-bold text-primary text-base">{formatPrice(effectivePrice)}</p>
+              </div>
+            </div>
+            <Button onClick={scrollToOrderForm}
+              className="font-cairo font-bold gap-2 rounded-xl px-6 h-11 bg-gradient-to-l from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/25 shrink-0">
+              <ShoppingCart className="w-4 h-4" />
+              اطلب الآن
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

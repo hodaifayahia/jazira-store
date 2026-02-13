@@ -686,6 +686,8 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [shortDescription, setShortDescription] = useState(product?.short_description || '');
   const [isFreeShipping, setIsFreeShipping] = useState(product?.is_free_shipping ?? false);
   const [slug, setSlug] = useState(product?.slug || '');
+  const [offerTitle, setOfferTitle] = useState((product as any)?.offer_title || '');
+  const [offerEndsAt, setOfferEndsAt] = useState((product as any)?.offer_ends_at ? new Date((product as any).offer_ends_at).toISOString().slice(0, 16) : '');
 
   // Bundle offers
   type Offer = { description: string; quantity: string; price: string };
@@ -991,7 +993,9 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         slug: slug.trim() || null,
         has_variants: hasVariants,
         product_type: productType,
-      };
+        offer_title: offerTitle.trim() || null,
+        offer_ends_at: offerEndsAt ? new Date(offerEndsAt).toISOString() : null,
+      } as any;
 
       let productId = product?.id;
 
@@ -1344,6 +1348,27 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
               المخزون الإجمالي: <span className="font-roboto font-bold">{variantRows.reduce((s, v) => s + Number(v.quantity || 0), 0)}</span> (يُحسب تلقائياً من المتغيرات)
             </p>
           )}
+        </div>
+      </div>
+
+      {/* Offer Timer Section */}
+      <div className="bg-card border rounded-xl p-5 space-y-4">
+        <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+            <AlertTriangle className="w-4 h-4 text-orange-500" />
+          </div>
+          عرض محدود بوقت
+        </h3>
+        <p className="font-cairo text-xs text-muted-foreground">اتركه فارغاً إذا لا يوجد عرض محدد بوقت</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <Label className="font-cairo">عنوان العرض</Label>
+            <Input value={offerTitle} onChange={e => setOfferTitle(e.target.value)} className="font-cairo mt-1.5 h-11" placeholder="مثال: عرض خاص - خصم 30%" />
+          </div>
+          <div>
+            <Label className="font-cairo">ينتهي في</Label>
+            <Input type="datetime-local" value={offerEndsAt} onChange={e => setOfferEndsAt(e.target.value)} className="font-roboto mt-1.5 h-11" dir="ltr" />
+          </div>
         </div>
       </div>
 
