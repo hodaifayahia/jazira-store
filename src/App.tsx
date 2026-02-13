@@ -36,6 +36,7 @@ import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import { useStoreTheme } from "@/hooks/useStoreTheme";
 import { useFavicon } from "@/hooks/useFavicon";
+import { useFacebookPixel } from "@/hooks/useFacebookPixel";
 import { LanguageProvider } from "@/i18n";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const queryClient = new QueryClient();
 function StoreThemeProvider({ children }: { children: React.ReactNode }) {
   useStoreTheme();
   useFavicon();
+  useFacebookPixel();
   return <>{children}</>;
 }
 

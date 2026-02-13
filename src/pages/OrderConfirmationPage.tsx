@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,9 +6,11 @@ import { CheckCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 
 export default function OrderConfirmationPage() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
+  const { trackEvent } = useFacebookPixel();
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', orderNumber],
@@ -22,6 +25,17 @@ export default function OrderConfirmationPage() {
     },
     enabled: !!orderNumber,
   });
+
+  // Facebook Pixel: Purchase
+  useEffect(() => {
+    if (order) {
+      trackEvent('Purchase', {
+        value: Number(order.total_amount),
+        currency: 'DZD',
+        content_type: 'product',
+      });
+    }
+  }, [order, trackEvent]);
 
   if (isLoading) return <div className="container py-16"><Skeleton className="h-64 max-w-lg mx-auto rounded-lg" /></div>;
 
