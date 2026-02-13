@@ -717,4 +717,23 @@ export const en: Record<string, string> = {
   'product.hours': 'Hours',
   'product.minutes': 'Minutes',
   'product.seconds': 'Seconds',
+
+  // ═══ Landing Page Builder ═══
+  'sidebar.landing': 'Landing Page',
+  'landing.title': 'Create Landing Page',
+  'landing.subtitle': 'Generate a professional landing page for any product with AI',
+  'landing.selectProduct': 'Select Product & Settings',
+  'landing.choosePlaceholder': 'Choose a product...',
+  'landing.language': 'Page Language',
+  'landing.selectImage': 'Select Main Image',
+  'landing.generate': 'Generate Page ✨',
+  'landing.generating': 'Generating...',
+  'landing.generated': 'Landing page created ✅',
+  'landing.preview': 'Preview & Edit',
+  'landing.editHint': 'Click any text to edit',
+  'landing.regenerate': 'Regenerate',
+  'landing.previewTab': 'Preview in Tab',
+  'landing.exportHtml': 'Copy HTML',
+  'landing.copiedBtn': 'Copied!',
+  'landing.copied': 'Landing page HTML copied ✅',
 };

@@ -39,6 +39,7 @@ import AdminInventoryPage from "./pages/admin/AdminInventoryPage";
 import AdminConfirmersPage from "./pages/admin/AdminConfirmersPage";
 import AdminReturnsPage from "./pages/admin/AdminReturnsPage";
 import AdminCostsPage from "./pages/admin/AdminCostsPage";
+import AdminLandingPagePage from "./pages/admin/AdminLandingPagePage";
 import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import { useStoreTheme } from "@/hooks/useStoreTheme";
@@ -102,6 +103,7 @@ const App = () => (
             <Route path="/admin/inventory" element={<LanguageProvider><AdminLayout><AdminInventoryPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/confirmers" element={<LanguageProvider><AdminLayout><AdminConfirmersPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/costs" element={<LanguageProvider><AdminLayout><AdminCostsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/landing" element={<LanguageProvider><AdminLayout><AdminLandingPagePage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings" element={<LanguageProvider><AdminLayout><AdminSettingsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/identity" element={<LanguageProvider><AdminLayout><AdminIdentityPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/payment" element={<LanguageProvider><AdminLayout><AdminPaymentPage /></AdminLayout></LanguageProvider>} />

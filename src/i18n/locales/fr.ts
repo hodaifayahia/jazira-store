@@ -717,4 +717,23 @@ export const fr: Record<string, string> = {
   'product.hours': 'Heures',
   'product.minutes': 'Minutes',
   'product.seconds': 'Secondes',
+
+  // ═══ Landing Page Builder ═══
+  'sidebar.landing': "Page d'atterrissage",
+  'landing.title': "Créer une page d'atterrissage",
+  'landing.subtitle': "Générez une page d'atterrissage professionnelle pour tout produit avec l'IA",
+  'landing.selectProduct': 'Sélectionner le produit et les paramètres',
+  'landing.choosePlaceholder': 'Choisir un produit...',
+  'landing.language': 'Langue de la page',
+  'landing.selectImage': "Sélectionner l'image principale",
+  'landing.generate': 'Générer la page ✨',
+  'landing.generating': 'Génération en cours...',
+  'landing.generated': "Page d'atterrissage créée ✅",
+  'landing.preview': 'Aperçu et modification',
+  'landing.editHint': 'Cliquez sur un texte pour le modifier',
+  'landing.regenerate': 'Régénérer',
+  'landing.previewTab': 'Aperçu dans un onglet',
+  'landing.exportHtml': 'Copier le HTML',
+  'landing.copiedBtn': 'Copié !',
+  'landing.copied': "HTML de la page d'atterrissage copié ✅",
 };

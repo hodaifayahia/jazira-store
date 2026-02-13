@@ -717,4 +717,23 @@ export const ar: Record<string, string> = {
   'product.hours': 'ساعة',
   'product.minutes': 'دقيقة',
   'product.seconds': 'ثانية',
+
+  // ═══ Landing Page Builder ═══
+  'sidebar.landing': 'صفحة هبوط',
+  'landing.title': 'إنشاء صفحة هبوط',
+  'landing.subtitle': 'أنشئ صفحة هبوط احترافية لأي منتج بالذكاء الاصطناعي',
+  'landing.selectProduct': 'اختر المنتج والإعدادات',
+  'landing.choosePlaceholder': 'اختر منتجاً...',
+  'landing.language': 'لغة الصفحة',
+  'landing.selectImage': 'اختر الصورة الرئيسية',
+  'landing.generate': 'توليد الصفحة ✨',
+  'landing.generating': 'جاري التوليد...',
+  'landing.generated': 'تم إنشاء الصفحة بنجاح ✅',
+  'landing.preview': 'معاينة وتعديل',
+  'landing.editHint': 'انقر على أي نص لتعديله',
+  'landing.regenerate': 'إعادة التوليد',
+  'landing.previewTab': 'معاينة في تبويب',
+  'landing.exportHtml': 'نسخ HTML',
+  'landing.copiedBtn': 'تم النسخ!',
+  'landing.copied': 'تم نسخ HTML للصفحة ✅',
 };
