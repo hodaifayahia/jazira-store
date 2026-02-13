@@ -3,23 +3,34 @@ import { supabase } from '@/integrations/supabase/client';
 declare const puter: any;
 
 /**
- * Generate an image using Puter.js (free, client-side) and upload to Supabase storage.
+ * Generate an image using Gemini Free Tier (primary) or Puter.js (fallback).
  * Returns the public URL of the uploaded image.
  */
 export async function generateImageWithPuter(prompt: string): Promise<string> {
+  // Try Gemini edge function first
+  try {
+    const res = await supabase.functions.invoke('gemini-image', {
+      body: { prompt },
+    });
+
+    if (res.error) throw res.error;
+    if (res.data?.url) return res.data.url;
+    throw new Error('No URL in response');
+  } catch (err: any) {
+    console.warn('Gemini image gen failed, falling back to Puter.js:', err.message);
+  }
+
+  // Fallback to Puter.js
   if (typeof puter === 'undefined') {
-    throw new Error('Puter.js is not loaded. Please refresh the page.');
+    throw new Error('Both Gemini and Puter.js failed. Please try again.');
   }
 
   const models = ['dall-e-3', 'flux-schnell'];
-
   let lastError: Error | null = null;
 
   for (const model of models) {
     try {
       const result = await puter.ai.txt2img(prompt, { model });
-
-      // result is an HTMLImageElement with a blob URL src
       const response = await fetch(result.src);
       const blob = await response.blob();
 
@@ -44,5 +55,5 @@ export async function generateImageWithPuter(prompt: string): Promise<string> {
     }
   }
 
-  throw lastError || new Error('All image generation models failed');
+  throw lastError || new Error('All image generation methods failed');
 }
