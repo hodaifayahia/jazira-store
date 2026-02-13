@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, Check, LayoutGrid, Minimize2, Zap } from 'lucide-react';
+import { Save, Check, LayoutGrid, Minimize2, Zap, Droplets } from 'lucide-react';
 
 const TEMPLATES = [
   {
@@ -23,6 +23,13 @@ const TEMPLATES = [
     icon: Zap,
     desc: 'تصميم عصري — صورة رئيسية كبيرة، بطاقات فئات كبيرة، منتج مميز.',
     features: ['صورة كاملة', 'فئات كبيرة', 'منتج مميز', 'تأثيرات بصرية'],
+  },
+  {
+    id: 'liquid',
+    name: 'سائل',
+    icon: Droplets,
+    desc: 'تصميم متقدم — خلفية سائلة متحركة، بطاقات زجاجية ثلاثية الأبعاد، تأثيرات بصرية غامرة.',
+    features: ['خلفية سائلة', 'زجاجية', 'تأثير 3D', 'تدرجات متحركة'],
   },
 ];
 

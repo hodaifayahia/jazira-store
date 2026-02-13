@@ -128,4 +128,69 @@
   .stagger-6 { animation-delay: 0.3s; }
   .stagger-7 { animation-delay: 0.35s; }
   .stagger-8 { animation-delay: 0.4s; }
+
+  /* Liquid template gradient text */
+  .liquid-gradient-text {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--secondary)) 50%,
+      hsl(var(--primary)) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shimmer 4s ease infinite;
+  }
+
+  /* Liquid glow button */
+  .liquid-glow-btn {
+    position: relative;
+    overflow: hidden;
+  }
+  .liquid-glow-btn::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.4), hsl(var(--secondary) / 0.2), hsl(var(--primary) / 0.4));
+    background-size: 200% 200%;
+    animation: gradient-shimmer 3s ease infinite;
+    z-index: -1;
+    filter: blur(12px);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .liquid-glow-btn:hover::after {
+    opacity: 1;
+  }
+
+  /* Category card glass border animation */
+  .liquid-category-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent, hsl(var(--secondary) / 0.2));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  .liquid-category-card:hover::before {
+    opacity: 1;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob-morph,
+  .liquid-gradient-text,
+  .animate-float,
+  .liquid-glow-btn::after {
+    animation: none !important;
+  }
 }

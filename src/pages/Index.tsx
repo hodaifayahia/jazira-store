@@ -22,6 +22,7 @@ import FloatingParticles from '@/components/FloatingParticles';
 import HeroScene3D from '@/components/HeroScene3D';
 import MinimalTemplate from '@/components/templates/MinimalTemplate';
 import BoldTemplate from '@/components/templates/BoldTemplate';
+import LiquidTemplate from '@/components/templates/LiquidTemplate';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt,
@@ -103,6 +104,9 @@ export default function IndexPage() {
   }
   if (storeTemplate === 'bold') {
     return <BoldTemplate products={allProducts} isLoading={isLoading} categories={categoriesData} heroSlides={heroSlides} />;
+  }
+  if (storeTemplate === 'liquid') {
+    return <LiquidTemplate products={allProducts} isLoading={isLoading} categories={categoriesData} heroSlides={heroSlides} />;
   }
 
   const trustItems = [
