@@ -41,6 +41,7 @@ import AdminReturnsPage from "./pages/admin/AdminReturnsPage";
 import AdminCostsPage from "./pages/admin/AdminCostsPage";
 import AdminLandingPagePage from "./pages/admin/AdminLandingPagePage";
 import AboutPage from "./pages/AboutPage";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { useStoreTheme } from "@/hooks/useStoreTheme";
 import { useFavicon } from "@/hooks/useFavicon";
@@ -87,6 +88,7 @@ const App = () => (
             <Route path="/auth" element={<PublicLayout><AuthPage /></PublicLayout>} />
             <Route path="/dashboard" element={<PublicLayout><CustomerDashboardPage /></PublicLayout>} />
             <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
+            <Route path="/lp/:id" element={<LandingPage />} />
 
             {/* Admin */}
             <Route path="/admin/login" element={<LanguageProvider><AdminLoginPage /></LanguageProvider>} />

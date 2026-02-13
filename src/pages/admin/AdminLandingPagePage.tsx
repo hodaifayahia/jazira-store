@@ -14,7 +14,7 @@ import {
   Rocket, Sparkles, RefreshCw, Copy, ExternalLink, Check, Star,
   Pencil, ShoppingCart, ImagePlus, Wand2, ArrowDown, Package, Shield,
   Truck, RotateCcw, Phone, User, MapPin, CheckCircle, Loader2,
-  Save, Trash2, FileText, Building2, Home, Eye
+  Save, Trash2, FileText, Building2, Home, Eye, Link2
 } from 'lucide-react';
 
 interface Product {
@@ -536,6 +536,12 @@ img{max-width:100%}
                         <Button size="sm" variant="outline" className="flex-1 font-cairo gap-1" onClick={() => handleLoadSaved(page)}>
                           <Eye className="w-3.5 h-3.5" /> {t('common.view')}
                         </Button>
+                        <Button size="sm" variant="outline" className="font-cairo gap-1" onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/lp/${page.id}`);
+                          toast.success(t('landing.linkCopied') || 'Link copied!');
+                        }}>
+                          <Link2 className="w-3.5 h-3.5" />
+                        </Button>
                         <Button size="sm" variant="ghost" className="text-destructive font-cairo" onClick={() => handleDeleteSaved(page.id)}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -721,25 +727,39 @@ img{max-width:100%}
                     <RefreshCw className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
                     {t('landing.regenerate')}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 font-cairo">
-                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    {t('common.save')}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handlePreviewTab} className="gap-1.5 font-cairo">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    {t('landing.previewTab')}
-                  </Button>
-                  <Button size="sm" onClick={handleCopyHtml} className="gap-1.5 font-cairo">
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? t('landing.copiedBtn') : t('landing.exportHtml')}
-                  </Button>
-                </div>
+                   <Button variant="outline" size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 font-cairo">
+                     {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                     {t('common.save')}
+                   </Button>
+                   {savedPageId && (
+                     <Button variant="outline" size="sm" className="gap-1.5 font-cairo" onClick={() => {
+                       const url = `${window.location.origin}/lp/${savedPageId}`;
+                       navigator.clipboard.writeText(url);
+                       toast.success(t('landing.linkCopied') || 'Link copied!');
+                     }}>
+                       <Link2 className="w-3.5 h-3.5" />
+                       {t('landing.copyLink') || 'Copy Link'}
+                     </Button>
+                   )}
+                   <Button variant="outline" size="sm" onClick={handlePreviewTab} className="gap-1.5 font-cairo">
+                     <ExternalLink className="w-3.5 h-3.5" />
+                     {t('landing.previewTab')}
+                   </Button>
+                   <Button size="sm" onClick={handleCopyHtml} className="gap-1.5 font-cairo">
+                     {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                     {copied ? t('landing.copiedBtn') : t('landing.exportHtml')}
+                   </Button>
+                 </div>
               </div>
 
               {savedPageId && (
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-sm font-cairo text-primary flex items-center gap-2">
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-sm font-cairo text-primary flex items-center gap-2 flex-wrap">
                   <CheckCircle className="w-4 h-4" />
                   {t('landing.savedIndicator')}
+                  <span className="mx-1">•</span>
+                  <a href={`/lp/${savedPageId}`} target="_blank" rel="noopener noreferrer" className="underline text-xs break-all hover:text-primary/80">
+                    {window.location.origin}/lp/{savedPageId}
+                  </a>
                 </div>
               )}
 
