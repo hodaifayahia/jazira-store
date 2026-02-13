@@ -35,9 +35,9 @@ interface ProductVariant {
 }
 
 const formLabels: Record<string, Record<string, string>> = {
-  ar: { orderNow: 'اطلب الآن', name: 'الاسم الكامل', phone: 'رقم الهاتف', wilaya: 'الولاية', baladiya: 'البلدية', deliveryType: 'نوع التوصيل', office: 'إلى المكتب', home: 'إلى المنزل', address: 'العنوان', submit: 'تأكيد الطلب', subtitle: 'املأ النموذج وسنتواصل معك', namePh: 'أدخل اسمك', phonePh: '05XXXXXXXX', wilayaPh: 'اختر الولاية', baladiyaPh: 'اختر البلدية', addressPh: 'عنوان التوصيل', success: 'تم تسجيل طلبك بنجاح! سنتواصل معك قريباً ✅', secure: 'آمن', fast: 'سريع', guaranteed: 'مضمون', fastDelivery: 'توصيل سريع', securePayment: 'دفع آمن', freeReturns: 'إرجاع مجاني', qualityGuaranteed: 'جودة مضمونة', reviews: '⭐ آراء عملائنا', required: 'مطلوب', invalidPhone: 'رقم هاتف غير صحيح', selectVariant: 'يرجى اختيار جميع الخيارات', faq: 'أسئلة شائعة' },
-  en: { orderNow: 'Order Now', name: 'Full Name', phone: 'Phone Number', wilaya: 'Wilaya', baladiya: 'City', deliveryType: 'Delivery Type', office: 'To Office', home: 'To Home', address: 'Address', submit: 'Confirm Order', subtitle: "Fill the form and we'll contact you", namePh: 'Enter your name', phonePh: '05XXXXXXXX', wilayaPh: 'Select wilaya', baladiyaPh: 'Select city', addressPh: 'Delivery address', success: 'Your order has been placed! We will contact you soon ✅', secure: 'Secure', fast: 'Fast', guaranteed: 'Guaranteed', fastDelivery: 'Fast Delivery', securePayment: 'Secure Payment', freeReturns: 'Free Returns', qualityGuaranteed: 'Quality Guaranteed', reviews: '⭐ Customer Reviews', required: 'Required', invalidPhone: 'Invalid phone number', selectVariant: 'Please select all options', faq: 'FAQ' },
-  fr: { orderNow: 'Commander Maintenant', name: 'Nom complet', phone: 'Téléphone', wilaya: 'Wilaya', baladiya: 'Commune', deliveryType: 'Type de livraison', office: 'Au bureau', home: 'À domicile', address: 'Adresse', submit: 'Confirmer la commande', subtitle: 'Remplissez le formulaire et nous vous contacterons', namePh: 'Entrez votre nom', phonePh: '05XXXXXXXX', wilayaPh: 'Sélectionner wilaya', baladiyaPh: 'Sélectionner commune', addressPh: 'Adresse de livraison', success: 'Votre commande a été enregistrée ! Nous vous contacterons bientôt ✅', secure: 'Sécurisé', fast: 'Rapide', guaranteed: 'Garanti', fastDelivery: 'Livraison rapide', securePayment: 'Paiement sécurisé', freeReturns: 'Retour gratuit', qualityGuaranteed: 'Qualité garantie', reviews: '⭐ Avis Clients', required: 'Requis', invalidPhone: 'Numéro de téléphone invalide', selectVariant: 'Veuillez sélectionner toutes les options', faq: 'FAQ' },
+  ar: { orderNow: 'اطلب الآن', name: 'الاسم الكامل', phone: 'رقم الهاتف', wilaya: 'الولاية', baladiya: 'البلدية', deliveryType: 'نوع التوصيل', office: 'إلى المكتب', home: 'إلى المنزل', address: 'العنوان', submit: 'تأكيد الطلب', subtitle: 'املأ النموذج وسنتواصل معك', namePh: 'أدخل اسمك', phonePh: '05XXXXXXXX', wilayaPh: 'اختر الولاية', baladiyaPh: 'اختر البلدية', addressPh: 'عنوان التوصيل', secure: 'آمن', fast: 'سريع', guaranteed: 'مضمون', fastDelivery: 'توصيل سريع', securePayment: 'دفع آمن', freeReturns: 'إرجاع مجاني', qualityGuaranteed: 'جودة مضمونة', reviews: '⭐ آراء عملائنا', required: 'مطلوب', invalidPhone: 'رقم هاتف غير صحيح', selectVariant: 'يرجى اختيار جميع الخيارات', faq: 'أسئلة شائعة', thankYouTitle: 'شكراً لك! 🎉', thankYouMsg: 'تم تسجيل طلبك بنجاح', thankYouSub: 'سنتواصل معك قريباً لتأكيد الطلب', orderNumber: 'رقم الطلب', close: 'إغلاق' },
+  en: { orderNow: 'Order Now', name: 'Full Name', phone: 'Phone Number', wilaya: 'Wilaya', baladiya: 'City', deliveryType: 'Delivery Type', office: 'To Office', home: 'To Home', address: 'Address', submit: 'Confirm Order', subtitle: "Fill the form and we'll contact you", namePh: 'Enter your name', phonePh: '05XXXXXXXX', wilayaPh: 'Select wilaya', baladiyaPh: 'Select city', addressPh: 'Delivery address', secure: 'Secure', fast: 'Fast', guaranteed: 'Guaranteed', fastDelivery: 'Fast Delivery', securePayment: 'Secure Payment', freeReturns: 'Free Returns', qualityGuaranteed: 'Quality Guaranteed', reviews: '⭐ Customer Reviews', required: 'Required', invalidPhone: 'Invalid phone number', selectVariant: 'Please select all options', faq: 'FAQ', thankYouTitle: 'Thank You! 🎉', thankYouMsg: 'Your order has been placed successfully', thankYouSub: 'We will contact you soon to confirm your order', orderNumber: 'Order Number', close: 'Close' },
+  fr: { orderNow: 'Commander Maintenant', name: 'Nom complet', phone: 'Téléphone', wilaya: 'Wilaya', baladiya: 'Commune', deliveryType: 'Type de livraison', office: 'Au bureau', home: 'À domicile', address: 'Adresse', submit: 'Confirmer la commande', subtitle: 'Remplissez le formulaire et nous vous contacterons', namePh: 'Entrez votre nom', phonePh: '05XXXXXXXX', wilayaPh: 'Sélectionner wilaya', baladiyaPh: 'Sélectionner commune', addressPh: 'Adresse de livraison', secure: 'Sécurisé', fast: 'Rapide', guaranteed: 'Garanti', fastDelivery: 'Livraison rapide', securePayment: 'Paiement sécurisé', freeReturns: 'Retour gratuit', qualityGuaranteed: 'Qualité garantie', reviews: '⭐ Avis Clients', required: 'Requis', invalidPhone: 'Numéro de téléphone invalide', selectVariant: 'Veuillez sélectionner toutes les options', faq: 'FAQ', thankYouTitle: 'Merci ! 🎉', thankYouMsg: 'Votre commande a été enregistrée avec succès', thankYouSub: 'Nous vous contacterons bientôt pour confirmer votre commande', orderNumber: 'Numéro de commande', close: 'Fermer' },
 };
 
 export default function LandingPage() {
@@ -53,9 +53,11 @@ export default function LandingPage() {
   const [orderAddress, setOrderAddress] = useState('');
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [showThankYou, setShowThankYou] = useState(false);
 
   // Fetch landing page
   const { data: page, isLoading } = useQuery({
@@ -188,8 +190,6 @@ export default function LandingPage() {
     return acc;
   }, {});
 
-  const hasVariantOptions = (product?.has_variants && optionGroups && optionGroups.length > 0) || (!product?.has_variants && Object.keys(legacyGrouped).length > 0);
-
   // FB Pixel: ViewContent on load
   useEffect(() => {
     if (product && content) {
@@ -272,7 +272,9 @@ export default function LandingPage() {
 
       supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
 
+      setOrderNumber(order.order_number || order.id.slice(0, 8).toUpperCase());
       setOrderSuccess(true);
+      setShowThankYou(true);
     } catch (e: any) {
       console.error(e);
       setFormErrors({ submit: e.message || 'Error' });
@@ -381,8 +383,74 @@ export default function LandingPage() {
     return null;
   };
 
+  // Thank You Modal
+  const renderThankYouModal = () => {
+    if (!showThankYou) return null;
+    return (
+      <div
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+          animation: 'fadeIn 0.3s ease-out',
+        }}
+        onClick={() => setShowThankYou(false)}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: '#fff', borderRadius: '1.5rem', padding: '3rem 2.5rem',
+            maxWidth: '480px', width: '90%', textAlign: 'center',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
+            animation: 'slideUp 0.4s ease-out',
+          }}
+        >
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.75rem' }}>
+            {fl.thankYouTitle}
+          </h2>
+          <p style={{ fontSize: '1.1rem', color: '#475569', marginBottom: '0.5rem', fontWeight: 600 }}>
+            {fl.thankYouMsg}
+          </p>
+          <p style={{ fontSize: '0.95rem', color: '#64748b', marginBottom: '1.5rem' }}>
+            {fl.thankYouSub}
+          </p>
+          {orderNumber && (
+            <div style={{
+              display: 'inline-block', padding: '0.75rem 1.5rem',
+              background: '#f0fdf4', borderRadius: '0.75rem', border: '1px solid #bbf7d0',
+              marginBottom: '1.5rem',
+            }}>
+              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{fl.orderNumber}: </span>
+              <span style={{ fontWeight: 800, color: '#16a34a', fontSize: '1.1rem' }}>{orderNumber}</span>
+            </div>
+          )}
+          <div>
+            <button
+              onClick={() => setShowThankYou(false)}
+              style={{
+                padding: '0.85rem 2.5rem', borderRadius: '0.75rem',
+                background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff',
+                border: 'none', fontSize: '1rem', fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              {fl.close}
+            </button>
+          </div>
+        </div>
+        <style>{`
+          @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+          @keyframes slideUp { from { opacity: 0; transform: translateY(30px) } to { opacity: 1; transform: translateY(0) } }
+        `}</style>
+      </div>
+    );
+  };
+
   return (
     <div dir={isRtl ? 'rtl' : 'ltr'} style={{ background: '#fff', color: '#1a1a1a', fontFamily: 'system-ui,-apple-system,sans-serif', margin: 0 }}>
+      {/* Thank You Modal */}
+      {renderThankYouModal()}
+
       {/* Hero */}
       <div style={{ position: 'relative', minHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'linear-gradient(135deg,#0f172a,#1e293b)' }}>
         {heroImage && (
@@ -514,8 +582,9 @@ export default function LandingPage() {
 
           {orderSuccess ? (
             <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(34,197,94,0.1)', borderRadius: '1rem', border: '1px solid rgba(34,197,94,0.3)' }}>
-              <div style={{ width: '3rem', height: '3rem', color: '#22c55e', margin: '0 auto 1rem', fontSize: '3rem' }}>✅</div>
-              <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#22c55e' }}>{fl.success}</p>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+              <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#22c55e' }}>{fl.thankYouMsg}</p>
+              <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>{fl.thankYouSub}</p>
             </div>
           ) : (
             <>

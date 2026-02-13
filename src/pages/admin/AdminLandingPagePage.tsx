@@ -819,8 +819,9 @@ img{max-width:100%}
                         <Button size="sm" variant="outline" className="flex-1 font-cairo gap-1" onClick={() => handleLoadSaved(page)}>
                           <Eye className="w-3.5 h-3.5" /> {t('common.view')}
                         </Button>
-                        <Button size="sm" variant="outline" className="font-cairo gap-1" onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/lp/${page.id}`);
+                         <Button size="sm" variant="outline" className="font-cairo gap-1" onClick={() => {
+                          const publishedUrl = 'https://algeria-souq-hub.lovable.app';
+                          navigator.clipboard.writeText(`${publishedUrl}/lp/${page.id}`);
                           toast.success(t('landing.linkCopied') || 'Link copied!');
                         }}>
                           <Link2 className="w-3.5 h-3.5" />
@@ -1016,8 +1017,8 @@ img{max-width:100%}
                    </Button>
                    {savedPageId && (
                      <Button variant="outline" size="sm" className="gap-1.5 font-cairo" onClick={() => {
-                       const url = `${window.location.origin}/lp/${savedPageId}`;
-                       navigator.clipboard.writeText(url);
+                       const publishedUrl = 'https://algeria-souq-hub.lovable.app';
+                       navigator.clipboard.writeText(`${publishedUrl}/lp/${savedPageId}`);
                        toast.success(t('landing.linkCopied') || 'Link copied!');
                      }}>
                        <Link2 className="w-3.5 h-3.5" />
@@ -1040,9 +1041,9 @@ img{max-width:100%}
                   <CheckCircle className="w-4 h-4" />
                   {t('landing.savedIndicator')}
                   <span className="mx-1">•</span>
-                  <a href={`/lp/${savedPageId}`} target="_blank" rel="noopener noreferrer" className="underline text-xs break-all hover:text-primary/80">
-                    {window.location.origin}/lp/{savedPageId}
-                  </a>
+                   <a href={`https://algeria-souq-hub.lovable.app/lp/${savedPageId}`} target="_blank" rel="noopener noreferrer" className="underline text-xs break-all hover:text-primary/80">
+                    https://algeria-souq-hub.lovable.app/lp/{savedPageId}
+                   </a>
                 </div>
               )}
 
