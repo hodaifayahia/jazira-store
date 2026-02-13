@@ -699,4 +699,22 @@ export const ar: Record<string, string> = {
   'selectVariationType': 'اختر نوع الخيار',
   'customOption': 'خيار مخصص',
   'loadFromLibrary': 'تحميل من المكتبة',
+
+  // ═══ Offer Timer ═══
+  'products.offerTitle': 'عنوان العرض',
+  'products.offerEndsAt': 'ينتهي في',
+  'products.offerTitlePlaceholder': 'مثال: عرض خاص - خصم 30%',
+  'products.offerTimerHint': 'اتركه فارغاً إذا لا يوجد عرض محدد بوقت',
+
+  // ═══ Product Page Trust / Urgency ═══
+  'product.freeDelivery': 'توصيل مجاني',
+  'product.securePayment': 'دفع آمن',
+  'product.fastShipping': 'شحن سريع',
+  'product.returnGuarantee': 'ضمان الاسترجاع',
+  'product.onlyLeft': 'بقي {n} فقط!',
+  'product.orderNow': 'اطلب الآن',
+  'product.days': 'يوم',
+  'product.hours': 'ساعة',
+  'product.minutes': 'دقيقة',
+  'product.seconds': 'ثانية',
 };

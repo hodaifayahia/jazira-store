@@ -699,4 +699,22 @@ export const fr: Record<string, string> = {
   'selectVariationType': 'Choisir le type de variation',
   'customOption': 'Option personnalisée',
   'loadFromLibrary': 'Charger depuis la bibliothèque',
+
+  // ═══ Offer Timer ═══
+  'products.offerTitle': "Titre de l'offre",
+  'products.offerEndsAt': 'Se termine le',
+  'products.offerTitlePlaceholder': 'Ex: Offre spéciale - 30% de réduction',
+  'products.offerTimerHint': "Laisser vide s'il n'y a pas d'offre limitée",
+
+  // ═══ Product Page Trust / Urgency ═══
+  'product.freeDelivery': 'Livraison gratuite',
+  'product.securePayment': 'Paiement sécurisé',
+  'product.fastShipping': 'Expédition rapide',
+  'product.returnGuarantee': 'Garantie de retour',
+  'product.onlyLeft': 'Plus que {n} !',
+  'product.orderNow': 'Commander maintenant',
+  'product.days': 'Jours',
+  'product.hours': 'Heures',
+  'product.minutes': 'Minutes',
+  'product.seconds': 'Secondes',
 };
