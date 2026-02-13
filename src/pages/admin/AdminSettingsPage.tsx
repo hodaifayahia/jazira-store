@@ -60,6 +60,7 @@ export default function AdminSettingsPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-settings'] });
+      qc.invalidateQueries({ queryKey: ['settings'] });
       qc.invalidateQueries({ queryKey: ['store-logo'] });
       qc.invalidateQueries({ queryKey: ['store-theme-colors'] });
       qc.invalidateQueries({ queryKey: ['store-favicon'] });
