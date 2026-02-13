@@ -696,4 +696,7 @@ export const fr: Record<string, string> = {
   'settings.announcementPlaceholder': "Texte de l'annonce...",
   'settings.announcementPreview': "Aperçu de la barre d'annonce",
   'settings.noPaymentMethods': 'Aucun mode de paiement activé',
+  'selectVariationType': 'Choisir le type de variation',
+  'customOption': 'Option personnalisée',
+  'loadFromLibrary': 'Charger depuis la bibliothèque',
 };

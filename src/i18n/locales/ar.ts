@@ -696,4 +696,7 @@ export const ar: Record<string, string> = {
   'settings.announcementPlaceholder': 'نص الإعلان...',
   'settings.announcementPreview': 'معاينة شريط الإعلانات',
   'settings.noPaymentMethods': 'لا توجد طرق دفع مفعّلة',
+  'selectVariationType': 'اختر نوع الخيار',
+  'customOption': 'خيار مخصص',
+  'loadFromLibrary': 'تحميل من المكتبة',
 };
