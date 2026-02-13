@@ -20,6 +20,8 @@ import heroBannerNew from '@/assets/hero-banner-new.jpg';
 import AnimatedSection from '@/components/AnimatedSection';
 import FloatingParticles from '@/components/FloatingParticles';
 import HeroScene3D from '@/components/HeroScene3D';
+import MinimalTemplate from '@/components/templates/MinimalTemplate';
+import BoldTemplate from '@/components/templates/BoldTemplate';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt,
@@ -73,6 +75,15 @@ export default function IndexPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: storeTemplate } = useQuery({
+    queryKey: ['store-template'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('value').eq('key', 'store_template').maybeSingle();
+      return data?.value || 'classic';
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const [emblaRef] = useEmblaCarousel({ direction: 'rtl', loop: true }, [Autoplay({ delay: 5000 })]);
 
   const newestProducts = allProducts?.slice(0, 8) || [];
@@ -85,6 +96,14 @@ export default function IndexPage() {
       navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  // Template routing
+  if (storeTemplate === 'minimal') {
+    return <MinimalTemplate products={allProducts} isLoading={isLoading} categories={categoriesData} />;
+  }
+  if (storeTemplate === 'bold') {
+    return <BoldTemplate products={allProducts} isLoading={isLoading} categories={categoriesData} heroSlides={heroSlides} />;
+  }
 
   const trustItems = [
     { icon: Truck, label: 'توصيل لجميع الولايات', desc: '58 ولاية' },

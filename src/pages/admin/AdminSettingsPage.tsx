@@ -9,11 +9,13 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Upload, X, ImageIcon, Bot, Plus, Send, Webhook, Key, Shield, Palette, Megaphone, SlidersHorizontal, Store, CreditCard, Loader2, Trash2, RotateCcw } from 'lucide-react';
+import { Save, Upload, X, ImageIcon, Bot, Plus, Send, Webhook, Key, Shield, Palette, Megaphone, SlidersHorizontal, Store, CreditCard, Loader2, Trash2, RotateCcw, FormInput, Paintbrush } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import AdminUserManagement from '@/components/admin/AdminUserManagement';
 import { useTranslation } from '@/i18n';
+import FormSettingsTab from '@/components/admin/FormSettingsTab';
+import AppearanceTab from '@/components/admin/AppearanceTab';
 
 export default function AdminSettingsPage() {
   const { t } = useTranslation();
@@ -248,24 +250,32 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       <Tabs defaultValue="identity" dir="rtl">
-        <TabsList className="w-full grid grid-cols-5 h-auto">
-          <TabsTrigger value="identity" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
+        <TabsList className="w-full flex overflow-x-auto h-auto">
+          <TabsTrigger value="identity" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5 flex-1 min-w-fit">
             <Store className="w-4 h-4 hidden sm:block" />
             {t('settings.storeIdentity')}
           </TabsTrigger>
-          <TabsTrigger value="payment" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
+          <TabsTrigger value="payment" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5 flex-1 min-w-fit">
             <CreditCard className="w-4 h-4 hidden sm:block" />
             {t('settings.paymentDelivery')}
           </TabsTrigger>
-          <TabsTrigger value="telegram" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
+          <TabsTrigger value="telegram" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5 flex-1 min-w-fit">
             <Bot className="w-4 h-4 hidden sm:block" />
             {t('settings.telegram')}
           </TabsTrigger>
-          <TabsTrigger value="returns" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
+          <TabsTrigger value="returns" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5 flex-1 min-w-fit">
             <RotateCcw className="w-4 h-4 hidden sm:block" />
             {t('settings.returnsTab')}
           </TabsTrigger>
-          <TabsTrigger value="security" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5">
+          <TabsTrigger value="form" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5 flex-1 min-w-fit">
+            <FormInput className="w-4 h-4 hidden sm:block" />
+            النموذج
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5 flex-1 min-w-fit">
+            <Paintbrush className="w-4 h-4 hidden sm:block" />
+            المظهر
+          </TabsTrigger>
+          <TabsTrigger value="security" className="font-cairo text-xs sm:text-sm py-2.5 gap-1.5 flex-1 min-w-fit">
             <Shield className="w-4 h-4 hidden sm:block" />
             {t('settings.security')}
           </TabsTrigger>
@@ -608,6 +618,28 @@ export default function AdminSettingsPage() {
         {/* ═══ Tab 5: Returns Settings ═══ */}
         <TabsContent value="returns" className="space-y-6 mt-6">
           <ReturnSettingsTab />
+        </TabsContent>
+
+        {/* ═══ Tab 6: Form Settings ═══ */}
+        <TabsContent value="form" className="space-y-6 mt-6">
+          <FormSettingsTab
+            currentValue={mergedSettings.checkout_form_config}
+            onUpdate={v => setField('checkout_form_config', v)}
+            onSave={handleSave}
+            saving={updateSetting.isPending}
+            hasChanges={Object.keys(form).length > 0}
+          />
+        </TabsContent>
+
+        {/* ═══ Tab 7: Appearance ═══ */}
+        <TabsContent value="appearance" className="space-y-6 mt-6">
+          <AppearanceTab
+            currentValue={mergedSettings.store_template || 'classic'}
+            onUpdate={v => setField('store_template', v)}
+            onSave={handleSave}
+            saving={updateSetting.isPending}
+            hasChanges={Object.keys(form).length > 0}
+          />
         </TabsContent>
 
         {/* ═══ Tab 4: Security ═══ */}
