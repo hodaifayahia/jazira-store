@@ -736,4 +736,10 @@ export const fr: Record<string, string> = {
   'landing.exportHtml': 'Copier le HTML',
   'landing.copiedBtn': 'Copié !',
   'landing.copied': "HTML de la page d'atterrissage copié ✅",
+  'landing.generateImage': "Générer une image IA",
+  'landing.imagePromptPlaceholder': "Décrivez l'image souhaitée... (ou laissez vide pour auto)",
+  'landing.generateImageBtn': "Générer l'image",
+  'landing.generatingImage': 'Génération...',
+  'landing.imageGenerated': 'Image générée ✅',
+  'landing.imagePromptHint': "Décrivez l'image en anglais pour de meilleurs résultats",
 };
