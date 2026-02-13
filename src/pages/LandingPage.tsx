@@ -16,7 +16,7 @@ interface LandingContent {
   urgency_text: string;
   faq?: { question: string; answer: string }[];
   social_proof_stats?: { number: string; label: string }[];
-  before_after?: { before_text: string; after_text: string; switch_line: string };
+  before_after?: { before_text: string; after_text: string; switch_line: string; image_url?: string };
   how_it_works?: { icon: string; title: string; description: string }[];
   guarantee_text?: string;
   authority_text?: string;
@@ -506,6 +506,15 @@ export default function LandingPage() {
       {content.before_after && (
         <div style={{ padding: '4rem 2rem', background: '#f8fafc' }}>
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 800, marginBottom: '2.5rem', color: '#0f172a' }}>
+              {lang === 'ar' ? '✨ التحول' : lang === 'fr' ? '✨ La Transformation' : '✨ The Transformation'}
+            </h2>
+            {/* Transformation Image */}
+            {content.before_after.image_url && (
+              <div style={{ marginBottom: '2.5rem', borderRadius: '1.5rem', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+                <img src={content.before_after.image_url} alt="Transformation" loading="lazy" style={{ width: '100%', height: 'auto', maxHeight: '500px', objectFit: 'cover', display: 'block' }} />
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '2rem', marginBottom: '2rem' }}>
               <div style={{ padding: '2.5rem 2rem', borderRadius: '1.5rem', background: '#fee2e2', border: '2px solid #fca5a5', textAlign: 'center' }}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>😔</div>
@@ -595,19 +604,55 @@ export default function LandingPage() {
       {/* Testimonials */}
       <div style={{ padding: '4rem 2rem', background: '#f8fafc' }}>
         <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 800, marginBottom: '2.5rem', color: '#0f172a' }}>{fl.reviews}</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
-          {content.testimonials.map((rev, i) => (
-            <div key={i} style={{ background: '#fff', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-              <div style={{ color: '#f59e0b', marginBottom: '0.5rem', fontSize: '1.1rem' }}>
-                {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+          {content.testimonials.map((rev, i) => {
+            const initials = rev.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            const gradients = [
+              'linear-gradient(135deg, #f97316, #ea580c)',
+              'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+              'linear-gradient(135deg, #06b6d4, #0891b2)',
+              'linear-gradient(135deg, #10b981, #059669)',
+              'linear-gradient(135deg, #ec4899, #db2777)',
+            ];
+            const gradient = gradients[i % gradients.length];
+            return (
+              <div key={i} style={{
+                background: '#fff', borderRadius: '1rem', padding: '2rem',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.06)',
+                borderLeft: '4px solid transparent',
+                borderImage: 'linear-gradient(to bottom, #f97316, #ea580c) 1',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                position: 'relative' as const,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 30px rgba(0,0,0,0.12)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 15px rgba(0,0,0,0.06)'; }}
+              >
+                {/* Quote icon */}
+                <div style={{ fontSize: '3rem', lineHeight: 1, color: '#f97316', opacity: 0.2, fontFamily: 'Georgia, serif', marginBottom: '0.5rem' }}>"</div>
+                {/* Review text */}
+                <p style={{ color: '#475569', lineHeight: 1.8, marginBottom: '1rem', fontSize: '0.95rem' }}>"{rev.text}"</p>
+                {/* Stars */}
+                <div style={{ color: '#f59e0b', marginBottom: '1rem', fontSize: '1rem', letterSpacing: '2px' }}>
+                  {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                </div>
+                {/* Avatar + Name */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%', background: gradient,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0,
+                  }}>{initials}</div>
+                  <div>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'block', fontSize: '0.95rem' }}>{rev.name}</span>
+                    <span style={{ fontSize: '0.7rem', background: 'linear-gradient(135deg, #dbeafe, #e0e7ff)', color: '#1d4ed8', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      {lang === 'ar' ? 'شراء موثق' : lang === 'fr' ? 'Achat vérifié' : 'Verified Purchase'}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <p style={{ color: '#475569', fontStyle: 'italic', marginBottom: '0.75rem', lineHeight: 1.7 }}>{rev.text}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontWeight: 700, color: '#0f172a' }}>{rev.name}</span>
-                <span style={{ fontSize: '0.75rem', background: '#dbeafe', color: '#1d4ed8', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontWeight: 600 }}>✓ {lang === 'ar' ? 'موثق' : lang === 'fr' ? 'Vérifié' : 'Verified'}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
