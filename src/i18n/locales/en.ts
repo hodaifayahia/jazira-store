@@ -736,4 +736,10 @@ export const en: Record<string, string> = {
   'landing.exportHtml': 'Copy HTML',
   'landing.copiedBtn': 'Copied!',
   'landing.copied': 'Landing page HTML copied ✅',
+  'landing.generateImage': 'Generate AI Image',
+  'landing.imagePromptPlaceholder': 'Describe the image you want... (or leave empty for auto)',
+  'landing.generateImageBtn': 'Generate Image',
+  'landing.generatingImage': 'Generating...',
+  'landing.imageGenerated': 'Image generated ✅',
+  'landing.imagePromptHint': 'Describe the image in English for best results',
 };

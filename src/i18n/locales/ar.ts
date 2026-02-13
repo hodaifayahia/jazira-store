@@ -736,4 +736,10 @@ export const ar: Record<string, string> = {
   'landing.exportHtml': 'نسخ HTML',
   'landing.copiedBtn': 'تم النسخ!',
   'landing.copied': 'تم نسخ HTML للصفحة ✅',
+  'landing.generateImage': 'توليد صورة بالذكاء الاصطناعي',
+  'landing.imagePromptPlaceholder': 'صف الصورة التي تريدها... (أو اتركه فارغاً للتلقائي)',
+  'landing.generateImageBtn': 'توليد صورة',
+  'landing.generatingImage': 'جاري التوليد...',
+  'landing.imageGenerated': 'تم توليد الصورة ✅',
+  'landing.imagePromptHint': 'اكتب وصف الصورة بالإنجليزية للحصول على أفضل نتائج',
 };

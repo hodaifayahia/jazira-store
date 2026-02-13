@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-landing]
 verify_jwt = false
+
+[functions.generate-landing-image]
+verify_jwt = false
