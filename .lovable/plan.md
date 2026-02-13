@@ -1,101 +1,75 @@
 
 
-# Overhaul Landing Page: New Premium Template + Full Prompt Integration
+# Upgrade Landing Page Order Form -- Premium UI/UX with Icons and Visual Elements
 
-## Root Cause
+## What Changes
 
-The landing page generation works in two parts:
-1. **Edge function** generates structured JSON content (text, headlines, etc.)
-2. **Frontend template** renders that JSON into HTML sections
+The order form on the public landing page (`/lp/:id`) and the admin preview will be redesigned to feel premium and match the overall landing page design. Currently it's plain dark inputs with text-only labels. The upgrade adds icons to every field, a product image inside the form, trust badges with icons, a visual order summary, and better visual hierarchy.
 
-Currently, the template only renders: Hero, Trust Bar, Benefits, Product Details, Gallery, Testimonials, FAQ, Urgency. Your prompt asks for many more sections (counters, Before/After, authority logos, hotspots, etc.), but the template ignores them because those fields don't exist in the JSON schema or the rendering code.
+## Changes to Both Files
 
-## Plan
+**Files:** `src/pages/LandingPage.tsx` and `src/pages/admin/AdminLandingPagePage.tsx`
 
-### 1. Expand the AI Generation Schema
+### 1. Form Header with Product Image
+- Add a small product image thumbnail next to the product name in the price box
+- Show a "limited stock" or urgency badge inside the form header
+- Add a glowing animated border around the entire form card
 
-Add new fields to the `generate-landing` edge function's tool schema and prompt:
+### 2. Icons on Every Form Field
+Each input gets an icon prefix inside the field area:
+- Name field: User icon (person silhouette)
+- Phone field: Phone icon
+- Wilaya field: MapPin icon
+- Baladiya field: Building icon
+- Address field: Home/MapPin icon
+- Delivery type buttons: Truck + Building icons
 
-- `social_proof_stats`: Array of animated counter items (e.g., "50,000+ Sold", "98% Satisfaction", "30-Day Guarantee")
-- `before_after`: Object with `before_text`, `after_text`, and `switch_line` (e.g., "See why 2,400+ customers made the switch")
-- `authority_text`: "As featured in..." section text
-- `how_it_works`: 3-step timeline array with icon, title, description
-- `guarantee_text`: Money-back guarantee badge text
+### 3. Delivery Type Cards with Icons
+- Office delivery: Building icon + price
+- Home delivery: Home icon + price
+- Both styled as premium selection cards with subtle glow on selection
 
-Keep existing fields (headline, subheadline, benefits, testimonials, faq, urgency_text).
+### 4. Enhanced Trust Strip Below Submit
+Replace plain emoji text with styled badge cards:
+- Lock icon + "Secure Payment"
+- Truck icon + "Fast Delivery"
+- Shield icon + "Guaranteed"
+- RotateCcw icon + "Free Returns"
 
-### 2. Redesign the Frontend Template (Both Admin + Public)
+### 5. Order Summary Before Submit
+- Show a mini order breakdown: Product price + Shipping cost = Total
+- Styled as a premium receipt-like element
 
-Update both `AdminLandingPagePage.tsx` and `LandingPage.tsx` to render a premium template with these sections in order:
+### 6. Submit Button Enhancement
+- Larger, with a ShoppingCart icon
+- Pulsing animation to draw attention
+- Loading spinner when submitting
 
-1. **Hero** -- Split layout with floating product image + headline + glowing CTA + micro social-proof strip ("4.9/5 from 2,400+ reviews") + animated gradient background
-2. **Trust Bar** -- Keep existing (Fast Delivery, Secure Payment, etc.)
-3. **Before / After** -- Two side-by-side cards showing transformation with a compelling one-liner below
-4. **Benefits** -- Keep existing grid but add subtle hover animations
-5. **Authority & Social Validation** -- Grayscale logo strip placeholder + animated number counters (e.g., "50,000+ Sold")
-6. **Product Details** -- Keep existing with product image + description
-7. **How It Works** -- 3-step horizontal timeline with icons
-8. **Testimonials** -- Keep existing with verified badge added
-9. **Guarantee Badge** -- "100% Money-Back Guarantee" section
-10. **FAQ** -- Keep existing accordion style
-11. **Urgency Banner** -- Keep existing
-12. **Order Form** -- Keep existing (outside contentEditable in admin)
+### 7. Visual Consistency
+- Form container gets a glassmorphism card effect (semi-transparent background with backdrop blur)
+- Input fields get subtle focus glow animations
+- All icons use inline SVG paths (no external dependencies needed for LandingPage.tsx since it uses inline styles, not Tailwind)
 
-### 3. Redeploy the Edge Function
+## Technical Approach
 
-Deploy the updated `generate-landing` function so the new prompt and schema are active.
+**LandingPage.tsx (public):** Since this file uses inline styles (no Tailwind), icons will be rendered as small inline SVG elements via a helper function. This keeps the page self-contained with zero imports.
 
-### 4. Add Premium CSS Animations
+**AdminLandingPagePage.tsx (admin preview):** Uses Lucide React icons already imported. Will add the same visual structure using the existing icon components.
 
-Add to both admin preview and public page:
-- Scroll-triggered fade-in/slide-up animations (using IntersectionObserver)
-- Animated number counters that count up when visible
-- Subtle gradient shifts on the hero section
-- Hover effects on benefit cards and testimonial cards
+### Icon Helper for LandingPage.tsx
+A small `FormIcon` component that renders common SVG paths inline:
+- `user`, `phone`, `map-pin`, `building`, `home`, `truck`, `shield`, `lock`, `rotate`, `shopping-cart`, `check`
 
-## Technical Details
-
-### Updated Edge Function Schema (new fields)
-
+### Input Wrapper Pattern
+Each form field becomes:
 ```text
-social_proof_stats: [
-  { number: "50,000+", label: "Products Sold" },
-  { number: "98%", label: "Customer Satisfaction" },
-  { number: "30", label: "Day Guarantee" }
-]
-
-before_after: {
-  before_text: "Before using [Product]...",
-  after_text: "After 30 days with [Product]...",
-  switch_line: "See why 2,400+ customers made the switch."
-}
-
-how_it_works: [
-  { icon: "1", title: "Order", description: "Place your order in seconds" },
-  { icon: "2", title: "Receive", description: "Fast delivery to your door" },
-  { icon: "3", title: "Enjoy", description: "Experience the transformation" }
-]
-
-guarantee_text: "100% Money-Back Guarantee - No Questions Asked"
-authority_text: "Trusted by 50,000+ customers across Algeria"
+[Icon] [Input field]
 ```
+Using a flex container with the icon on the left (or right for RTL), styled with the same dark theme colors.
 
 ### Files Modified
-
-| File | Changes |
-|------|---------|
-| `supabase/functions/generate-landing/index.ts` | Add new fields to schema, enhance prompt sections |
-| `src/pages/admin/AdminLandingPagePage.tsx` | Add new template sections (Before/After, Counters, How It Works, Guarantee), add animations, update LandingContent interface |
-| `src/pages/LandingPage.tsx` | Mirror all new template sections, add scroll animations, update LandingContent interface |
-
-### Animation Approach
-
-Using a lightweight IntersectionObserver pattern (no dependencies):
-
-```text
-// On each section wrapper:
-// - Start with opacity: 0, transform: translateY(30px)
-// - When intersecting viewport: transition to opacity: 1, translateY(0)
-// - Counter sections: animate numbers from 0 to target using requestAnimationFrame
-```
+| File | What |
+|------|------|
+| `src/pages/LandingPage.tsx` | Lines 646-741: Completely redesigned order form section with icons, product image, order summary, enhanced trust badges |
+| `src/pages/admin/AdminLandingPagePage.tsx` | Lines 660-771: Mirror the same redesign in admin preview form using Lucide icons |
 
