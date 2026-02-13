@@ -1,107 +1,127 @@
 
 
-# Create Landing Page Builder
+# Landing Page Builder: Full Order Form, Auto Images, Save & Track
 
-## Overview
-Add a new "Landing Page Builder" feature in the admin sidebar that lets users select a product, choose a language, and use AI to generate a complete, editable, high-converting landing page -- all in minutes.
+## 1. Database Changes
 
-## Architecture
+### New table: `landing_pages`
+Stores saved landing pages for reuse and order tracking.
 
-### New Files
-| File | Purpose |
-|------|---------|
-| `src/pages/admin/AdminLandingPagePage.tsx` | Main page with product selector, language picker, AI generation, and live editor |
-| `supabase/functions/generate-landing/index.ts` | Edge function that calls Lovable AI to generate landing page content (headline, description, benefits, CTA text, testimonial placeholders) |
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid (PK) | Default gen_random_uuid() |
+| product_id | uuid | Reference to products table |
+| title | text | The generated headline |
+| language | text | e.g. 'ar', 'en', 'fr' |
+| content | jsonb | Full LandingContent JSON |
+| selected_image | text | Primary image URL |
+| generated_images | text[] | AI-generated image URLs |
+| created_at | timestamptz | Default now() |
+| updated_at | timestamptz | Default now() |
 
-### Modified Files
-| File | Change |
-|------|--------|
-| `src/components/AdminLayout.tsx` | Add "Landing Page" item to `NAV_KEYS` sidebar array |
-| `src/App.tsx` | Add route `/admin/landing` with the new page |
-| `src/i18n/locales/ar.ts` | Add ~15 new translation keys |
-| `src/i18n/locales/en.ts` | Add ~15 new translation keys |
-| `src/i18n/locales/fr.ts` | Add ~15 new translation keys |
-| `supabase/config.toml` | Register the new edge function |
+RLS: Admin-only for all operations.
 
-No database migration needed -- landing pages are generated on-the-fly and rendered client-side. Users can copy the final HTML or share a preview link.
-
----
-
-## Step-by-Step Flow
-
-### 1. Sidebar Entry
-A new item with a `FileText` (or `Rocket`) icon labeled "صفحة هبوط" / "Landing Page" / "Page d'atterrissage" is added to the admin sidebar between "Coupons" and "Settings".
-
-### 2. Product Selection (Step 1 of the wizard)
-- Fetch all products from the `products` table
-- Display a searchable dropdown (using the existing `Select` component) showing product name + thumbnail
-- On selection, show the product's images in a grid so the user can pick the primary image
-- The image with the highest resolution is pre-selected (based on `main_image_index`), but the user can click any other image to override
-
-### 3. Language Selection (Step 2)
-- A dropdown with: Arabic, English, French, Spanish, German, Turkish
-- Defaults to the current admin language
-
-### 4. AI Content Generation (Step 3)
-- On clicking "Generate", the frontend calls the `generate-landing` edge function with:
-  - Product name, price, old price, description, short description, category
-  - Selected language code
-- The edge function uses Lovable AI (`google/gemini-3-flash-preview`) with a carefully crafted system prompt to return structured JSON via tool calling:
-  - `headline` (catchy hero headline)
-  - `subheadline` (supporting text)
-  - `description` (3-4 paragraph persuasive copy, SEO-optimized)
-  - `benefits` (array of 4-6 benefit objects with icon hint + title + text)
-  - `cta_primary` (main button text)
-  - `cta_secondary` (secondary button text)
-  - `testimonial_placeholders` (2-3 fake but realistic review quotes)
-  - `urgency_text` (scarcity/urgency line)
-- A loading state shows a skeleton preview while AI generates
-
-### 5. Live Preview + Inline Editing (Step 4)
-- The generated content is rendered in a beautiful, responsive landing page preview
-- Layout sections:
-  - **Hero**: Full-width product image with headline overlay, gradient, and CTA button
-  - **Benefits**: Icon grid (3 columns on desktop, 1 on mobile) with benefit cards
-  - **Product Details**: Large image + AI description side by side
-  - **Social Proof**: Testimonial cards in a row
-  - **Urgency Banner**: Countdown or limited stock message
-  - **Final CTA**: Large button with price display
-- Every text element is wrapped in a `contentEditable` div (or uses a simple inline editing approach) so the user can click and type to refine any copy
-- A "Regenerate" button lets the user re-run AI for fresh content
-- An "Export HTML" button copies the full self-contained HTML to clipboard
-- A "Preview in new tab" button opens the landing page in a new browser tab
-
-### 6. Sharing
-- The generated landing page includes the product link back to the store's product page for the CTA buttons
-- The exported HTML is fully self-contained with inline styles (Tailwind classes compiled to inline) for use anywhere
-
----
-
-## Technical Details
-
-### Edge Function: `generate-landing`
-
-```text
-POST /functions/v1/generate-landing
-Body: { productName, price, oldPrice, description, category, language }
-Response: { headline, subheadline, description, benefits[], cta_primary, cta_secondary, testimonials[], urgency_text }
+### Alter `orders` table
+Add a nullable column to track landing page source:
+```sql
+ALTER TABLE public.orders ADD COLUMN landing_page_id uuid;
 ```
 
-- Uses `LOVABLE_API_KEY` (already configured)
-- Uses tool calling to get structured JSON output
-- Model: `google/gemini-3-flash-preview`
-- Handles 429/402 errors gracefully
-- `verify_jwt = false` in config.toml (auth checked in code)
+## 2. Landing Page Form Overhaul
 
-### Landing Page Component
-- Rendered as a React component with state for each editable field
-- Uses `useState` for each text block so edits are reactive
-- Styled with Tailwind classes for a modern, premium look
-- Mobile-responsive with proper breakpoints
-- RTL support for Arabic
+Replace the current static HTML form (name/phone/wilaya text inputs) with a **real interactive React form** that mirrors CheckoutPage:
 
-### Inline Editing Approach
-- Each text element uses `contentEditable="true"` with `onBlur` to capture changes
-- A subtle pencil icon appears on hover to indicate editability
-- Changes update local state only (no database persistence needed)
+- **Wilaya dropdown**: Fetches from `wilayas` table (active only), shows real wilaya names
+- **Baladiya dropdown**: Loads dynamically based on selected wilaya from `baladiyat` table
+- **Delivery type**: Office vs Home buttons with shipping prices from the wilaya record
+- **Address textarea**: For detailed delivery address
+- **Payment method**: COD by default (landing pages use COD as the primary method)
+- **Phone validation**: Same 05/06/07 + 10 digit Algerian format
+- **Form submission**: Actually creates an order in the `orders` table with `landing_page_id` set, plus `order_items` for the product
+
+The form section at the bottom of the landing page preview will be a live React component (not static HTML), using the same Supabase queries as CheckoutPage.
+
+## 3. Auto-Generate Multiple AI Images
+
+When the user clicks "Generate Landing Page" (step 2), the system will:
+
+1. Call `generate-landing` for text content (as before)
+2. Simultaneously fire 3 parallel calls to `generate-landing-image` with contextual prompts:
+   - **Prompt 1**: Product in its natural environment (e.g., clothes being worn, kitchen tools in a kitchen)
+   - **Prompt 2**: Close-up detail shot highlighting quality/texture
+   - **Prompt 3**: Lifestyle shot showing the product in use
+
+The prompts are auto-generated based on the product category:
+- Clothes/Fashion: "Person wearing [product], lifestyle photography"
+- Electronics: "[Product] on a modern desk, tech setup"
+- Kitchen: "[Product] in a beautiful kitchen, cooking scene"
+- Generic fallback: "[Product] in its natural environment, professional photography"
+
+All generated images are used in the landing page:
+- Image 1: Hero background
+- Image 2: Product details section
+- Image 3: A secondary section or gallery strip
+
+## 4. Save Landing Pages
+
+- Add a "Save" button in the toolbar (step 3)
+- Saves to `landing_pages` table with all content, images, and settings
+- Add a "Saved Pages" tab/section in step 1 showing previously saved landing pages as cards
+- Clicking a saved page loads it into the editor for viewing/editing
+- Each saved page gets a shareable preview link
+
+## 5. Orders Tracking
+
+### In the landing page form
+When a customer submits the order form on the landing page:
+- Insert into `orders` with `landing_page_id` set to the saved landing page ID
+- Insert into `order_items` with the product details
+- Show a success message
+
+### In AdminOrdersPage
+- Add a new filter option: "Source" with values "All", "Website", "Landing Page"
+- Orders with `landing_page_id IS NOT NULL` are "Landing Page" orders
+- Show a small badge/icon on landing page orders in the table
+- Optionally show which landing page it came from
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/admin/AdminLandingPagePage.tsx` | Major rewrite: real checkout form with wilayas/baladiyat, auto 3-image generation, save functionality, saved pages list |
+| `src/pages/admin/AdminOrdersPage.tsx` | Add "source" filter (Website vs Landing Page), landing page badge on orders |
+| `src/i18n/locales/ar.ts` | New keys for save, source filter, baladiya labels |
+| `src/i18n/locales/en.ts` | Same |
+| `src/i18n/locales/fr.ts` | Same |
+
+## Database Migration
+
+```sql
+-- Landing pages table
+CREATE TABLE public.landing_pages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL,
+  title text NOT NULL DEFAULT '',
+  language text NOT NULL DEFAULT 'ar',
+  content jsonb NOT NULL DEFAULT '{}'::jsonb,
+  selected_image text,
+  generated_images text[] DEFAULT '{}'::text[],
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.landing_pages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admin can manage landing_pages"
+  ON public.landing_pages FOR ALL
+  USING (has_role(auth.uid(), 'admin'))
+  WITH CHECK (has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Landing pages publicly readable"
+  ON public.landing_pages FOR SELECT
+  USING (true);
+
+-- Add landing_page_id to orders
+ALTER TABLE public.orders ADD COLUMN landing_page_id uuid;
+```
 
