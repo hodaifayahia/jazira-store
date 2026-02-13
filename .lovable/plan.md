@@ -1,88 +1,95 @@
 
-# Enhanced Homepage with 3D Elements and Animations
+
+# Website Settings: Form Customization and Store Templates
 
 ## Overview
-Transform the homepage from a simple layout into a visually stunning experience with scroll-triggered animations, floating 3D objects in the hero section, and polished micro-interactions throughout.
+Two new admin settings sections will be added:
+1. **Checkout Form Customizer** -- Control which fields appear on the checkout form, which are required, and which are hidden.
+2. **Store Templates / Appearance** -- Choose from ready-made visual templates that change the homepage layout and style.
 
-## What You'll See
-
-### 1. 3D Floating Shopping Bag in Hero Section
-- A rotating, floating 3D shopping bag rendered with Three.js appears beside the hero text (desktop only, hidden on mobile for performance)
-- The bag gently rotates and bobs up/down, giving a premium modern feel
-- Uses `@react-three/fiber@^8.18` and `@react-three/drei@^9.122.0` (compatible with React 18)
-
-### 2. Scroll-Triggered Section Animations
-- Each section (categories, products, why us, CTA) fades and slides in as you scroll down
-- A custom `useScrollAnimation` hook using IntersectionObserver triggers animations when elements enter the viewport
-- Staggered delays on grid items (categories, product cards, trust items) for a cascade effect
-
-### 3. Enhanced Trust Bar
-- Icons pulse/bounce on hover
-- Animated counter effect for the product count badge in the hero
-
-### 4. Animated Category Cards
-- Cards scale up slightly and glow on hover with a subtle gradient border effect
-- Staggered entrance animation as they scroll into view
-
-### 5. Floating Particles Background
-- Subtle animated dots/circles float behind the "Why Choose Us" and CTA sections using CSS animations
-- Gives depth without hurting performance
-
-### 6. Enhanced CTA Banner
-- Animated gradient background that slowly shifts colors
-- Pulsing glow effect on the main CTA button
-
-### 7. New Tailwind Keyframes
-- `float` (gentle up/down bobbing)
-- `slide-up` (scroll reveal from below)
-- `glow-pulse` (button glow effect)
-- `gradient-shift` (animated gradient background)
+Both will be implemented as new tabs inside the existing Admin Settings page (`/admin/settings`), storing configuration in the existing `settings` table as JSON values.
 
 ---
 
-## Technical Details
+## Part 1: Checkout Form Customizer
 
-### New Dependencies
-- `@react-three/fiber@^8.18.0` -- React renderer for Three.js
-- `three@^0.170.0` -- 3D rendering engine
-- `@react-three/drei@^9.122.0` -- Helper components (Float, MeshDistortMaterial, etc.)
+### What it does
+A new "Form Settings" tab in admin settings where you can configure each checkout field:
+- **Full Name** -- visible/hidden, required/optional
+- **Phone** -- always required (cannot be hidden)
+- **Wilaya** -- visible/hidden, required/optional
+- **Baladiya** -- visible/hidden, required/optional
+- **Delivery Type** -- visible/hidden, required/optional
+- **Address** -- visible/hidden, required/optional
+- **Coupon Code** -- show/hide the coupon section entirely
+- **Payment Receipt** -- show/hide
 
-### New Files
-1. **`src/components/HeroScene3D.tsx`** -- Three.js Canvas with a floating 3D shopping bag using `@react-three/drei`'s `Float`, `MeshDistortMaterial`, and basic geometric shapes. Wrapped in `Suspense` with a fallback. Only renders on `lg:` screens and above.
+Each field will have a toggle for "Visible" and a toggle for "Required". Some fields like Phone will be locked as always required.
 
-2. **`src/hooks/useScrollAnimation.ts`** -- Custom hook that returns a `ref` and `isVisible` boolean. Uses `IntersectionObserver` with a threshold of 0.1 to trigger CSS class changes for scroll-reveal animations.
+### Technical Details
+- Store a single JSON setting with key `checkout_form_config` in the `settings` table
+- JSON structure example:
+```text
+{
+  "name": { "visible": true, "required": true },
+  "phone": { "visible": true, "required": true, "locked": true },
+  "wilaya": { "visible": true, "required": true },
+  "baladiya": { "visible": true, "required": false },
+  "delivery_type": { "visible": true, "required": true },
+  "address": { "visible": true, "required": false },
+  "coupon": { "visible": true, "required": false },
+  "payment_receipt": { "visible": true, "required": false }
+}
+```
+- Add a new tab "Form" with a table/list of fields, each with Visible and Required toggles
+- Update `CheckoutPage.tsx` to read this config and conditionally render/validate fields
 
-3. **`src/components/AnimatedSection.tsx`** -- Wrapper component that applies scroll-triggered fade/slide animations to its children with configurable direction and delay.
+### Files to modify
+- `src/pages/admin/AdminSettingsPage.tsx` -- add "Form" tab with field configuration UI
+- `src/pages/CheckoutPage.tsx` -- read `checkout_form_config` from settings and conditionally show/require fields
 
-4. **`src/components/FloatingParticles.tsx`** -- Lightweight CSS-only animated particles (8-10 circles) with randomized positions and animation durations for background decoration.
+---
 
-### Modified Files
-1. **`src/pages/Index.tsx`** -- Major changes:
-   - Import and place `HeroScene3D` in the fallback hero section (alongside existing text)
-   - Wrap each section in `AnimatedSection` for scroll reveals
-   - Add staggered `animation-delay` styles to grid children
-   - Add `FloatingParticles` behind "Why Choose Us" and CTA sections
-   - Add animated gradient class to CTA section
-   - Add hover animations to trust bar items
-   - Add animated counter for product count
+## Part 2: Store Templates / Appearance
 
-2. **`tailwind.config.ts`** -- Add new keyframes:
-   - `float`: translateY oscillation over 3s
-   - `slide-up`: opacity 0 + translateY(30px) to visible
-   - `slide-left`: opacity 0 + translateX(30px) to visible  
-   - `glow-pulse`: box-shadow pulse effect
-   - `gradient-shift`: background-position animation
-   - Corresponding animation utilities
+### What it does
+A new "Appearance" tab in admin settings with 3 ready-made homepage templates the admin can choose from:
 
-3. **`src/index.css`** -- Add utility classes:
-   - `.animate-on-scroll` base class (opacity 0, transform, transition)
-   - `.animate-on-scroll.visible` (opacity 1, transform none)
-   - `.animated-gradient` for shifting gradient backgrounds
-   - `.stagger-1` through `.stagger-8` for cascade delays
+1. **Classic** (current layout) -- Hero slider, trust bar, categories grid, product sections
+2. **Minimal** -- Clean layout, no hero slider, simple product grid with large search bar
+3. **Bold** -- Full-width hero with overlay text, large category cards, featured product spotlight
 
-### Performance Considerations
-- 3D scene only loads on desktop (lg: breakpoint) via a media query check
-- Three.js canvas uses `frameloop="demand"` to avoid unnecessary renders
-- IntersectionObserver disconnects after triggering (one-time animation)
-- CSS animations used wherever possible instead of JS for particles
-- `React.lazy` + `Suspense` for the 3D component to avoid blocking initial load
+### Technical Details
+- Store a setting with key `store_template` in the `settings` table (values: `classic`, `minimal`, `bold`)
+- The "Appearance" tab shows visual previews (simple card mockups) for each template
+- The homepage (`Index.tsx`) reads the template setting and renders the chosen layout
+- Each template reuses existing components (ProductCard, categories, etc.) but arranges them differently
+- The existing hero slides, colors, and announcements continue to work across all templates
+
+### Files to modify/create
+- `src/pages/admin/AdminSettingsPage.tsx` -- add "Appearance" tab with template selector cards
+- `src/pages/Index.tsx` -- read `store_template` setting, render layout based on selection
+- Optionally extract template layouts into separate components under `src/components/templates/` for cleanliness:
+  - `src/components/templates/ClassicTemplate.tsx`
+  - `src/components/templates/MinimalTemplate.tsx`
+  - `src/components/templates/BoldTemplate.tsx`
+
+---
+
+## Settings Tab Layout Update
+The current settings page has 5 tabs. Two new ones will be added, making 7 total. The tab bar will be updated from `grid-cols-5` to `grid-cols-7` (or a scrollable horizontal layout for mobile).
+
+New tab order:
+1. Store Identity
+2. Payment/Delivery
+3. Telegram
+4. Returns
+5. **Form** (new)
+6. **Appearance** (new)
+7. Security
+
+---
+
+## No Database Migration Needed
+Both features store their data as JSON strings in the existing `settings` table using new keys (`checkout_form_config` and `store_template`). No schema changes are required.
+
