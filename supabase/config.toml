@@ -2,3 +2,6 @@ project_id = "dwghdxhzsvyzasqnnukv"
 
 [functions.manage-confirmer]
 verify_jwt = false
+
+[functions.generate-landing]
+verify_jwt = false
