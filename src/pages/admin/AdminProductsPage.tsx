@@ -718,9 +718,52 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   // ─── NEW: Option Groups + Variants ───
   const [optionGroups, setOptionGroups] = useState<OptionGroupState[]>([]);
   const [variantRows, setVariantRows] = useState<VariantRow[]>([]);
-  const [newValueInputs, setNewValueInputs] = useState<Record<number, string>>({});
+  const [newValueInputs, setNewValueInputs] = useState<Record<number | string, string>>({});
   const [variantImagePicker, setVariantImagePicker] = useState<number | null>(null); // which variant row is picking an image
   const variantImageInputRef = useRef<HTMLInputElement>(null);
+
+  // ─── Fetch variation library ───
+  const { data: variationLibrary } = useQuery({
+    queryKey: ['variation-options-library'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('variation_options')
+        .select('*')
+        .eq('is_active', true)
+        .order('variation_type')
+        .order('variation_value');
+      return data || [];
+    },
+  });
+
+  const variationTypes = useMemo(() => {
+    if (!variationLibrary) return [];
+    const types = [...new Set(variationLibrary.map(v => v.variation_type))];
+    return types;
+  }, [variationLibrary]);
+
+  const isColorType = (type: string) => {
+    const tt = type.toLowerCase();
+    return tt.includes('لون') || tt.includes('color') || tt.includes('colour');
+  };
+
+  const handleVariationTypeSelect = (gIdx: number, selectedType: string) => {
+    if (selectedType === '__custom__') {
+      updateOptionGroup(gIdx, 'name', '');
+      return;
+    }
+    const libraryValues = (variationLibrary || []).filter(v => v.variation_type === selectedType);
+    const displayType = isColorType(selectedType) ? 'color_swatch' : 'button';
+    const values = libraryValues.map(v => ({
+      label: v.variation_value,
+      colorHex: v.color_code || '',
+    }));
+    const newGroups = optionGroups.map((g, i) =>
+      i === gIdx ? { ...g, name: selectedType, displayType, values } : g
+    );
+    setOptionGroups(newGroups);
+    regenerateVariants(newGroups);
+  };
 
   // Load existing option groups, values, and variants
   const { data: existingOptionGroups } = useQuery({
@@ -1407,19 +1450,39 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                   <div className="flex-1 grid grid-cols-2 gap-2">
                     <div>
                       <Label className="font-cairo text-xs">اسم الخيار</Label>
-                      <Input
-                        value={group.name}
-                        onChange={e => updateOptionGroup(gIdx, 'name', e.target.value)}
-                        placeholder="مثال: اللون، المقاس"
-                        className="font-cairo h-9 mt-1"
-                        list="option-suggestions"
-                      />
-                      <datalist id="option-suggestions">
-                        <option value="اللون" />
-                        <option value="المقاس" />
-                        <option value="المادة" />
-                        <option value="النمط" />
-                      </datalist>
+                      {variationTypes.length > 0 ? (
+                        <>
+                          <Select
+                            value={variationTypes.includes(group.name) ? group.name : '__custom__'}
+                            onValueChange={v => handleVariationTypeSelect(gIdx, v)}
+                          >
+                            <SelectTrigger className="font-cairo h-9 mt-1"><SelectValue placeholder="اختر نوع الخيار" /></SelectTrigger>
+                            <SelectContent>
+                              {variationTypes
+                                .filter(vt => !optionGroups.some((g, i) => i !== gIdx && g.name === vt))
+                                .map(vt => (
+                                  <SelectItem key={vt} value={vt} className="font-cairo">{vt}</SelectItem>
+                                ))}
+                              <SelectItem value="__custom__" className="font-cairo">خيار مخصص</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {!variationTypes.includes(group.name) && (
+                            <Input
+                              value={group.name}
+                              onChange={e => updateOptionGroup(gIdx, 'name', e.target.value)}
+                              placeholder="مثال: اللون، المقاس"
+                              className="font-cairo h-9 mt-1"
+                            />
+                          )}
+                        </>
+                      ) : (
+                        <Input
+                          value={group.name}
+                          onChange={e => updateOptionGroup(gIdx, 'name', e.target.value)}
+                          placeholder="مثال: اللون، المقاس"
+                          className="font-cairo h-9 mt-1"
+                        />
+                      )}
                     </div>
                     <div>
                       <Label className="font-cairo text-xs">نوع العرض</Label>

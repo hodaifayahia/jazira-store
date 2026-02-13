@@ -696,4 +696,7 @@ export const en: Record<string, string> = {
   'settings.announcementPlaceholder': 'Announcement text...',
   'settings.announcementPreview': 'Announcement bar preview',
   'settings.noPaymentMethods': 'No payment methods enabled',
+  'selectVariationType': 'Select variation type',
+  'customOption': 'Custom option',
+  'loadFromLibrary': 'Load from library',
 };
