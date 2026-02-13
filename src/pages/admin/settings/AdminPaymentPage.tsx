@@ -65,6 +65,59 @@ export default function AdminPaymentPage() {
             )}
           </div>
         </div>
+
+        {/* International Payment Methods */}
+        <div className="space-y-4 border-b pb-4">
+          <h3 className="font-cairo font-semibold">{t('settings.internationalPayments')}</h3>
+
+          {/* Binance Pay */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-2">
+              <Switch checked={mergedSettings.binance_enabled === 'true'} onCheckedChange={v => setField('binance_enabled', String(v))} />
+              <Label className="font-cairo font-medium">{t('orders.binance')}</Label>
+            </div>
+            {mergedSettings.binance_enabled === 'true' && (
+              <div className="mr-8 space-y-3 pl-2 border-r-2 border-muted pr-4">
+                <div>
+                  <Label className="font-cairo text-sm text-muted-foreground">{t('settings.binanceAddress')}</Label>
+                  <Input value={mergedSettings.binance_address || ''} onChange={e => setField('binance_address', e.target.value)} className="font-roboto mt-1" dir="ltr" placeholder="Wallet Address / Pay ID" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Vodafone Cash */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-2">
+              <Switch checked={mergedSettings.vodafone_enabled === 'true'} onCheckedChange={v => setField('vodafone_enabled', String(v))} />
+              <Label className="font-cairo font-medium">{t('orders.vodafone')}</Label>
+            </div>
+            {mergedSettings.vodafone_enabled === 'true' && (
+              <div className="mr-8 space-y-3 pl-2 border-r-2 border-muted pr-4">
+                <div>
+                  <Label className="font-cairo text-sm text-muted-foreground">{t('settings.vodafoneNumber')}</Label>
+                  <Input value={mergedSettings.vodafone_number || ''} onChange={e => setField('vodafone_number', e.target.value)} className="font-roboto mt-1" dir="ltr" placeholder="01XXXXXXXXX" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Redotpay */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-2">
+              <Switch checked={mergedSettings.redotpay_enabled === 'true'} onCheckedChange={v => setField('redotpay_enabled', String(v))} />
+              <Label className="font-cairo font-medium">{t('orders.redotpay')}</Label>
+            </div>
+            {mergedSettings.redotpay_enabled === 'true' && (
+              <div className="mr-8 space-y-3 pl-2 border-r-2 border-muted pr-4">
+                <div>
+                  <Label className="font-cairo text-sm text-muted-foreground">{t('settings.redotpayAddress')}</Label>
+                  <Input value={mergedSettings.redotpay_address || ''} onChange={e => setField('redotpay_address', e.target.value)} className="font-roboto mt-1" dir="ltr" placeholder="Wallet Address" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <Button onClick={handleSave} disabled={updateSetting.isPending || Object.keys(form).length === 0} className="font-cairo font-semibold gap-2">
