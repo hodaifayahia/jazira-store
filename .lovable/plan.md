@@ -1,91 +1,54 @@
 
-# Enhance Transformation Section + Testimonials Design
 
-## 1. Transformation Section -- Add Generated Image
+# Switch Image Generation to Puter.js (Free, No Credits Needed)
 
-Currently the Before/After section shows two small text-only cards (red/green). The upgrade will:
+## Why
 
-- **Generate a transformation image** using the existing `generate-landing-image` edge function when the landing page is created
-- Add a new field `before_after.image_url` to store the generated transformation image URL
-- Display a **large, full-width transformation image** above the Before/After text cards
-- The image prompt will be crafted based on the product context (e.g., "Before and after transformation showing the impact of [product name], split comparison, professional photography")
-- In the admin page, add a "Generate Transformation Image" button so admins can regenerate it
-- The image will be stored in the `before_after` content object alongside the text
+The current edge function uses Lovable AI Gateway for image generation, which has credit limits (causing the 402 error). Puter.js provides free, unlimited image generation directly from the browser -- no API keys, no server needed, no credits to run out.
 
-### Layout Change (Before/After Section)
-```text
-+--------------------------------------------------+
-|  Section Title: "The Transformation"              |
-|                                                   |
-|  +--------------------------------------------+  |
-|  |                                              | |
-|  |    Large Generated Transformation Image      | |
-|  |    (full-width, rounded, with shadow)        | |
-|  |                                              | |
-|  +--------------------------------------------+  |
-|                                                   |
-|  +-- Before Card --+    +-- After Card --+        |
-|  |  (red/pain)     |    | (green/gain)   |        |
-|  +-----------------+    +----------------+        |
-|                                                   |
-|  "See why 2,400+ customers made the switch"       |
-+--------------------------------------------------+
-```
+## How It Works
 
-## 2. Testimonials Section -- Premium Redesign
+Puter.js is a client-side JavaScript library. Instead of calling the `generate-landing-image` edge function, the admin page will generate images directly in the browser using `puter.ai.txt2img()`, then upload the resulting blob to storage via the existing Supabase client.
 
-Current design: simple white cards with stars, italic text, name + verified badge. The upgrade adds:
+## Changes
 
-- **Avatar circle** with the customer's initials (colored gradient background, generated from name)
-- **Quote icon** (large decorative quote mark) at the top of each card
-- **Card elevation** with gradient left border (orange accent)
-- **Bottom row** with avatar + name + verified badge in a more polished layout
-- **Hover effect** with subtle lift and shadow increase
-- **Star rating** moved below the quote for better visual flow
+### 1. Add Puter.js Script Tag to `index.html`
+Add `<script src="https://js.puter.com/v2/"></script>` to the HTML head so the `puter` global is available.
 
-### New Testimonial Card Layout
-```text
-+----------------------------------------+
-|  "  (large decorative quote mark)      |
-|                                         |
-|  "Review text here, specific and        |
-|   detailed about the product..."        |
-|                                         |
-|  ★★★★★                                 |
-|                                         |
-|  [Avatar] Name                          |
-|           Verified Purchase badge       |
-+----------------------------------------+
-  (left border: orange gradient accent)
-```
+### 2. Create a Helper: `src/lib/puterImageGen.ts`
+A small utility that wraps Puter.js image generation + Supabase storage upload:
+- Calls `puter.ai.txt2img(prompt, { model: 'dall-e-3' })` to generate the image
+- Uploads the resulting blob to the `products` storage bucket
+- Returns the public URL
+- Handles errors gracefully with fallback models
+
+### 3. Update `src/pages/admin/AdminLandingPagePage.tsx`
+Replace all `supabase.functions.invoke('generate-landing-image', ...)` calls (4 occurrences) with the new Puter.js helper function. The logic stays the same -- only the image source changes.
+
+### 4. Keep the Edge Function (No Delete)
+The edge function `generate-landing-image` stays in place as a fallback but will no longer be the primary method. This means if Puter.js fails for any reason, a retry via edge function is still possible.
 
 ## Technical Details
 
-### Files Modified
-
-| File | Changes |
-|------|------|
-| `src/pages/LandingPage.tsx` | Add `before_after.image_url` rendering, redesign testimonial cards with avatar initials + quote icon + gradient border |
-| `src/pages/admin/AdminLandingPagePage.tsx` | Same visual changes + "Generate Transformation Image" button that calls `generate-landing-image` with a transformation prompt |
-| `supabase/functions/generate-landing/index.ts` | Add `image_url` field to `before_after` schema (optional, will be populated client-side after image generation) |
-
-### Interface Change
+### Puter.js API Usage
 ```text
-before_after: {
-  before_text: string;
-  after_text: string;
-  switch_line: string;
-  image_url?: string;  // NEW: generated transformation image
-}
+// Available globally after script inclusion
+const result = await puter.ai.txt2img(prompt, { model: 'dall-e-3' });
+// result is an HTML Image element with src as a blob URL
+// Convert to blob, upload to storage
 ```
 
-### Transformation Image Generation
-When generating a landing page, after the text content is generated, the admin page will automatically call `generate-landing-image` with a transformation-specific prompt like:
-- "Before and after transformation showing the dramatic impact of [product name], split screen comparison, professional lifestyle photography, 4K"
+### Models Available (free)
+- `dall-e-3` (recommended -- high quality)
+- `gpt-image-1` (OpenAI's latest)
+- `flux-schnell` (fast)
 
-The admin can also click a button to regenerate this image independently.
+### File Changes Summary
 
-### Avatar Generation (Testimonials)
-No API call needed -- avatars will be generated from name initials with deterministic gradient colors based on the name string hash. For example:
-- "Ahmed B." gets initials "AB" on a blue-purple gradient circle
-- "Sarah M." gets initials "SM" on a green-teal gradient circle
+| File | Change |
+|------|--------|
+| `index.html` | Add Puter.js script tag |
+| `src/lib/puterImageGen.ts` | New helper for Puter image generation + upload |
+| `src/pages/admin/AdminLandingPagePage.tsx` | Replace 4 edge function calls with Puter.js helper |
+| `src/vite-env.d.ts` | Add type declaration for the global `puter` object |
+
