@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe, Store, CreditCard, Bot, FormInput, Paintbrush, Shield, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe, Store, CreditCard, Bot, FormInput, Paintbrush, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
 import { useStoreLogo } from '@/hooks/useStoreLogo';
 import { toast } from 'sonner';
 import { useTranslation, Language } from '@/i18n';
@@ -268,31 +268,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Link>
           ))}
 
-          {/* Settings collapsible group */}
-          <Collapsible defaultOpen={isSettingsActive}>
-            <CollapsibleTrigger className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-cairo text-sm transition-colors w-full ${
-              isSettingsActive ? 'text-primary font-semibold' : 'text-muted-foreground hover:bg-muted'
-            }`}>
-              <Settings className="w-4 h-4" />
-              <span className="flex-1 text-start">{t('sidebar.settings')}</span>
-              <ChevronRight className="w-3.5 h-3.5 transition-transform data-[state=open]:rotate-90" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-0.5 mt-0.5">
-              {SETTINGS_SUB_KEYS.map(item => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg font-cairo text-xs transition-colors ${isRtl ? 'pr-9' : 'pl-9'} ${
-                    location.pathname === item.href ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  <item.icon className="w-3.5 h-3.5" />
-                  {t(item.key)}
-                </Link>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
+          {/* Settings link */}
+          <Link
+            to="/admin/settings"
+            onClick={() => setSidebarOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-cairo text-sm transition-colors ${
+              isSettingsActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            {t('sidebar.settings')}
+          </Link>
         </nav>
         <div className="p-3 border-t">
           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2 font-cairo text-destructive hover:text-destructive">
