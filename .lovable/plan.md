@@ -1,68 +1,72 @@
 
 
-# Split Settings Page into Separate Category Pages
+# Redesign Navbar with Categories Bar
 
 ## Overview
-Break the single monolithic Settings page (942 lines, 7 tabs) into separate admin pages, each accessible from the sidebar navigation. This makes the admin panel cleaner and easier to navigate.
+Upgrade the homepage header with a modern two-row design: the main navigation bar on top, and a categories strip below it. This creates a cleaner, more professional e-commerce experience and gives customers quick access to product categories.
 
-## Current vs New Structure
-
-```text
-BEFORE (single page with tabs):
-/admin/settings
-  ├── Tab: Store Identity
-  ├── Tab: Payment & Delivery
-  ├── Tab: Telegram Bot
-  ├── Tab: Returns
-  ├── Tab: Form
-  ├── Tab: Appearance
-  └── Tab: Security
-
-AFTER (separate pages in sidebar):
-/admin/settings/identity    --> Store Identity (name, logo, colors, announcements, slider, footer, pixel)
-/admin/settings/payment     --> Payment & Delivery
-/admin/settings/telegram    --> Telegram Bot
-/admin/settings/returns     --> Returns Settings
-/admin/settings/form        --> Form Settings
-/admin/settings/appearance  --> Appearance / Template
-/admin/settings/security    --> Security & Users
-```
-
-## Sidebar Navigation Changes
-The current single "Settings" item in the sidebar will become a collapsible group with sub-items:
+## New Header Layout
 
 ```text
-Settings (collapsible)
-  ├── Store Identity
-  ├── Payment
-  ├── Telegram
-  ├── Returns
-  ├── Form
-  ├── Appearance
-  └── Security
++---------------------------------------------------------------+
+| Announcement Bar (existing, unchanged)                        |
++---------------------------------------------------------------+
+| [Logo + Store Name]    [Home] [Products] [Track] [About]    [User] [Cart] [Menu] |
++---------------------------------------------------------------+
+| [All] [ملابس] [إكسسوارات] [أحذية] [إلكترونيات] [منزل]        |  <-- NEW categories bar
++---------------------------------------------------------------+
 ```
+
+## Design Improvements
+
+### Main Nav Bar (Row 1)
+- Slightly increased height for better breathing room
+- Refined hover states with smooth scale transitions
+- Search icon shortcut on desktop (navigates to /products)
+- Better visual separation between logo and nav links
+- Improved cart badge with subtle animation
+
+### Categories Bar (Row 2)
+- Horizontal scrollable strip of category pills below the main nav
+- Each category shows its icon (mapped from Lucide icons like Shirt, Watch, etc.) + name
+- Clicking a category navigates to `/products?category=CategoryName`
+- "All" pill at the start links to `/products`
+- Only visible on the homepage (or optionally on all pages)
+- On mobile: horizontally scrollable with hidden scrollbar for a clean look
+- Subtle bottom border and slightly different background tint to distinguish from main nav
+
+### Mobile Menu
+- Categories section added at the top of the mobile slide-down menu as horizontal scrollable pills
+- Cleaner spacing and visual grouping with section dividers
 
 ## Technical Details
 
-### Files Created (7 new page files)
-Each file extracts its corresponding tab content from the current settings page, keeping the same shared hooks (settings query, save mutation, image upload helpers):
-
-- `src/pages/admin/settings/AdminIdentityPage.tsx` -- Store name, logo, favicon, colors, announcements, hero slider, footer info, Facebook Pixel, extra settings
-- `src/pages/admin/settings/AdminPaymentPage.tsx` -- COD, BaridiMob, Flexy payment toggles and config
-- `src/pages/admin/settings/AdminTelegramPage.tsx` -- Telegram bot token, chat IDs, webhook, test notification
-- `src/pages/admin/settings/AdminReturnsSettingsPage.tsx` -- Return settings + reasons manager (the existing `ReturnSettingsTab` component)
-- `src/pages/admin/settings/AdminFormSettingsPage.tsx` -- Wrapper for existing `FormSettingsTab` component
-- `src/pages/admin/settings/AdminAppearancePage.tsx` -- Wrapper for existing `AppearanceTab` component
-- `src/pages/admin/settings/AdminSecurityPage.tsx` -- Password change + `AdminUserManagement`
-
-### Shared Settings Hook
-- `src/hooks/useAdminSettings.ts` -- Extract the shared logic (settings query, save mutation, image upload, setField) into a reusable hook so all 7 pages share the same data fetching and saving pattern without duplicating code.
-
 ### Files Modified
-- `src/components/AdminLayout.tsx` -- Replace single "Settings" nav item with a collapsible group containing 7 sub-links
-- `src/App.tsx` -- Add 7 new routes under `/admin/settings/*`
-- `src/pages/admin/AdminSettingsPage.tsx` -- Simplified to redirect to `/admin/settings/identity` (keeps backward compatibility)
+
+**`src/components/Navbar.tsx`** -- Major redesign:
+- Import `useCategories` hook and `useStoreSettings` (for store name)
+- Import additional Lucide icons needed for category icon mapping (Shirt, Watch, Footprints, Smartphone, Home, Search, Grid3X3)
+- Add a helper function to map category icon strings to Lucide icon components
+- Add a categories bar section below the main nav (desktop: flex row of pills, mobile: horizontal scroll)
+- Include categories in the mobile menu as a scrollable section
+- Add a search shortcut icon in the desktop nav actions area
+- Use the dynamic store name from settings instead of hardcoded "DZ Store"
+- Improve hover/active states with better transitions and visual feedback
+
+### Icon Mapping
+The categories store icon names as strings (e.g., "Shirt", "Watch"). A mapping function will convert these to actual Lucide React components:
+
+```text
+"Shirt"      -> Shirt icon
+"Watch"      -> Watch icon
+"Footprints" -> Footprints icon
+"Smartphone" -> Smartphone icon
+"Home"       -> Home icon
+(fallback)   -> Grid3X3 icon
+```
 
 ### No New Dependencies
-Uses existing `Collapsible` component from Radix UI (already installed) for the sidebar group.
+All icons come from `lucide-react` (already installed). Categories data comes from the existing `useCategories` hook.
 
+### No Database Changes
+Categories are already stored in the settings table and fetched via `useCategories()`.
