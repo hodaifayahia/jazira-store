@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/format';
+import { generateImageWithPuter } from '@/lib/puterImageGen';
 import {
   Rocket, Sparkles, RefreshCw, Copy, ExternalLink, Check, Star,
   Pencil, ShoppingCart, ImagePlus, Wand2, ArrowDown, Package, Shield,
@@ -295,9 +296,7 @@ export default function AdminLandingPagePage() {
           },
         }),
         ...imagePrompts.map(prompt =>
-          supabase.functions.invoke('generate-landing-image', {
-            body: { prompt, productName: selectedProduct.name },
-          })
+          generateImageWithPuter(prompt).then(url => ({ data: { url }, error: null }))
         ),
       ]);
 
@@ -335,15 +334,9 @@ export default function AdminLandingPagePage() {
     setGeneratingImages(true);
     try {
       const prompt = imagePrompt.trim() || `High quality professional product photo of ${selectedProduct.name}, studio lighting, clean background, commercial photography, 4K ultra HD`;
-      const { data, error } = await supabase.functions.invoke('generate-landing-image', {
-        body: { prompt, productName: selectedProduct.name },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (data?.url) {
-        setGeneratedImages(prev => [...prev, data.url]);
-        toast.success(t('landing.imageGenerated'));
-      }
+      const url = await generateImageWithPuter(prompt);
+      setGeneratedImages(prev => [...prev, url]);
+      toast.success(t('landing.imageGenerated'));
     } catch (e: any) {
       toast.error(e.message || t('common.errorOccurred'));
     } finally {
@@ -1226,12 +1219,9 @@ img{max-width:100%}
                                 setGeneratingImages(true);
                                 try {
                                   const prompt = `Before and after transformation showing the dramatic impact of ${selectedProduct.name}, split screen comparison, professional lifestyle photography, high resolution, 4K`;
-                                  const { data, error } = await supabase.functions.invoke('generate-landing-image', {
-                                    body: { prompt, productName: selectedProduct.name },
-                                  });
-                                  if (error) throw error;
-                                  if (data?.url) {
-                                    setContent({ ...content, before_after: { ...content.before_after!, image_url: data.url } });
+                                  const url = await generateImageWithPuter(prompt);
+                                  if (url) {
+                                    setContent({ ...content, before_after: { ...content.before_after!, image_url: url } });
                                     toast.success('Transformation image regenerated!');
                                   }
                                 } catch (e: any) {
@@ -1260,12 +1250,9 @@ img{max-width:100%}
                               setGeneratingImages(true);
                               try {
                                 const prompt = `Before and after transformation showing the dramatic impact of ${selectedProduct.name}, split screen comparison, professional lifestyle photography, high resolution, 4K`;
-                                const { data, error } = await supabase.functions.invoke('generate-landing-image', {
-                                  body: { prompt, productName: selectedProduct.name },
-                                });
-                                if (error) throw error;
-                                if (data?.url) {
-                                  setContent({ ...content, before_after: { ...content.before_after!, image_url: data.url } });
+                                const url = await generateImageWithPuter(prompt);
+                                if (url) {
+                                  setContent({ ...content, before_after: { ...content.before_after!, image_url: url } });
                                   toast.success('Transformation image generated!');
                                 }
                               } catch (e: any) {
