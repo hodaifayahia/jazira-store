@@ -1,35 +1,34 @@
 
-# Fix: Clear Variations When Selecting "Custom Option"
+
+# Improve Variations Page: Dropdown for Type + Quick Add per Group
 
 ## Problem
-When you select "خيار مخصص" (Custom Option) from the variation type dropdown, the values from the previously selected type remain visible. They should be cleared so you start fresh.
+1. When adding a variation, the "Type" field is a free-text input with a datalist hint -- it should be a proper **dropdown** to select from existing types (with an option to create a new type).
+2. Each variation type group (e.g., "اللون", "المقاس") should have an **"Add" button** in its header to quickly add a new value under that type.
 
-## Fix
+## Changes
 
-### File: `src/pages/admin/AdminProductsPage.tsx` (lines 750-754)
+### File: `src/pages/admin/AdminVariationsPage.tsx`
 
-In the `handleVariationTypeSelect` function, when `__custom__` is selected, also clear the `values` array and reset `displayType`:
+#### 1. Add button in each group header (line 168-172)
+Add a `Plus` button next to the type name and badge. Clicking it opens the create dialog with `formType` pre-filled to that group's type.
 
-**Before:**
-```typescript
-if (selectedType === '__custom__') {
-  updateOptionGroup(gIdx, 'name', '');
-  return;
-}
+```
+[Palette icon] اللون  (3)  [+ إضافة]
 ```
 
-**After:**
-```typescript
-if (selectedType === '__custom__') {
-  const newGroups = optionGroups.map((g, i) =>
-    i === gIdx ? { ...g, name: '', displayType: 'button', values: [] } : g
-  );
-  setOptionGroups(newGroups);
-  regenerateVariants(newGroups);
-  return;
-}
-```
+A new function `openCreateForType(type: string)` will:
+- Set `formType` to the given type
+- Clear `formValue` and reset other fields
+- Open the dialog
 
-This resets all three fields (name, displayType, values) and regenerates the variant matrix (which will be empty since there are no values).
+#### 2. Replace the datalist input with a proper Select dropdown (lines 213-218)
+Replace the `Input + datalist` for the type field with a `Select` component:
+- Lists all existing types from `existingTypes`
+- Has a final option "نوع جديد..." (New type) that shows a text input for custom entry
+- When opened from a group header button, the dropdown is pre-set and disabled (since the type is already chosen)
 
-### No other files affected.
+A new state `isCustomType` (boolean) will control whether to show the dropdown or a free-text input.
+
+### No database changes needed.
+
