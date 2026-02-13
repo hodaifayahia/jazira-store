@@ -25,6 +25,13 @@ import AdminWilayasPage from "./pages/admin/AdminWilayasPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
+import AdminIdentityPage from "./pages/admin/settings/AdminIdentityPage";
+import AdminPaymentPage from "./pages/admin/settings/AdminPaymentPage";
+import AdminTelegramPage from "./pages/admin/settings/AdminTelegramPage";
+import AdminReturnsSettingsPage from "./pages/admin/settings/AdminReturnsSettingsPage";
+import AdminFormSettingsPage from "./pages/admin/settings/AdminFormSettingsPage";
+import AdminAppearancePage from "./pages/admin/settings/AdminAppearancePage";
+import AdminSecurityPage from "./pages/admin/settings/AdminSecurityPage";
 import AdminLeadsPage from "./pages/admin/AdminLeadsPage";
 import AdminVariationsPage from "./pages/admin/AdminVariationsPage";
 import AdminAbandonedPage from "./pages/admin/AdminAbandonedPage";
@@ -96,6 +103,13 @@ const App = () => (
             <Route path="/admin/confirmers" element={<LanguageProvider><AdminLayout><AdminConfirmersPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/costs" element={<LanguageProvider><AdminLayout><AdminCostsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings" element={<LanguageProvider><AdminLayout><AdminSettingsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/identity" element={<LanguageProvider><AdminLayout><AdminIdentityPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/payment" element={<LanguageProvider><AdminLayout><AdminPaymentPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/telegram" element={<LanguageProvider><AdminLayout><AdminTelegramPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/returns" element={<LanguageProvider><AdminLayout><AdminReturnsSettingsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/form" element={<LanguageProvider><AdminLayout><AdminFormSettingsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/appearance" element={<LanguageProvider><AdminLayout><AdminAppearancePage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/security" element={<LanguageProvider><AdminLayout><AdminSecurityPage /></AdminLayout></LanguageProvider>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

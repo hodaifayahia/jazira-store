@@ -14,6 +14,8 @@ export const ar: Record<string, string> = {
   'sidebar.wilayas': 'الولايات',
   'sidebar.coupons': 'كوبونات',
   'sidebar.settings': 'الإعدادات',
+  'sidebar.form': 'النموذج',
+  'sidebar.appearance': 'المظهر',
   'sidebar.controlPanel': 'لوحة التحكم',
   'sidebar.logout': 'تسجيل الخروج',
   'sidebar.viewStore': 'عرض المتجر',
