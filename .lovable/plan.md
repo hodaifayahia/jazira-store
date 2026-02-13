@@ -1,85 +1,40 @@
 
 
-# New "Liquid" Premium Homepage Template
+# Facebook Pixel Integration
 
 ## Overview
-Add a new "Liquid" (سائل) template to the existing template system. This template brings a modern, immersive design with glassmorphism effects, fluid animations, organic shapes, and interactive category cards -- all using the existing tech stack (React, Tailwind CSS, React Three Fiber, Framer Motion is NOT installed so we use CSS animations and the existing AnimatedSection).
+Add Facebook Pixel tracking to the website so you can connect it to your Facebook Ads account. The Pixel ID will be configurable from the admin settings panel -- no code changes needed when you change your Pixel ID.
 
-## What Gets Built
+## How It Works
 
-### 1. Hero Section
-- Full-viewport immersive hero with animated SVG liquid background blobs
-- Gradient text headline with shimmer animation
-- Glassmorphism search bar with frosted glass effect
-- Animated CTA button with glow/ripple on hover
-- Floating product showcase using existing 3D scene (React Three Fiber)
+1. **Admin Settings**: A new "Facebook Pixel" field in the admin settings page where you enter your Pixel ID
+2. **Automatic Script Injection**: The Pixel script loads automatically on every page when a Pixel ID is configured
+3. **Event Tracking**: Key e-commerce events are tracked automatically:
+   - **PageView** -- every page visit
+   - **ViewContent** -- when a customer views a product
+   - **AddToCart** -- when a product is added to cart
+   - **InitiateCheckout** -- when checkout page is opened
+   - **Purchase** -- when an order is confirmed
 
-### 2. Category Cards (Showstopper)
-- Glassmorphism cards with backdrop-blur and gradient borders
-- CSS 3D tilt effect on mouse move (using onMouseMove + CSS transforms)
-- Animated gradient overlays that shift on hover
-- Staggered fade-in on scroll using existing AnimatedSection
-- Asymmetric grid layout with varying card sizes (first 2 cards span larger)
-- Subtle glow shadow effect on hover
-
-### 3. Products Section
-- Stagger-reveal grid using existing ProductCard component
-- Glassmorphism section headers
-- Floating decorative blob shapes in background
-
-### 4. Trust/Social Proof Section
-- Glassmorphism cards with icon animations
-- Stats counter with animated numbers (existing AnimatedCounter)
-
-### 5. Accessibility and Performance
-- `prefers-reduced-motion` media query to disable animations
-- Lazy loading images (already in ProductCard)
-- Semantic HTML structure
-- All animations are CSS-only (no heavy JS animation libraries needed)
-
-## Layout
-
-```text
-+------------------------------------------+
-|  HERO (100vh)                            |
-|  - SVG liquid blobs (animated)           |
-|  - Gradient text headline                |
-|  - Glassmorphism search bar              |
-|  - CTA buttons with glow                 |
-+------------------------------------------+
-|  CATEGORIES (asymmetric grid)            |
-|  +--------+  +--------+                 |
-|  | Large  |  | Large  |                 |
-|  | Card   |  | Card   |                 |
-|  +--------+  +--------+                 |
-|  +------+ +------+ +------+             |
-|  | Sm   | | Sm   | | Sm   |             |
-|  +------+ +------+ +------+             |
-+------------------------------------------+
-|  PRODUCTS (stagger grid)                 |
-|  Existing ProductCard x 8                |
-+------------------------------------------+
-|  TRUST BAR (glassmorphism cards)         |
-+------------------------------------------+
-```
+## What You Will Need
+- A Facebook Pixel ID (found in your Facebook Business Manager under Events Manager)
 
 ## Technical Details
 
+### Database
+- Add a new setting key `facebook_pixel_id` to the `settings` table (same pattern as existing settings like `store_name`)
+
 ### Files Created
-- `src/components/templates/LiquidTemplate.tsx` -- Main template component with:
-  - `LiquidBlobs` -- SVG animated background blobs
-  - `TiltCard` -- Category card with CSS 3D tilt on mouse move
-  - Glassmorphism utility classes via inline Tailwind
+- `src/hooks/useFacebookPixel.ts` -- Hook that injects the Facebook Pixel base script into the page head and provides a `trackEvent()` function
 
 ### Files Modified
-- `src/pages/Index.tsx` -- Add `liquid` template routing (3 lines)
-- `src/components/admin/AppearanceTab.tsx` -- Add "Liquid" option to TEMPLATES array
-- `src/index.css` -- Add ~30 lines of CSS for liquid animations (blob morph, gradient shimmer, glow pulse, reduced-motion support)
-- `tailwind.config.ts` -- Add new keyframes for blob-morph and gradient-shimmer animations
+- `src/pages/admin/AdminSettingsPage.tsx` -- Add a "Facebook Pixel ID" input field in the settings form
+- `src/App.tsx` -- Initialize the Facebook Pixel hook at the app level
+- `src/pages/SingleProductPage.tsx` -- Fire `ViewContent` event
+- `src/contexts/CartContext.tsx` -- Fire `AddToCart` event
+- `src/pages/CheckoutPage.tsx` -- Fire `InitiateCheckout` event
+- `src/pages/OrderConfirmationPage.tsx` -- Fire `Purchase` event with order value
 
 ### No New Dependencies
-Everything is built with existing packages: React, Tailwind CSS, Lucide icons, and the existing AnimatedSection/FloatingParticles components.
-
-### Template Registration
-The new template ID will be `liquid` and it will appear in the admin Appearance tab alongside Classic, Minimal, and Bold.
+Uses the standard Facebook Pixel JavaScript snippet injected via a React hook (no third-party npm packages needed).
 
