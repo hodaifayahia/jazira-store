@@ -1,54 +1,51 @@
 
 
-# Switch Image Generation to Puter.js (Free, No Credits Needed)
+# Move Landing Page Text Generation to Puter.js (Free)
 
-## Why
+## Problem
 
-The current edge function uses Lovable AI Gateway for image generation, which has credit limits (causing the 402 error). Puter.js provides free, unlimited image generation directly from the browser -- no API keys, no server needed, no credits to run out.
+The `generate-landing` edge function uses the Lovable AI Gateway for generating landing page text content, which is returning a 402 "Credits exhausted" error. Images were already switched to Puter.js, but the text generation still relies on the paid gateway.
 
-## How It Works
+## Solution
 
-Puter.js is a client-side JavaScript library. Instead of calling the `generate-landing-image` edge function, the admin page will generate images directly in the browser using `puter.ai.txt2img()`, then upload the resulting blob to storage via the existing Supabase client.
+Replace the edge function call with Puter.js `puter.ai.chat()` directly in the browser. Puter.js provides free, unlimited access to AI text models (GPT-4o, Claude, etc.) with no API keys needed.
 
 ## Changes
 
-### 1. Add Puter.js Script Tag to `index.html`
-Add `<script src="https://js.puter.com/v2/"></script>` to the HTML head so the `puter` global is available.
+### 1. Create Helper: `src/lib/puterTextGen.ts`
+A new utility that:
+- Takes the same product data (name, price, description, category, language)
+- Calls `puter.ai.chat()` with the same system/user prompts currently in the edge function
+- Parses the JSON response into the same structured landing page content format
+- Includes error handling and retry logic
 
-### 2. Create a Helper: `src/lib/puterImageGen.ts`
-A small utility that wraps Puter.js image generation + Supabase storage upload:
-- Calls `puter.ai.txt2img(prompt, { model: 'dall-e-3' })` to generate the image
-- Uploads the resulting blob to the `products` storage bucket
-- Returns the public URL
-- Handles errors gracefully with fallback models
+### 2. Update `src/pages/admin/AdminLandingPagePage.tsx`
+Replace line 287's `supabase.functions.invoke('generate-landing', ...)` call with the new Puter.js text generation helper. The rest of the flow (setting content, step progression, etc.) stays identical.
 
-### 3. Update `src/pages/admin/AdminLandingPagePage.tsx`
-Replace all `supabase.functions.invoke('generate-landing-image', ...)` calls (4 occurrences) with the new Puter.js helper function. The logic stays the same -- only the image source changes.
+### 3. Update Type Declaration: `src/vite-env.d.ts`
+Add `chat()` method to the existing `PuterAI` interface.
 
 ### 4. Keep the Edge Function (No Delete)
-The edge function `generate-landing-image` stays in place as a fallback but will no longer be the primary method. This means if Puter.js fails for any reason, a retry via edge function is still possible.
+The `generate-landing` edge function stays as-is for potential future use but won't be called.
 
 ## Technical Details
 
-### Puter.js API Usage
+### Puter.js Chat API
 ```text
-// Available globally after script inclusion
-const result = await puter.ai.txt2img(prompt, { model: 'dall-e-3' });
-// result is an HTML Image element with src as a blob URL
-// Convert to blob, upload to storage
+const response = await puter.ai.chat(prompt, { model: 'gpt-4o' });
+// response.message.content contains the text response
 ```
 
-### Models Available (free)
-- `dall-e-3` (recommended -- high quality)
-- `gpt-image-1` (OpenAI's latest)
-- `flux-schnell` (fast)
+Since Puter.js chat doesn't support tool_choice/function calling natively, the prompt will instruct the AI to return a JSON object directly, and the helper will parse it.
+
+### Prompt Strategy
+The same system and user prompts from the edge function will be reused, but instead of using OpenAI function calling, the prompt will end with: "Return ONLY a valid JSON object with the following structure: {...}" -- this ensures clean parseable output.
 
 ### File Changes Summary
 
 | File | Change |
 |------|--------|
-| `index.html` | Add Puter.js script tag |
-| `src/lib/puterImageGen.ts` | New helper for Puter image generation + upload |
-| `src/pages/admin/AdminLandingPagePage.tsx` | Replace 4 edge function calls with Puter.js helper |
-| `src/vite-env.d.ts` | Add type declaration for the global `puter` object |
+| `src/lib/puterTextGen.ts` | New helper for Puter.js text generation |
+| `src/pages/admin/AdminLandingPagePage.tsx` | Replace edge function call with Puter.js helper |
+| `src/vite-env.d.ts` | Add `chat()` method to PuterAI interface |
 
