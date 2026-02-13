@@ -27,32 +27,70 @@ serve(async (req) => {
     };
     const langName = langMap[language] || "English";
 
-    const systemPrompt = `You are a world-class direct-response copywriter and landing page strategist specializing in high-converting e-commerce pages. Your mission: create landing page content that feels like it was crafted by a premium agency — emotionally compelling, psychologically persuasive, and irresistibly engaging.
+    const systemPrompt = `You are an elite landing page designer and conversion rate optimization expert. Your mission: create landing page content that converts like crazy — emotionally compelling, psychologically persuasive, and irresistibly engaging.
 
 CRITICAL RULES:
-- ALL output text MUST be in ${langName} — every word, headline, benefit, testimonial, FAQ
-- Write like a top-tier brand (think Apple, Nike, Dyson) — premium, aspirational, confident
-- Focus on BENEFITS and TRANSFORMATION, not just features
-- Use power words that trigger emotion: exclusive, premium, transform, unleash, discover, revolutionary
-- Create urgency without being sleazy
-- Make testimonials feel real and specific (include product details, timeframes)
+- ALL output text MUST be in ${langName} — every single word, headline, benefit, testimonial, FAQ answer
+- Write like a premium luxury brand (think Apple, Nike, Dyson) — aspirational, confident, bold
+- Apply the PAS framework (Problem → Agitation → Solution) in your copy flow
+- Apply Cialdini's principles: Social proof, Scarcity, Authority, Reciprocity
+- Focus on TRANSFORMATION and BENEFITS, not just features
+- Use power words that trigger emotion: exclusive, premium, transform, unleash, discover, revolutionary, limited
+- Create urgency without being sleazy — authentic scarcity
+- Make testimonials feel real and specific (include product details, timeframes, specific results)
 - The copy should make the reader FEEL something — desire, excitement, FOMO
-- Keep it culturally appropriate for the ${langName}-speaking market`;
+- Keep it culturally appropriate for the ${langName}-speaking market
 
-    const userPrompt = `Deeply analyze this product and create a stunning, high-converting landing page:
+DESIGN PHILOSOPHY:
+- Premium, modern, trust-building aesthetic
+- Serif fonts for headings (editorial luxury feel), clean sans-serif for body
+- Generous whitespace with smooth scroll animations
+- Color palette should feel extracted from a product photo — warm, rich tones
+- Every section should build desire and overcome objections
+- F-pattern reading layout for text-heavy sections
+- Contrast and whitespace to draw eyes to CTAs`;
 
-PRODUCT ANALYSIS:
+    const userPrompt = `Deeply analyze this product and create a stunning, high-converting landing page following this structure:
+
+PRODUCT TO ANALYZE:
 - Product: ${productName}
 - Price: ${price} DA${oldPrice ? ` (original: ${oldPrice} DA — ${Math.round((1 - price/oldPrice) * 100)}% OFF!)` : ""}
 - Category: ${category || "General"}
 - Description: ${description || shortDescription || "Premium quality product"}
 
-YOUR TASK:
-1. First, mentally analyze: What type of person buys this? What problem does it solve? What desire does it fulfill? What emotional trigger works best?
-2. Then generate compelling content that speaks directly to that buyer's heart
-3. Make every word count — this page needs to CONVERT
+LANDING PAGE SECTIONS TO GENERATE:
 
-Generate the content using the suggest_landing_content function. Remember: ALL text in ${langName}.`;
+SECTION 1 — HERO (Above the Fold):
+- Bold headline using formula: "[Transformation outcome] Without [Pain point]" — max 10 words
+- Subheadline that amplifies the emotional promise — 1-2 sentences
+- Primary CTA: action-oriented, urgent ("Get Yours Now", "Try It Risk-Free")
+- Secondary CTA: softer action ("Learn More", "See Details")
+- Micro social-proof strip: "⭐ 4.9/5 from 2,400+ reviews"
+
+SECTION 2 — BENEFITS / FEATURES:
+- 4-6 key benefits focusing on what the customer GAINS, not what the product HAS
+- Each with an emoji icon, punchy title (3-5 words), and 1-2 sentence transformation-focused description
+- Think: Before/After transformation for each benefit
+
+SECTION 3 — PRODUCT DESCRIPTION:
+- 3-4 paragraph persuasive description using PAS framework
+- Lead with the transformation/benefit, then features
+- Use sensory language — make them FEEL the product
+- SEO-optimized with natural keyword integration
+
+SECTION 4 — SOCIAL VALIDATION (Testimonials):
+- 3 realistic, specific testimonials addressing different buyer concerns
+- Each with: realistic name, specific quote mentioning product by name and concrete benefit experienced, rating 4-5
+- Include timeframes and measurable results where possible
+
+SECTION 5 — FAQ (Objection Handling):
+- 4-5 FAQ items addressing common objections: shipping speed, quality assurance, returns policy, payment security, product authenticity
+- Clear, reassuring answers that overcome each objection with confidence
+
+SECTION 6 — URGENCY / SCARCITY:
+- Scarcity line that creates authentic FOMO: limited stock, special offer ending, exclusive deal
+
+Generate ALL content using the suggest_landing_content function. Remember: EVERY word in ${langName}. Make it CONVERT.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -75,9 +113,9 @@ Generate the content using the suggest_landing_content function. Remember: ALL t
               parameters: {
                 type: "object",
                 properties: {
-                  headline: { type: "string", description: "Bold, attention-grabbing hero headline. Max 10 words. Must create instant desire." },
-                  subheadline: { type: "string", description: "Supporting text that amplifies the headline. 1-2 sentences max. Builds on the emotional promise." },
-                  description: { type: "string", description: "3-4 paragraph persuasive product description. Lead with the transformation/benefit, then features. Use sensory language. SEO-optimized." },
+                  headline: { type: "string", description: "Bold, attention-grabbing hero headline using '[Transformation] Without [Pain]' formula. Max 10 words. Must create instant desire." },
+                  subheadline: { type: "string", description: "Supporting text that amplifies the headline's emotional promise. 1-2 sentences max." },
+                  description: { type: "string", description: "3-4 paragraph persuasive product description using PAS framework. Lead with transformation, then features. Use sensory language. SEO-optimized." },
                   benefits: {
                     type: "array",
                     items: {
@@ -85,42 +123,42 @@ Generate the content using the suggest_landing_content function. Remember: ALL t
                       properties: {
                         icon: { type: "string", description: "Single relevant emoji" },
                         title: { type: "string", description: "Short, punchy benefit title (3-5 words)" },
-                        text: { type: "string", description: "1-2 sentence benefit description focusing on transformation" },
+                        text: { type: "string", description: "1-2 sentence benefit description focusing on before/after transformation" },
                       },
                       required: ["icon", "title", "text"],
                       additionalProperties: false,
                     },
                     description: "4-6 key benefits. Focus on what the customer GAINS, not what the product HAS.",
                   },
-                  cta_primary: { type: "string", description: "Main CTA button text — action-oriented, urgent (e.g., 'Get Yours Now')" },
-                  cta_secondary: { type: "string", description: "Secondary CTA — softer action (e.g., 'Learn More')" },
+                  cta_primary: { type: "string", description: "Main CTA button text — action-oriented, urgent (e.g., 'Get Yours Now', 'Try It Risk-Free')" },
+                  cta_secondary: { type: "string", description: "Secondary CTA — softer action (e.g., 'Learn More', 'See Details')" },
                   testimonials: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
                         name: { type: "string", description: "Realistic first name + last initial" },
-                        text: { type: "string", description: "Specific, believable review mentioning the product by name and a concrete benefit they experienced" },
+                        text: { type: "string", description: "Specific, believable review mentioning the product by name, a concrete benefit experienced, and a timeframe" },
                         rating: { type: "number", description: "Rating 4-5" },
                       },
                       required: ["name", "text", "rating"],
                       additionalProperties: false,
                     },
-                    description: "3 realistic, specific testimonials that address different buyer concerns",
+                    description: "3 realistic, specific testimonials addressing different buyer concerns (quality, value, results)",
                   },
-                  urgency_text: { type: "string", description: "Scarcity/urgency line that creates FOMO without being fake" },
+                  urgency_text: { type: "string", description: "Authentic scarcity/urgency line that creates FOMO — limited stock, special offer, exclusive deal" },
                   faq: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        question: { type: "string", description: "Common buyer question or objection" },
-                        answer: { type: "string", description: "Clear, reassuring answer that overcomes the objection" },
+                        question: { type: "string", description: "Common buyer question or objection about shipping, quality, returns, payment, or authenticity" },
+                        answer: { type: "string", description: "Clear, confident, reassuring answer that overcomes the objection" },
                       },
                       required: ["question", "answer"],
                       additionalProperties: false,
                     },
-                    description: "3-4 FAQ items addressing common objections: shipping, quality, returns, payment",
+                    description: "4-5 FAQ items addressing common objections: shipping, quality, returns, payment security",
                   },
                 },
                 required: ["headline", "subheadline", "description", "benefits", "cta_primary", "cta_secondary", "testimonials", "urgency_text", "faq"],
