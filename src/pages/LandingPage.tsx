@@ -15,6 +15,11 @@ interface LandingContent {
   testimonials: { name: string; text: string; rating: number }[];
   urgency_text: string;
   faq?: { question: string; answer: string }[];
+  social_proof_stats?: { number: string; label: string }[];
+  before_after?: { before_text: string; after_text: string; switch_line: string };
+  how_it_works?: { icon: string; title: string; description: string }[];
+  guarantee_text?: string;
+  authority_text?: string;
 }
 
 interface OptionGroup {
@@ -497,6 +502,48 @@ export default function LandingPage() {
         ))}
       </div>
 
+      {/* Before / After */}
+      {content.before_after && (
+        <div style={{ padding: '4rem 2rem', background: '#f8fafc' }}>
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '2rem', marginBottom: '2rem' }}>
+              <div style={{ padding: '2.5rem 2rem', borderRadius: '1.5rem', background: '#fee2e2', border: '2px solid #fca5a5', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>😔</div>
+                <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: '#991b1b', marginBottom: '0.75rem' }}>{lang === 'ar' ? 'قبل' : lang === 'fr' ? 'Avant' : 'Before'}</h3>
+                <p style={{ color: '#7f1d1d', lineHeight: 1.7 }}>{content.before_after.before_text}</p>
+              </div>
+              <div style={{ padding: '2.5rem 2rem', borderRadius: '1.5rem', background: '#dcfce7', border: '2px solid #86efac', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>😍</div>
+                <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: '#166534', marginBottom: '0.75rem' }}>{lang === 'ar' ? 'بعد' : lang === 'fr' ? 'Après' : 'After'}</h3>
+                <p style={{ color: '#14532d', lineHeight: 1.7 }}>{content.before_after.after_text}</p>
+              </div>
+            </div>
+            <p style={{ textAlign: 'center', fontSize: '1.2rem', fontWeight: 700, color: '#475569' }}>{content.before_after.switch_line}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Authority & Social Validation */}
+      {(content.authority_text || (content.social_proof_stats && content.social_proof_stats.length > 0)) && (
+        <div style={{ padding: '4rem 2rem', background: 'linear-gradient(135deg,#0f172a,#1e293b)', color: '#fff' }}>
+          <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
+            {content.authority_text && (
+              <p style={{ fontSize: '1.2rem', color: '#94a3b8', marginBottom: '2.5rem', fontWeight: 600 }}>{content.authority_text}</p>
+            )}
+            {content.social_proof_stats && content.social_proof_stats.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', flexWrap: 'wrap' }}>
+                {content.social_proof_stats.map((stat, i) => (
+                  <div key={i} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f97316', marginBottom: '0.25rem' }}>{stat.number}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 600 }}>{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Product Details */}
       <div id="details" style={{ display: 'flex', flexWrap: 'wrap', gap: '3rem', padding: '4rem 2rem', maxWidth: '1200px', margin: '0 auto', alignItems: 'center' }}>
         {detailImage && (
@@ -513,6 +560,26 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+
+      {/* How It Works */}
+      {content.how_it_works && content.how_it_works.length > 0 && (
+        <div style={{ padding: '4rem 2rem', background: '#f8fafc' }}>
+          <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 800, marginBottom: '3rem', color: '#0f172a' }}>
+            {lang === 'ar' ? '🔄 كيف يعمل' : lang === 'fr' ? '🔄 Comment ça marche' : '🔄 How It Works'}
+          </h2>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', maxWidth: '900px', margin: '0 auto' }}>
+            {content.how_it_works.map((step, i) => (
+              <div key={i} style={{ textAlign: 'center', flex: '1 1 220px', maxWidth: '280px' }}>
+                <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '50%', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 900, margin: '0 auto 1rem', boxShadow: '0 4px 15px rgba(249,115,22,0.3)' }}>
+                  {step.icon}
+                </div>
+                <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: '#0f172a', marginBottom: '0.5rem' }}>{step.title}</h3>
+                <p style={{ color: '#64748b', lineHeight: 1.6 }}>{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Gallery */}
       {galleryImage && (
@@ -535,11 +602,24 @@ export default function LandingPage() {
                 {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
               </div>
               <p style={{ color: '#475569', fontStyle: 'italic', marginBottom: '0.75rem', lineHeight: 1.7 }}>{rev.text}</p>
-              <span style={{ fontWeight: 700, color: '#0f172a' }}>{rev.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{rev.name}</span>
+                <span style={{ fontSize: '0.75rem', background: '#dbeafe', color: '#1d4ed8', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontWeight: 600 }}>✓ {lang === 'ar' ? 'موثق' : lang === 'fr' ? 'Vérifié' : 'Verified'}</span>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Guarantee */}
+      {content.guarantee_text && (
+        <div style={{ padding: '3rem 2rem', textAlign: 'center' }}>
+          <div style={{ display: 'inline-block', padding: '2rem 3rem', borderRadius: '1.5rem', background: 'linear-gradient(135deg,#ecfdf5,#d1fae5)', border: '2px solid #6ee7b7' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🛡️</div>
+            <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#065f46' }}>{content.guarantee_text}</p>
+          </div>
+        </div>
+      )}
 
       {/* FAQ */}
       {content.faq && content.faq.length > 0 && (

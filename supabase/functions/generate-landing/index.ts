@@ -67,27 +67,39 @@ SECTION 1 — HERO (Above the Fold):
 - Secondary CTA: softer action ("Learn More", "See Details")
 - Micro social-proof strip: "⭐ 4.9/5 from 2,400+ reviews"
 
-SECTION 2 — BENEFITS / FEATURES:
+SECTION 2 — BEFORE / AFTER TRANSFORMATION:
+- A "Before" text showing the pain/problem the customer faces without the product
+- An "After" text showing the transformation/improvement after using the product
+- A compelling one-liner: "See why <number>+ customers made the switch."
+
+SECTION 3 — BENEFITS / FEATURES:
 - 4-6 key benefits focusing on what the customer GAINS, not what the product HAS
 - Each with an emoji icon, punchy title (3-5 words), and 1-2 sentence transformation-focused description
-- Think: Before/After transformation for each benefit
 
-SECTION 3 — PRODUCT DESCRIPTION:
+SECTION 4 — AUTHORITY & SOCIAL VALIDATION:
+- Authority text like "Trusted by 50,000+ customers across Algeria"
+- 3 animated counter items showing social proof stats (e.g., "50,000+ Sold", "98% Satisfaction", "30-Day Guarantee")
+
+SECTION 5 — PRODUCT DESCRIPTION:
 - 3-4 paragraph persuasive description using PAS framework
 - Lead with the transformation/benefit, then features
 - Use sensory language — make them FEEL the product
-- SEO-optimized with natural keyword integration
 
-SECTION 4 — SOCIAL VALIDATION (Testimonials):
+SECTION 6 — HOW IT WORKS:
+- 3-step simple timeline: Order → Receive → Enjoy
+- Each step with a number icon, title, and short description
+
+SECTION 7 — SOCIAL VALIDATION (Testimonials):
 - 3 realistic, specific testimonials addressing different buyer concerns
 - Each with: realistic name, specific quote mentioning product by name and concrete benefit experienced, rating 4-5
-- Include timeframes and measurable results where possible
 
-SECTION 5 — FAQ (Objection Handling):
+SECTION 8 — GUARANTEE:
+- Money-back guarantee text that eliminates risk (e.g., "100% Money-Back Guarantee — No Questions Asked")
+
+SECTION 9 — FAQ (Objection Handling):
 - 4-5 FAQ items addressing common objections: shipping speed, quality assurance, returns policy, payment security, product authenticity
-- Clear, reassuring answers that overcome each objection with confidence
 
-SECTION 6 — URGENCY / SCARCITY:
+SECTION 10 — URGENCY / SCARCITY:
 - Scarcity line that creates authentic FOMO: limited stock, special offer ending, exclusive deal
 
 Generate ALL content using the suggest_landing_content function. Remember: EVERY word in ${langName}. Make it CONVERT.`;
@@ -109,59 +121,98 @@ Generate ALL content using the suggest_landing_content function. Remember: EVERY
             type: "function",
             function: {
               name: "suggest_landing_content",
-              description: "Return structured landing page content",
+              description: "Return structured landing page content with all sections",
               parameters: {
                 type: "object",
                 properties: {
-                  headline: { type: "string", description: "Bold, attention-grabbing hero headline using '[Transformation] Without [Pain]' formula. Max 10 words. Must create instant desire." },
-                  subheadline: { type: "string", description: "Supporting text that amplifies the headline's emotional promise. 1-2 sentences max." },
-                  description: { type: "string", description: "3-4 paragraph persuasive product description using PAS framework. Lead with transformation, then features. Use sensory language. SEO-optimized." },
+                  headline: { type: "string", description: "Bold hero headline using '[Transformation] Without [Pain]' formula. Max 10 words." },
+                  subheadline: { type: "string", description: "Supporting text that amplifies the headline's emotional promise. 1-2 sentences." },
+                  description: { type: "string", description: "3-4 paragraph persuasive product description using PAS framework." },
                   benefits: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
                         icon: { type: "string", description: "Single relevant emoji" },
-                        title: { type: "string", description: "Short, punchy benefit title (3-5 words)" },
-                        text: { type: "string", description: "1-2 sentence benefit description focusing on before/after transformation" },
+                        title: { type: "string", description: "Short benefit title (3-5 words)" },
+                        text: { type: "string", description: "1-2 sentence benefit description" },
                       },
                       required: ["icon", "title", "text"],
                       additionalProperties: false,
                     },
-                    description: "4-6 key benefits. Focus on what the customer GAINS, not what the product HAS.",
+                    description: "4-6 key benefits.",
                   },
-                  cta_primary: { type: "string", description: "Main CTA button text — action-oriented, urgent (e.g., 'Get Yours Now', 'Try It Risk-Free')" },
-                  cta_secondary: { type: "string", description: "Secondary CTA — softer action (e.g., 'Learn More', 'See Details')" },
+                  cta_primary: { type: "string", description: "Main CTA button text" },
+                  cta_secondary: { type: "string", description: "Secondary CTA button text" },
                   testimonials: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        name: { type: "string", description: "Realistic first name + last initial" },
-                        text: { type: "string", description: "Specific, believable review mentioning the product by name, a concrete benefit experienced, and a timeframe" },
+                        name: { type: "string", description: "Realistic name" },
+                        text: { type: "string", description: "Specific review" },
                         rating: { type: "number", description: "Rating 4-5" },
                       },
                       required: ["name", "text", "rating"],
                       additionalProperties: false,
                     },
-                    description: "3 realistic, specific testimonials addressing different buyer concerns (quality, value, results)",
+                    description: "3 testimonials",
                   },
-                  urgency_text: { type: "string", description: "Authentic scarcity/urgency line that creates FOMO — limited stock, special offer, exclusive deal" },
+                  urgency_text: { type: "string", description: "Scarcity/urgency line" },
                   faq: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        question: { type: "string", description: "Common buyer question or objection about shipping, quality, returns, payment, or authenticity" },
-                        answer: { type: "string", description: "Clear, confident, reassuring answer that overcomes the objection" },
+                        question: { type: "string" },
+                        answer: { type: "string" },
                       },
                       required: ["question", "answer"],
                       additionalProperties: false,
                     },
-                    description: "4-5 FAQ items addressing common objections: shipping, quality, returns, payment security",
+                    description: "4-5 FAQ items",
                   },
+                  social_proof_stats: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        number: { type: "string", description: "Stat number e.g. '50,000+'" },
+                        label: { type: "string", description: "Stat label e.g. 'Products Sold'" },
+                      },
+                      required: ["number", "label"],
+                      additionalProperties: false,
+                    },
+                    description: "3 animated counter stats for social proof",
+                  },
+                  before_after: {
+                    type: "object",
+                    properties: {
+                      before_text: { type: "string", description: "Pain/problem text before using product" },
+                      after_text: { type: "string", description: "Transformation text after using product" },
+                      switch_line: { type: "string", description: "Compelling one-liner about customers switching" },
+                    },
+                    required: ["before_text", "after_text", "switch_line"],
+                    additionalProperties: false,
+                  },
+                  how_it_works: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        icon: { type: "string", description: "Step number as string: '1', '2', '3'" },
+                        title: { type: "string", description: "Step title" },
+                        description: { type: "string", description: "Step description" },
+                      },
+                      required: ["icon", "title", "description"],
+                      additionalProperties: false,
+                    },
+                    description: "3-step how it works timeline",
+                  },
+                  guarantee_text: { type: "string", description: "Money-back guarantee text" },
+                  authority_text: { type: "string", description: "Authority/trust text like 'Trusted by X customers'" },
                 },
-                required: ["headline", "subheadline", "description", "benefits", "cta_primary", "cta_secondary", "testimonials", "urgency_text", "faq"],
+                required: ["headline", "subheadline", "description", "benefits", "cta_primary", "cta_secondary", "testimonials", "urgency_text", "faq", "social_proof_stats", "before_after", "how_it_works", "guarantee_text", "authority_text"],
                 additionalProperties: false,
               },
             },
