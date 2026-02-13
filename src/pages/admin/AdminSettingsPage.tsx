@@ -482,6 +482,19 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
+          {/* Facebook Pixel */}
+          <div className="bg-card border rounded-lg p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-primary" />
+              <h2 className="font-cairo font-bold text-xl">Facebook Pixel</h2>
+            </div>
+            <p className="font-cairo text-sm text-muted-foreground">أدخل معرف Facebook Pixel لتتبع الأحداث التسويقية (PageView, AddToCart, Purchase...)</p>
+            <div>
+              <Label className="font-cairo">Pixel ID</Label>
+              <Input value={mergedSettings.facebook_pixel_id || ''} onChange={e => setField('facebook_pixel_id', e.target.value)} className="font-roboto mt-1" dir="ltr" placeholder="مثال: 123456789012345" />
+            </div>
+          </div>
+
           {/* Copyright & Products Per Page */}
           <div className="bg-card border rounded-lg p-6 space-y-4">
             <h2 className="font-cairo font-bold text-xl">إعدادات إضافية</h2>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +21,19 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { trackEvent } = useFacebookPixel();
+
+  // Facebook Pixel: InitiateCheckout
+  useEffect(() => {
+    if (items.length > 0) {
+      trackEvent('InitiateCheckout', {
+        content_ids: items.map(i => i.id),
+        num_items: items.length,
+        value: subtotal,
+        currency: 'DZD',
+      });
+    }
+  }, []); // fire once on mount
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');

@@ -14,6 +14,7 @@ import { formatPrice, formatDate } from '@/lib/format';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 
 function StarRating({ value, onChange, readonly = false }: { value: number; onChange?: (v: number) => void; readonly?: boolean }) {
   return (
@@ -32,6 +33,7 @@ export default function SingleProductPage() {
   const { id } = useParams<{ id: string }>();
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { trackEvent } = useFacebookPixel();
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -251,6 +253,19 @@ export default function SingleProductPage() {
     onError: () => { toast({ title: 'حدث خطأ، حاول مرة أخرى', variant: 'destructive' }); },
   });
 
+  // Facebook Pixel: ViewContent
+  useEffect(() => {
+    if (product) {
+      trackEvent('ViewContent', {
+        content_name: product.name,
+        content_ids: [product.id],
+        content_type: 'product',
+        value: Number(product.price),
+        currency: 'DZD',
+      });
+    }
+  }, [product, trackEvent]);
+
   if (isLoading) {
     return (
       <div className="container py-8">
@@ -342,6 +357,13 @@ export default function SingleProductPage() {
         });
       }
     }
+    trackEvent('AddToCart', {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: 'product',
+      value: effectivePrice * qty,
+      currency: 'DZD',
+    });
     toast({ title: 'تمت الإضافة إلى السلة ✅', description: `تمت إضافة "${product.name}" (×${qty}) إلى السلة` });
   };
 
