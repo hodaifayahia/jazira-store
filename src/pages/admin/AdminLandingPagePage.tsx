@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/format';
 import { generateImageWithPuter } from '@/lib/puterImageGen';
+import { generateTextWithPuter } from '@/lib/puterTextGen';
 import {
   Rocket, Sparkles, RefreshCw, Copy, ExternalLink, Check, Star,
   Pencil, ShoppingCart, ImagePlus, Wand2, ArrowDown, Package, Shield,
@@ -284,16 +285,14 @@ export default function AdminLandingPagePage() {
     try {
       const imagePrompts = getImagePrompts(selectedProduct);
       const [textResult, ...imageResults] = await Promise.allSettled([
-        supabase.functions.invoke('generate-landing', {
-          body: {
-            productName: selectedProduct.name,
-            price: selectedProduct.price,
-            oldPrice: selectedProduct.old_price,
-            description: selectedProduct.description,
-            shortDescription: selectedProduct.short_description,
-            category: selectedProduct.category?.join(', '),
-            language: selectedLang,
-          },
+        generateTextWithPuter({
+          productName: selectedProduct.name,
+          price: selectedProduct.price,
+          oldPrice: selectedProduct.old_price,
+          description: selectedProduct.description,
+          shortDescription: selectedProduct.short_description,
+          category: selectedProduct.category?.join(', '),
+          language: selectedLang,
         }),
         ...imagePrompts.map(prompt =>
           generateImageWithPuter(prompt).then(url => ({ data: { url }, error: null }))
@@ -301,10 +300,7 @@ export default function AdminLandingPagePage() {
       ]);
 
       if (textResult.status === 'fulfilled') {
-        const { data, error } = textResult.value;
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        setContent(data);
+        setContent(textResult.value);
         setStep(3);
         toast.success(t('landing.generated'));
       } else {
