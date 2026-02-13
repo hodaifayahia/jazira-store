@@ -60,10 +60,30 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    console.log("AI response structure:", JSON.stringify({
+      hasChoices: !!data.choices,
+      choicesLen: data.choices?.length,
+      hasMessage: !!data.choices?.[0]?.message,
+      hasImages: !!data.choices?.[0]?.message?.images,
+      imagesLen: data.choices?.[0]?.message?.images?.length,
+      messageKeys: data.choices?.[0]?.message ? Object.keys(data.choices[0].message) : [],
+    }));
+
+    // Try multiple paths to find the image
+    let imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
+    // Fallback: check if image is in content array
     if (!imageData) {
-      return new Response(JSON.stringify({ error: "No image generated" }), {
+      const content = data.choices?.[0]?.message?.content;
+      if (Array.isArray(content)) {
+        const imgPart = content.find((p: any) => p.type === "image_url" || p.type === "image");
+        imageData = imgPart?.image_url?.url || imgPart?.url;
+      }
+    }
+
+    if (!imageData) {
+      console.error("Full AI response:", JSON.stringify(data).slice(0, 2000));
+      return new Response(JSON.stringify({ error: "No image generated. The AI model may have filtered this prompt." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
