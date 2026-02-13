@@ -1,61 +1,61 @@
 
 
-# Switch Image Generation to Prodia API (Free Tier)
+# Use Google Gemini Free Tier for Image Generation
 
 ## Why
 
-Puter.js image generation may be unreliable or failing. Prodia offers the fastest free image generation API (190ms latency) with a generous free tier -- no credit card required.
+Puter.js image generation can be unreliable. Google offers a free tier for Gemini API (including the image generation model `gemini-2.0-flash-exp`) with no credit card required -- just a free API key from Google AI Studio.
 
 ## How It Works
 
-Prodia provides a simple REST API. We'll create an edge function to call it (keeping the API key secure on the server), and update the frontend to use it. The free tier provides plenty of generations for landing page use.
+We'll create an edge function that calls the Gemini API directly using a free Google AI API key (separate from the Lovable AI Gateway). The free tier provides 15 requests per minute which is plenty for landing page generation.
 
 ## Steps
 
-### 1. Get Prodia API Key (Free)
-You'll need to sign up at https://prodia.com and get a free API key. It takes 30 seconds -- no credit card needed.
+### 1. Get a Free Google AI API Key
+- Go to https://aistudio.google.com/apikey
+- Click "Create API Key" (free, no credit card needed)
+- Copy the key -- you'll be asked to paste it as a secret
 
-### 2. Create Edge Function: `supabase/functions/prodia-image/index.ts`
-A lightweight edge function that:
+### 2. Create Edge Function: `supabase/functions/gemini-image/index.ts`
+A new edge function that:
 - Receives a prompt from the frontend
-- Calls Prodia's API to generate an image (using SDXL or Flux Schnell model)
-- Waits for the job to complete (usually under 1 second)
-- Downloads the result and uploads it to storage
+- Calls Gemini's image generation API (`gemini-2.0-flash-exp` with `responseModalities: ["IMAGE"]`)
+- Receives the base64 image in the response
+- Uploads it to the `products` storage bucket
 - Returns the public URL
 
 ### 3. Update `src/lib/puterImageGen.ts`
-Replace the Puter.js logic with a call to the new edge function. Keep the same function signature so no other files need changing. The function will:
-- Call the `prodia-image` edge function with the prompt
-- Return the public URL from storage
-- Fall back to Puter.js if the edge function fails
+- Try the Gemini edge function first (primary)
+- Fall back to Puter.js if it fails (secondary)
+- Same function signature -- no other files need changing
 
 ### 4. Store API Key as Secret
-The Prodia API key will be stored as a secret (`PRODIA_API_KEY`) so it's never exposed in frontend code.
+The Google AI API key will be stored as `GOOGLE_AI_API_KEY` so it stays secure on the server.
 
 ## Technical Details
 
-### Prodia API Call (inside edge function)
+### Gemini Image Generation API
 ```text
-// 1. Create job
-POST https://inference.prodia.com/v2/job
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=API_KEY
 {
-  "type": "inference.flux-fast.schnell.txt2img.v2",
-  "config": { "prompt": "..." }
+  "contents": [{ "parts": [{ "text": "Generate an image of..." }] }],
+  "generationConfig": { "responseModalities": ["IMAGE"] }
 }
 
-// 2. Poll until complete, then download image
-GET https://inference.prodia.com/v2/job/{jobId}
-// When status is "succeeded", image URL is available
+// Response contains base64 image data in:
+// response.candidates[0].content.parts[0].inline_data.data
 ```
 
 ### Fallback Chain
-Prodia (primary) -> Puter.js (fallback) -> Error
+Gemini Free Tier (primary) --> Puter.js (fallback) --> Error
 
 ### File Changes Summary
 
 | File | Change |
 |------|--------|
-| `supabase/functions/prodia-image/index.ts` | New edge function for Prodia API |
-| `src/lib/puterImageGen.ts` | Update to call edge function, keep Puter.js as fallback |
-| Secret: `PRODIA_API_KEY` | Store free API key securely |
+| `supabase/functions/gemini-image/index.ts` | New edge function for Gemini image API |
+| `src/lib/puterImageGen.ts` | Call edge function first, Puter.js as fallback |
+| `supabase/config.toml` | Register new function with `verify_jwt = false` |
+| Secret: `GOOGLE_AI_API_KEY` | Free API key from Google AI Studio |
 
