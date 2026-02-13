@@ -42,7 +42,7 @@ interface LandingContent {
   urgency_text: string;
   faq?: { question: string; answer: string }[];
   social_proof_stats?: { number: string; label: string }[];
-  before_after?: { before_text: string; after_text: string; switch_line: string };
+  before_after?: { before_text: string; after_text: string; switch_line: string; image_url?: string };
   how_it_works?: { icon: string; title: string; description: string }[];
   guarantee_text?: string;
   authority_text?: string;
@@ -1212,6 +1212,84 @@ img{max-width:100%}
                 {content.before_after && (
                   <div style={{ padding: '4rem 2rem', background: '#f8fafc' }}>
                     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                      <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 800, marginBottom: '1rem', color: '#0f172a' }}>
+                        {selectedLang === 'ar' ? '✨ التحول' : selectedLang === 'fr' ? '✨ La Transformation' : '✨ The Transformation'}
+                      </h2>
+                      {/* Generate Transformation Image Button */}
+                      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                        {content.before_after.image_url ? (
+                          <div style={{ marginBottom: '2rem', borderRadius: '1.5rem', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', position: 'relative' as const }}>
+                            <img src={content.before_after.image_url} alt="Transformation" style={{ width: '100%', height: 'auto', maxHeight: '500px', objectFit: 'cover', display: 'block' }} />
+                            <button
+                              onClick={async () => {
+                                if (!selectedProduct) return;
+                                setGeneratingImages(true);
+                                try {
+                                  const prompt = `Before and after transformation showing the dramatic impact of ${selectedProduct.name}, split screen comparison, professional lifestyle photography, high resolution, 4K`;
+                                  const { data, error } = await supabase.functions.invoke('generate-landing-image', {
+                                    body: { prompt, productName: selectedProduct.name },
+                                  });
+                                  if (error) throw error;
+                                  if (data?.url) {
+                                    setContent({ ...content, before_after: { ...content.before_after!, image_url: data.url } });
+                                    toast.success('Transformation image regenerated!');
+                                  }
+                                } catch (e: any) {
+                                  toast.error(e.message || 'Error generating image');
+                                } finally {
+                                  setGeneratingImages(false);
+                                }
+                              }}
+                              disabled={generatingImages}
+                              style={{
+                                position: 'absolute' as const, bottom: '1rem', right: '1rem',
+                                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                padding: '0.5rem 1rem', borderRadius: '0.75rem',
+                                background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+                                color: '#fff', border: '1px solid rgba(255,255,255,0.2)',
+                                cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                              }}
+                            >
+                              {generatingImages ? '⏳' : '🔄'} {selectedLang === 'ar' ? 'إعادة توليد' : 'Regenerate'}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              if (!selectedProduct) return;
+                              setGeneratingImages(true);
+                              try {
+                                const prompt = `Before and after transformation showing the dramatic impact of ${selectedProduct.name}, split screen comparison, professional lifestyle photography, high resolution, 4K`;
+                                const { data, error } = await supabase.functions.invoke('generate-landing-image', {
+                                  body: { prompt, productName: selectedProduct.name },
+                                });
+                                if (error) throw error;
+                                if (data?.url) {
+                                  setContent({ ...content, before_after: { ...content.before_after!, image_url: data.url } });
+                                  toast.success('Transformation image generated!');
+                                }
+                              } catch (e: any) {
+                                toast.error(e.message || 'Error generating image');
+                              } finally {
+                                setGeneratingImages(false);
+                              }
+                            }}
+                            disabled={generatingImages}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                              padding: '0.75rem 1.5rem', borderRadius: '0.75rem',
+                              background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                              color: '#fff', border: 'none', cursor: 'pointer',
+                              fontSize: '0.9rem', fontWeight: 700,
+                              boxShadow: '0 4px 15px rgba(249,115,22,0.3)',
+                              marginBottom: '1rem',
+                            }}
+                          >
+                            {generatingImages ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+                            {selectedLang === 'ar' ? 'توليد صورة التحول' : 'Generate Transformation Image'}
+                          </button>
+                        )}
+                      </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '2rem', marginBottom: '2rem' }}>
                         <div style={{ padding: '2.5rem 2rem', borderRadius: '1.5rem', background: '#fee2e2', border: '2px solid #fca5a5', textAlign: 'center' }}>
                           <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>😔</div>
@@ -1303,19 +1381,51 @@ img{max-width:100%}
                   <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 800, marginBottom: '2.5rem', color: '#0f172a' }}>
                     {selectedLang === 'ar' ? '⭐ آراء عملائنا' : selectedLang === 'fr' ? '⭐ Avis Clients' : '⭐ Customer Reviews'}
                   </h2>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
-                    {content.testimonials.map((rev, i) => (
-                      <div key={i} style={{ background: '#fff', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-                        <div style={{ color: '#f59e0b', marginBottom: '0.5rem', fontSize: '1.1rem' }}>
-                          {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+                    {content.testimonials.map((rev, i) => {
+                      const initials = rev.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                      const gradients = [
+                        'linear-gradient(135deg, #f97316, #ea580c)',
+                        'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+                        'linear-gradient(135deg, #06b6d4, #0891b2)',
+                        'linear-gradient(135deg, #10b981, #059669)',
+                        'linear-gradient(135deg, #ec4899, #db2777)',
+                      ];
+                      const gradient = gradients[i % gradients.length];
+                      return (
+                        <div key={i} style={{
+                          background: '#fff', borderRadius: '1rem', padding: '2rem',
+                          boxShadow: '0 4px 15px rgba(0,0,0,0.06)',
+                          borderLeft: '4px solid transparent',
+                          borderImage: 'linear-gradient(to bottom, #f97316, #ea580c) 1',
+                          transition: 'transform 0.2s, box-shadow 0.2s',
+                        }}>
+                          {/* Quote icon */}
+                          <div style={{ fontSize: '3rem', lineHeight: 1, color: '#f97316', opacity: 0.2, fontFamily: 'Georgia, serif', marginBottom: '0.5rem' }}>"</div>
+                          {/* Review text */}
+                          <EditableText tag="p" value={rev.text} onChange={(v: string) => { const n = [...content.testimonials]; n[i] = { ...n[i], text: v }; setContent({ ...content, testimonials: n }); }} className="block" style={{ color: '#475569', lineHeight: 1.8, marginBottom: '1rem', fontSize: '0.95rem' }} />
+                          {/* Stars */}
+                          <div style={{ color: '#f59e0b', marginBottom: '1rem', fontSize: '1rem', letterSpacing: '2px' }}>
+                            {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                          </div>
+                          {/* Avatar + Name */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{
+                              width: '40px', height: '40px', borderRadius: '50%', background: gradient,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0,
+                            }}>{initials}</div>
+                            <div>
+                              <EditableText tag="span" value={rev.name} onChange={(v: string) => { const n = [...content.testimonials]; n[i] = { ...n[i], name: v }; setContent({ ...content, testimonials: n }); }} style={{ fontWeight: 700, color: '#0f172a', display: 'block', fontSize: '0.95rem' }} />
+                              <span style={{ fontSize: '0.7rem', background: 'linear-gradient(135deg, #dbeafe, #e0e7ff)', color: '#1d4ed8', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Check className="w-2.5 h-2.5" />
+                                {selectedLang === 'ar' ? 'شراء موثق' : selectedLang === 'fr' ? 'Achat vérifié' : 'Verified Purchase'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <EditableText tag="p" value={rev.text} onChange={(v: string) => { const n = [...content.testimonials]; n[i] = { ...n[i], text: v }; setContent({ ...content, testimonials: n }); }} className="block" style={{ color: '#475569', fontStyle: 'italic', marginBottom: '0.75rem', lineHeight: 1.7 }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <EditableText tag="span" value={rev.name} onChange={(v: string) => { const n = [...content.testimonials]; n[i] = { ...n[i], name: v }; setContent({ ...content, testimonials: n }); }} style={{ fontWeight: 700, color: '#0f172a' }} />
-                          <span style={{ fontSize: '0.75rem', background: '#dbeafe', color: '#1d4ed8', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontWeight: 600 }}>✓ {selectedLang === 'ar' ? 'موثق' : selectedLang === 'fr' ? 'Vérifié' : 'Verified'}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
