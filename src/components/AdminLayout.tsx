@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe, Store, CreditCard, Bot, FormInput, Paintbrush, Shield, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
 import { toast } from 'sonner';
 import { useTranslation, Language } from '@/i18n';
@@ -49,7 +50,16 @@ const NAV_KEYS = [
   { href: '/admin/abandoned', key: 'sidebar.abandoned', icon: PackageX },
   { href: '/admin/wilayas', key: 'sidebar.wilayas', icon: MapPin },
   { href: '/admin/coupons', key: 'sidebar.coupons', icon: Tag },
-  { href: '/admin/settings', key: 'sidebar.settings', icon: Settings },
+];
+
+const SETTINGS_SUB_KEYS = [
+  { href: '/admin/settings/identity', key: 'settings.storeIdentity', icon: Store },
+  { href: '/admin/settings/payment', key: 'settings.paymentDelivery', icon: CreditCard },
+  { href: '/admin/settings/telegram', key: 'settings.telegram', icon: Bot },
+  { href: '/admin/settings/returns', key: 'settings.returnsTab', icon: RotateCcw },
+  { href: '/admin/settings/form', key: 'sidebar.form', icon: FormInput },
+  { href: '/admin/settings/appearance', key: 'sidebar.appearance', icon: Paintbrush },
+  { href: '/admin/settings/security', key: 'settings.security', icon: Shield },
 ];
 
 const LANG_OPTIONS: { value: Language; label: string; flag: string }[] = [
@@ -215,7 +225,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Skeleton className="w-32 h-8" /></div>;
   if (!user || !isAdmin) return null;
 
-  const currentPageLabel = NAV_KEYS.find(i => i.href === location.pathname)?.key;
+  const currentPageLabel = NAV_KEYS.find(i => i.href === location.pathname)?.key
+    || SETTINGS_SUB_KEYS.find(i => i.href === location.pathname)?.key;
+  const isSettingsActive = location.pathname.startsWith('/admin/settings');
   const currentLang = LANG_OPTIONS.find(l => l.value === language)!;
 
   return (
@@ -255,6 +267,32 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               {t(item.key)}
             </Link>
           ))}
+
+          {/* Settings collapsible group */}
+          <Collapsible defaultOpen={isSettingsActive}>
+            <CollapsibleTrigger className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-cairo text-sm transition-colors w-full ${
+              isSettingsActive ? 'text-primary font-semibold' : 'text-muted-foreground hover:bg-muted'
+            }`}>
+              <Settings className="w-4 h-4" />
+              <span className="flex-1 text-start">{t('sidebar.settings')}</span>
+              <ChevronRight className="w-3.5 h-3.5 transition-transform data-[state=open]:rotate-90" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-0.5 mt-0.5">
+              {SETTINGS_SUB_KEYS.map(item => (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg font-cairo text-xs transition-colors ${isRtl ? 'pr-9' : 'pl-9'} ${
+                    location.pathname === item.href ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <item.icon className="w-3.5 h-3.5" />
+                  {t(item.key)}
+                </Link>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
         </nav>
         <div className="p-3 border-t">
           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2 font-cairo text-destructive hover:text-destructive">

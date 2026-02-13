@@ -14,6 +14,8 @@ export const en: Record<string, string> = {
   'sidebar.wilayas': 'Wilayas',
   'sidebar.coupons': 'Coupons',
   'sidebar.settings': 'Settings',
+  'sidebar.form': 'Form',
+  'sidebar.appearance': 'Appearance',
   'sidebar.controlPanel': 'Control Panel',
   'sidebar.logout': 'Logout',
   'sidebar.viewStore': 'View Store',

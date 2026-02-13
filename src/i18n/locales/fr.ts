@@ -14,6 +14,8 @@ export const fr: Record<string, string> = {
   'sidebar.wilayas': 'Wilayas',
   'sidebar.coupons': 'Coupons',
   'sidebar.settings': 'Paramètres',
+  'sidebar.form': 'Formulaire',
+  'sidebar.appearance': 'Apparence',
   'sidebar.controlPanel': 'Panneau de contrôle',
   'sidebar.logout': 'Déconnexion',
   'sidebar.viewStore': 'Voir la boutique',
