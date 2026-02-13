@@ -1,51 +1,61 @@
 
 
-# Move Landing Page Text Generation to Puter.js (Free)
+# Switch Image Generation to Prodia API (Free Tier)
 
-## Problem
+## Why
 
-The `generate-landing` edge function uses the Lovable AI Gateway for generating landing page text content, which is returning a 402 "Credits exhausted" error. Images were already switched to Puter.js, but the text generation still relies on the paid gateway.
+Puter.js image generation may be unreliable or failing. Prodia offers the fastest free image generation API (190ms latency) with a generous free tier -- no credit card required.
 
-## Solution
+## How It Works
 
-Replace the edge function call with Puter.js `puter.ai.chat()` directly in the browser. Puter.js provides free, unlimited access to AI text models (GPT-4o, Claude, etc.) with no API keys needed.
+Prodia provides a simple REST API. We'll create an edge function to call it (keeping the API key secure on the server), and update the frontend to use it. The free tier provides plenty of generations for landing page use.
 
-## Changes
+## Steps
 
-### 1. Create Helper: `src/lib/puterTextGen.ts`
-A new utility that:
-- Takes the same product data (name, price, description, category, language)
-- Calls `puter.ai.chat()` with the same system/user prompts currently in the edge function
-- Parses the JSON response into the same structured landing page content format
-- Includes error handling and retry logic
+### 1. Get Prodia API Key (Free)
+You'll need to sign up at https://prodia.com and get a free API key. It takes 30 seconds -- no credit card needed.
 
-### 2. Update `src/pages/admin/AdminLandingPagePage.tsx`
-Replace line 287's `supabase.functions.invoke('generate-landing', ...)` call with the new Puter.js text generation helper. The rest of the flow (setting content, step progression, etc.) stays identical.
+### 2. Create Edge Function: `supabase/functions/prodia-image/index.ts`
+A lightweight edge function that:
+- Receives a prompt from the frontend
+- Calls Prodia's API to generate an image (using SDXL or Flux Schnell model)
+- Waits for the job to complete (usually under 1 second)
+- Downloads the result and uploads it to storage
+- Returns the public URL
 
-### 3. Update Type Declaration: `src/vite-env.d.ts`
-Add `chat()` method to the existing `PuterAI` interface.
+### 3. Update `src/lib/puterImageGen.ts`
+Replace the Puter.js logic with a call to the new edge function. Keep the same function signature so no other files need changing. The function will:
+- Call the `prodia-image` edge function with the prompt
+- Return the public URL from storage
+- Fall back to Puter.js if the edge function fails
 
-### 4. Keep the Edge Function (No Delete)
-The `generate-landing` edge function stays as-is for potential future use but won't be called.
+### 4. Store API Key as Secret
+The Prodia API key will be stored as a secret (`PRODIA_API_KEY`) so it's never exposed in frontend code.
 
 ## Technical Details
 
-### Puter.js Chat API
+### Prodia API Call (inside edge function)
 ```text
-const response = await puter.ai.chat(prompt, { model: 'gpt-4o' });
-// response.message.content contains the text response
+// 1. Create job
+POST https://inference.prodia.com/v2/job
+{
+  "type": "inference.flux-fast.schnell.txt2img.v2",
+  "config": { "prompt": "..." }
+}
+
+// 2. Poll until complete, then download image
+GET https://inference.prodia.com/v2/job/{jobId}
+// When status is "succeeded", image URL is available
 ```
 
-Since Puter.js chat doesn't support tool_choice/function calling natively, the prompt will instruct the AI to return a JSON object directly, and the helper will parse it.
-
-### Prompt Strategy
-The same system and user prompts from the edge function will be reused, but instead of using OpenAI function calling, the prompt will end with: "Return ONLY a valid JSON object with the following structure: {...}" -- this ensures clean parseable output.
+### Fallback Chain
+Prodia (primary) -> Puter.js (fallback) -> Error
 
 ### File Changes Summary
 
 | File | Change |
 |------|--------|
-| `src/lib/puterTextGen.ts` | New helper for Puter.js text generation |
-| `src/pages/admin/AdminLandingPagePage.tsx` | Replace edge function call with Puter.js helper |
-| `src/vite-env.d.ts` | Add `chat()` method to PuterAI interface |
+| `supabase/functions/prodia-image/index.ts` | New edge function for Prodia API |
+| `src/lib/puterImageGen.ts` | Update to call edge function, keep Puter.js as fallback |
+| Secret: `PRODIA_API_KEY` | Store free API key securely |
 
