@@ -1,45 +1,25 @@
 
 
-# Settings Hub: Category Cards Page
+# Simplify Settings Sidebar Navigation
 
 ## Overview
-Replace the current auto-redirect at `/admin/settings` with a visual hub page showing all 7 settings categories as clickable cards. When you click a card, it navigates to that category's settings page.
+Remove the expandable settings sub-items from the sidebar. Instead, "Settings" will be a single link that navigates to `/admin/settings`, where the cards hub page (already built) lets you pick the category you want.
 
-## What You'll See
+## What Changes
 
-```text
-/admin/settings
-+---------------------------------------------------+
-|  Settings (title)                                  |
-|                                                    |
-|  [Store Identity]  [Payment]    [Telegram]         |
-|  [Returns]         [Form]      [Appearance]        |
-|  [Security]                                        |
-+---------------------------------------------------+
-```
+### Before (current)
+The sidebar shows "Settings" as a collapsible group that expands to reveal 7 sub-links (Identity, Payment, Telegram, etc.).
 
-Each card will show:
-- The category icon (same icons already used in sidebar)
-- The category name
-- A short description of what that section controls
-
-Clicking a card navigates to the corresponding sub-page (e.g., `/admin/settings/identity`).
+### After
+The sidebar shows "Settings" as a single link (like Dashboard, Products, etc.) that goes to `/admin/settings`. From there, you click a card to reach the specific settings page.
 
 ## Technical Details
 
-### File Modified
+### `src/components/AdminLayout.tsx`
+- Remove the `Collapsible`, `CollapsibleContent`, `CollapsibleTrigger` usage for the settings group (lines 272-295)
+- Replace it with a simple `Link` to `/admin/settings`, styled the same as other nav items
+- Keep the `SETTINGS_SUB_KEYS` array (it's still used by `currentPageLabel` logic) but remove the collapsible rendering
+- Update the active-state check: highlight the Settings link when any `/admin/settings*` path is active
+- Remove unused imports (`Collapsible`, `CollapsibleContent`, `CollapsibleTrigger`, `ChevronRight`) if no longer needed elsewhere
 
-**`src/pages/admin/AdminSettingsPage.tsx`**
-- Remove the `Navigate` redirect
-- Render a responsive grid of cards (one per settings category)
-- Each card uses the same icon and translation key from `SETTINGS_SUB_KEYS` pattern
-- Cards link to their respective routes using `useNavigate` or `Link`
-- Add short description text for each category
-- Uses existing `Card` component from `src/components/ui/card.tsx`
-
-### Translation Keys
-Add 7 short description strings to `ar.ts`, `fr.ts`, and `en.ts` for each settings category card (e.g., "Manage store name, logo, and colors").
-
-### No Database or Routing Changes
-The route `/admin/settings` already exists. We're just changing what it renders from a redirect to a cards page.
-
+No other files need changes -- the hub page and routing already work.
