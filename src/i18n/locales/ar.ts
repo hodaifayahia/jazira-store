@@ -756,4 +756,7 @@ export const ar: Record<string, string> = {
   'orders.sourceLanding': 'صفحة هبوط',
   'landing.copyLink': 'نسخ الرابط',
   'landing.linkCopied': 'تم نسخ الرابط!',
+  'landing.invalidPhone': 'رقم هاتف غير صحيح (05/06/07XXXXXXXX)',
+  'landing.selectVariant': 'يرجى اختيار جميع الخيارات',
+  'landing.faq': 'أسئلة شائعة',
 };

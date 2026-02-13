@@ -756,4 +756,7 @@ export const en: Record<string, string> = {
   'orders.sourceLanding': 'Landing Page',
   'landing.copyLink': 'Copy Link',
   'landing.linkCopied': 'Link copied!',
+  'landing.invalidPhone': 'Invalid phone number (05/06/07XXXXXXXX)',
+  'landing.selectVariant': 'Please select all options',
+  'landing.faq': 'FAQ',
 };
