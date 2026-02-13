@@ -1,127 +1,106 @@
 
 
-# Landing Page Builder: Full Order Form, Auto Images, Save & Track
+# Fix Landing Page: Variations, Delivery/Order Bugs, and Enhanced Generation
 
-## 1. Database Changes
+## Problems Identified
 
-### New table: `landing_pages`
-Stores saved landing pages for reuse and order tracking.
+### Bug 1: Product Variations Missing from Form
+The landing page order form (both admin preview and public `/lp/:id`) does not fetch or display product variations/variants. When a product has options (Size, Color, etc.), customers cannot select them.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid (PK) | Default gen_random_uuid() |
-| product_id | uuid | Reference to products table |
-| title | text | The generated headline |
-| language | text | e.g. 'ar', 'en', 'fr' |
-| content | jsonb | Full LandingContent JSON |
-| selected_image | text | Primary image URL |
-| generated_images | text[] | AI-generated image URLs |
-| created_at | timestamptz | Default now() |
-| updated_at | timestamptz | Default now() |
+### Bug 2: Delivery Type Buttons & Order Submit Not Working
+The delivery type buttons (`office`/`home`) and the "Confirm Order" button in the admin preview form use `onClick` handlers that update state, but the form is inside the `contentEditable` preview container (`previewRef`). React event handlers inside a `contentEditable` parent can be swallowed or interfered with. Additionally, the `handleOrderSubmit` function requires `savedPageId` to be set before submission, but a user testing in the admin preview may not have saved yet.
 
-RLS: Admin-only for all operations.
+### Bug 3: Landing Page Generation Needs Enhancement
+The prompt requests a more "magical" experience with AI vision analysis, auto-generated contextual images, and a richer template.
 
-### Alter `orders` table
-Add a nullable column to track landing page source:
-```sql
-ALTER TABLE public.orders ADD COLUMN landing_page_id uuid;
+---
+
+## Plan
+
+### 1. Add Product Variations to the Order Form
+
+**Files: `src/pages/admin/AdminLandingPagePage.tsx`, `src/pages/LandingPage.tsx`**
+
+- Fetch `product_option_groups` + `product_option_values` + `product_variants` for the selected product (same queries as SingleProductPage)
+- Also fetch legacy `product_variations` for backward compatibility
+- Add variant selection UI in the order form section:
+  - For new variant system (`has_variants`): Show option group buttons (Color, Size, etc.) with availability checking against `product_variants`
+  - For legacy variations: Show grouped buttons by `variation_type`
+- Selected variant affects the displayed price and is included in the order submission (`variant_id` in `order_items`)
+- Both admin preview form and public `/lp/:id` form get this treatment
+
+### 2. Fix Delivery Type & Order Submit Bugs
+
+**Files: `src/pages/admin/AdminLandingPagePage.tsx`, `src/pages/LandingPage.tsx`**
+
+- Move the order form section OUTSIDE the `contentEditable` preview container (`previewRef`) in the admin page. Render it as a separate React component below the preview, so React event handlers work properly
+- Remove the `savedPageId` requirement from `handleOrderSubmit` -- allow orders even before saving (use `null` for `landing_page_id` if not saved)
+- Wrap all async handlers (`handleOrderSubmit`, delivery type clicks) in proper `try...catch` blocks
+- In `LandingPage.tsx`: The delivery type buttons already work (they're native HTML buttons outside contentEditable), but add better error feedback -- show validation errors inline instead of silently failing
+- Add proper form validation with visible error messages for both files
+
+### 3. Enhance Landing Page Generation with Better Prompt
+
+**File: `supabase/functions/generate-landing/index.ts`**
+
+- Enhance the system prompt to instruct the AI to:
+  - Analyze the product deeply (type, style, target audience, emotional vibe)
+  - Generate more compelling, emotionally-driven copy
+  - Create content that feels like a premium luxury brand
+  - Include FAQ section content in the generated JSON (add `faq` field)
+- Add a `faq` field to the tool schema (array of question/answer pairs)
+
+**File: `src/pages/admin/AdminLandingPagePage.tsx`**
+
+- Add FAQ section to the landing page template (between testimonials and urgency banner)
+- Update `LandingContent` interface to include `faq`
+
+**File: `src/pages/LandingPage.tsx`**
+
+- Add FAQ section rendering to the public page as well
+
+### 4. Auto-Generate Images with Product Context
+
+The current image generation already fires 3 parallel prompts based on category. Enhance the prompts in `getImagePrompts()` to be more specific:
+- Use the product description to make prompts more contextual
+- For clothing: explicitly request "person wearing" shots
+- For products: explicitly request "product in its environment" shots
+- Pass the product's existing image URL to the AI for reference (edit mode) if available
+
+### 5. Update i18n Keys
+
+**Files: `src/i18n/locales/ar.ts`, `en.ts`, `fr.ts`**
+
+- Add keys for: variation selection labels, FAQ section title, form validation error messages
+
+---
+
+## Technical Details
+
+### Variant Selection in Landing Form
+
+```text
+-- Fetch chain for a product with variants:
+1. product_option_groups (by product_id) -> get group names (e.g., "Size", "Color")
+2. product_option_values (by option_group_id) -> get values (e.g., "S", "M", "L")
+3. product_variants (by product_id, is_active) -> get available combinations with prices
+
+-- On form submit, include variant_id in order_items:
+INSERT INTO order_items (order_id, product_id, variant_id, quantity, unit_price)
 ```
 
-## 2. Landing Page Form Overhaul
+### Order Form Extraction from Preview
 
-Replace the current static HTML form (name/phone/wilaya text inputs) with a **real interactive React form** that mirrors CheckoutPage:
+The admin preview's order form will be rendered as a separate `<div>` AFTER the `previewRef` container, not inside it. This ensures all React event handlers (onClick, onChange) work correctly since they won't be inside a `contentEditable` ancestor.
 
-- **Wilaya dropdown**: Fetches from `wilayas` table (active only), shows real wilaya names
-- **Baladiya dropdown**: Loads dynamically based on selected wilaya from `baladiyat` table
-- **Delivery type**: Office vs Home buttons with shipping prices from the wilaya record
-- **Address textarea**: For detailed delivery address
-- **Payment method**: COD by default (landing pages use COD as the primary method)
-- **Phone validation**: Same 05/06/07 + 10 digit Algerian format
-- **Form submission**: Actually creates an order in the `orders` table with `landing_page_id` set, plus `order_items` for the product
-
-The form section at the bottom of the landing page preview will be a live React component (not static HTML), using the same Supabase queries as CheckoutPage.
-
-## 3. Auto-Generate Multiple AI Images
-
-When the user clicks "Generate Landing Page" (step 2), the system will:
-
-1. Call `generate-landing` for text content (as before)
-2. Simultaneously fire 3 parallel calls to `generate-landing-image` with contextual prompts:
-   - **Prompt 1**: Product in its natural environment (e.g., clothes being worn, kitchen tools in a kitchen)
-   - **Prompt 2**: Close-up detail shot highlighting quality/texture
-   - **Prompt 3**: Lifestyle shot showing the product in use
-
-The prompts are auto-generated based on the product category:
-- Clothes/Fashion: "Person wearing [product], lifestyle photography"
-- Electronics: "[Product] on a modern desk, tech setup"
-- Kitchen: "[Product] in a beautiful kitchen, cooking scene"
-- Generic fallback: "[Product] in its natural environment, professional photography"
-
-All generated images are used in the landing page:
-- Image 1: Hero background
-- Image 2: Product details section
-- Image 3: A secondary section or gallery strip
-
-## 4. Save Landing Pages
-
-- Add a "Save" button in the toolbar (step 3)
-- Saves to `landing_pages` table with all content, images, and settings
-- Add a "Saved Pages" tab/section in step 1 showing previously saved landing pages as cards
-- Clicking a saved page loads it into the editor for viewing/editing
-- Each saved page gets a shareable preview link
-
-## 5. Orders Tracking
-
-### In the landing page form
-When a customer submits the order form on the landing page:
-- Insert into `orders` with `landing_page_id` set to the saved landing page ID
-- Insert into `order_items` with the product details
-- Show a success message
-
-### In AdminOrdersPage
-- Add a new filter option: "Source" with values "All", "Website", "Landing Page"
-- Orders with `landing_page_id IS NOT NULL` are "Landing Page" orders
-- Show a small badge/icon on landing page orders in the table
-- Optionally show which landing page it came from
-
-## Files to Modify
+### Files Modified Summary
 
 | File | Changes |
 |------|---------|
-| `src/pages/admin/AdminLandingPagePage.tsx` | Major rewrite: real checkout form with wilayas/baladiyat, auto 3-image generation, save functionality, saved pages list |
-| `src/pages/admin/AdminOrdersPage.tsx` | Add "source" filter (Website vs Landing Page), landing page badge on orders |
-| `src/i18n/locales/ar.ts` | New keys for save, source filter, baladiya labels |
+| `src/pages/admin/AdminLandingPagePage.tsx` | Move form outside preview, add variant selection, fix order submit, add FAQ section, enhance image prompts |
+| `src/pages/LandingPage.tsx` | Add variant selection, fix validation errors display, add FAQ section |
+| `supabase/functions/generate-landing/index.ts` | Enhanced prompt, add FAQ to schema |
+| `src/i18n/locales/ar.ts` | New keys for variants, FAQ, validation |
 | `src/i18n/locales/en.ts` | Same |
 | `src/i18n/locales/fr.ts` | Same |
-
-## Database Migration
-
-```sql
--- Landing pages table
-CREATE TABLE public.landing_pages (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id uuid NOT NULL,
-  title text NOT NULL DEFAULT '',
-  language text NOT NULL DEFAULT 'ar',
-  content jsonb NOT NULL DEFAULT '{}'::jsonb,
-  selected_image text,
-  generated_images text[] DEFAULT '{}'::text[],
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.landing_pages ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admin can manage landing_pages"
-  ON public.landing_pages FOR ALL
-  USING (has_role(auth.uid(), 'admin'))
-  WITH CHECK (has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Landing pages publicly readable"
-  ON public.landing_pages FOR SELECT
-  USING (true);
-
--- Add landing_page_id to orders
-ALTER TABLE public.orders ADD COLUMN landing_page_id uuid;
-```
 
