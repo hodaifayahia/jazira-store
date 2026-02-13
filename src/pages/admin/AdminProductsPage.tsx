@@ -679,6 +679,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [mainImageIndex, setMainImageIndex] = useState<number>(product?.main_image_index ?? 0);
   const [uploading, setUploading] = useState(false);
+  const [productType, setProductType] = useState<string>((product as any)?.product_type || 'physical');
 
   // New fields
   const [oldPrice, setOldPrice] = useState(product?.old_price ? String(product.old_price) : '');
@@ -932,16 +933,17 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         description: description.trim(),
         price: Number(price),
         category: [category],
-        stock: hasVariants ? variantRows.reduce((sum, v) => sum + Number(v.quantity || 0), 0) : Number(stock),
+        stock: hasVariants ? variantRows.reduce((sum, v) => sum + Number(v.quantity || 0), 0) : (productType === 'digital' ? 99999 : Number(stock)),
         is_active: isActive,
         images,
         main_image_index: mainImageIndex,
         sku: sku.trim() || null,
         old_price: oldPrice ? Number(oldPrice) : null,
         short_description: shortDescription.trim() || null,
-        is_free_shipping: isFreeShipping,
+        is_free_shipping: productType === 'digital' ? true : isFreeShipping,
         slug: slug.trim() || null,
         has_variants: hasVariants,
+        product_type: productType,
       };
 
       let productId = product?.id;
@@ -1140,6 +1142,36 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
         )}
       </div>
 
+      {/* Product Type Selector */}
+      <div className="bg-card border rounded-xl p-5 space-y-4">
+        <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Package className="w-4 h-4 text-primary" />
+          </div>
+          نوع المنتج
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setProductType('physical')}
+            className={`flex flex-col items-center gap-2 p-4 border-2 rounded-xl transition-all ${productType === 'physical' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+          >
+            <Package className={`w-6 h-6 ${productType === 'physical' ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className="font-cairo font-semibold text-sm">منتج مادي</span>
+            <span className="font-cairo text-xs text-muted-foreground">يتطلب شحن وتوصيل</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setProductType('digital')}
+            className={`flex flex-col items-center gap-2 p-4 border-2 rounded-xl transition-all ${productType === 'digital' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+          >
+            <Layers className={`w-6 h-6 ${productType === 'digital' ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className="font-cairo font-semibold text-sm">منتج رقمي</span>
+            <span className="font-cairo text-xs text-muted-foreground">تسليم فوري بدون شحن</span>
+          </button>
+        </div>
+      </div>
+
       {/* Product Details */}
       <div className="bg-card border rounded-xl p-5 space-y-4">
         <h3 className="font-cairo font-semibold text-base flex items-center gap-2">
@@ -1240,19 +1272,26 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {optionGroups.length === 0 && (
+            {optionGroups.length === 0 && productType !== 'digital' && (
               <div>
                 <Label className="font-cairo">المخزون</Label>
                 <Input type="number" value={stock} onChange={e => setStock(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
               </div>
             )}
-            <div className="flex items-end pb-1">
-              <div className="flex items-center gap-2">
-                <Switch checked={isFreeShipping} onCheckedChange={setIsFreeShipping} />
-                <Label className="font-cairo">توصيل مجاني</Label>
+            {productType !== 'digital' && (
+              <div className="flex items-end pb-1">
+                <div className="flex items-center gap-2">
+                  <Switch checked={isFreeShipping} onCheckedChange={setIsFreeShipping} />
+                  <Label className="font-cairo">توصيل مجاني</Label>
+                </div>
               </div>
-            </div>
+            )}
           </div>
+          {productType === 'digital' && (
+            <p className="font-cairo text-xs text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg p-3">
+              ⚡ المنتجات الرقمية لا تحتاج إلى مخزون أو شحن — يتم التسليم فوراً
+            </p>
+          )}
           {optionGroups.length > 0 && variantRows.length > 0 && (
             <p className="font-cairo text-xs text-muted-foreground">
               المخزون الإجمالي: <span className="font-roboto font-bold">{variantRows.reduce((s, v) => s + Number(v.quantity || 0), 0)}</span> (يُحسب تلقائياً من المتغيرات)

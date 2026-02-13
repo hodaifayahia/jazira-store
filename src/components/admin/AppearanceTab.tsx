@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, Check, LayoutGrid, Minimize2, Zap, Droplets } from 'lucide-react';
+import { Save, Check, LayoutGrid, Minimize2, Zap, Droplets, Monitor } from 'lucide-react';
 
 const TEMPLATES = [
   {
@@ -30,6 +30,13 @@ const TEMPLATES = [
     icon: Droplets,
     desc: 'تصميم متقدم — خلفية سائلة متحركة، بطاقات زجاجية ثلاثية الأبعاد، تأثيرات بصرية غامرة.',
     features: ['خلفية سائلة', 'زجاجية', 'تأثير 3D', 'تدرجات متحركة'],
+  },
+  {
+    id: 'digital',
+    name: 'رقمي',
+    icon: Monitor,
+    desc: 'مُحسَّن للمنتجات الرقمية — بدون شحن، تسليم فوري، تصميم عصري نظيف.',
+    features: ['تسليم فوري', 'بدون شحن', 'تصميم نظيف', 'منتجات رقمية'],
   },
 ];
 

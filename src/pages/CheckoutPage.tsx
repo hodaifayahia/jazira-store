@@ -53,6 +53,7 @@ export default function CheckoutPage() {
   const [abandonedSaved, setAbandonedSaved] = useState(false);
 
   const validatePhone = (v: string) => /^0[567]\d{8}$/.test(v);
+  const validatePhoneInternational = (v: string) => /^\+?\d{7,15}$/.test(v.replace(/\s/g, ''));
 
   const handleBlurName = () => {
     setErrors(e => ({ ...e, name: name.trim() ? '' : 'الاسم مطلوب' }));
@@ -171,6 +172,24 @@ export default function CheckoutPage() {
     },
   });
 
+  // Fetch product types to determine if cart is digital-only
+  const { data: productTypesMap } = useQuery({
+    queryKey: ['product-types', items.map(i => i.id)],
+    queryFn: async () => {
+      if (items.length === 0) return new Map<string, string>();
+      const { data } = await supabase
+        .from('products')
+        .select('id, product_type')
+        .in('id', items.map(i => i.id));
+      const map = new Map<string, string>();
+      data?.forEach(p => map.set(p.id, (p as any).product_type || 'physical'));
+      return map;
+    },
+    enabled: items.length > 0,
+  });
+
+  const isDigitalOnly = productTypesMap ? items.every(i => productTypesMap.get(i.id) === 'digital') : false;
+
   const { data: productShippingMap } = useQuery({
     queryKey: ['product-shipping', items.map(i => i.id)],
     queryFn: async () => {
@@ -190,12 +209,12 @@ export default function CheckoutPage() {
   const formConfig = parseFormConfig(settings?.checkout_form_config);
   const wilayaBaseRate = selectedWilaya ? Number(selectedWilaya.shipping_price) : 0;
   const wilayaHomeRate = selectedWilaya ? Number(selectedWilaya.shipping_price_home) : 0;
-  const shippingCost = productShippingMap
+  const shippingCost = isDigitalOnly ? 0 : (productShippingMap
     ? calculateShippingForOrder(items, productShippingMap, wilayaBaseRate, wilayaHomeRate, deliveryType)
-    : 0;
-  const shippingBreakdown = productShippingMap
+    : 0);
+  const shippingBreakdown = isDigitalOnly ? [] : (productShippingMap
     ? getShippingBreakdown(items, productShippingMap, wilayaBaseRate, wilayaHomeRate, deliveryType)
-    : [];
+    : []);
   const total = subtotal - discount + shippingCost;
 
   const applyCoupon = async () => {
@@ -239,17 +258,22 @@ export default function CheckoutPage() {
   const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};
     if (formConfig.name?.visible !== false && formConfig.name?.required !== false && !name.trim()) newErrors.name = 'الاسم مطلوب';
-    if (!phone.trim() || !validatePhone(phone)) newErrors.phone = 'رقم الهاتف يجب أن يبدأ بـ 05/06/07 ويتكون من 10 أرقام';
-    if (formConfig.wilaya?.visible !== false && formConfig.wilaya?.required !== false && !wilayaId) newErrors.wilaya = 'يرجى اختيار الولاية';
+    if (isDigitalOnly) {
+      if (!phone.trim() || !validatePhoneInternational(phone)) newErrors.phone = 'رقم الهاتف غير صالح';
+    } else {
+      if (!phone.trim() || !validatePhone(phone)) newErrors.phone = 'رقم الهاتف يجب أن يبدأ بـ 05/06/07 ويتكون من 10 أرقام';
+    }
+    if (!isDigitalOnly && formConfig.wilaya?.visible !== false && formConfig.wilaya?.required !== false && !wilayaId) newErrors.wilaya = 'يرجى اختيار الولاية';
     if (!paymentMethod) newErrors.payment = 'يرجى اختيار طريقة الدفع';
-    if (formConfig.delivery_type?.visible !== false && formConfig.delivery_type?.required !== false && !deliveryType && wilayaId) newErrors.deliveryType = 'يرجى اختيار نوع التوصيل';
+    if (!isDigitalOnly && formConfig.delivery_type?.visible !== false && formConfig.delivery_type?.required !== false && !deliveryType && wilayaId) newErrors.deliveryType = 'يرجى اختيار نوع التوصيل';
     if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
       toast({ title: 'خطأ', description: 'يرجى ملء جميع الحقول المطلوبة بشكل صحيح', variant: 'destructive' });
       return;
     }
 
-    if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) {
+    const receiptRequiredMethods = ['baridimob', 'flexy', 'binance', 'vodafone', 'redotpay'];
+    if (receiptRequiredMethods.includes(paymentMethod) && !receiptFile) {
       toast({ title: 'خطأ', description: 'يرجى إرفاق إيصال الدفع', variant: 'destructive' });
       return;
     }
@@ -270,10 +294,10 @@ export default function CheckoutPage() {
         order_number: '',
         customer_name: name,
         customer_phone: phone,
-        wilaya_id: wilayaId,
-        baladiya: baladiyaName || null,
-        delivery_type: deliveryType || null,
-        address: address || null,
+        wilaya_id: isDigitalOnly ? null : (wilayaId || null),
+        baladiya: isDigitalOnly ? null : (baladiyaName || null),
+        delivery_type: isDigitalOnly ? 'digital' : (deliveryType || null),
+        address: isDigitalOnly ? null : (address || null),
         subtotal,
         shipping_cost: shippingCost,
         total_amount: total,
@@ -323,7 +347,10 @@ export default function CheckoutPage() {
   const baridimobEnabled = settings?.baridimob_enabled === 'true';
   const flexyEnabled = settings?.flexy_enabled === 'true';
   const codEnabled = settings?.cod_enabled === 'true';
-  const hasAnyPayment = baridimobEnabled || flexyEnabled || codEnabled;
+  const binanceEnabled = settings?.binance_enabled === 'true';
+  const vodafoneEnabled = settings?.vodafone_enabled === 'true';
+  const redotpayEnabled = settings?.redotpay_enabled === 'true';
+  const hasAnyPayment = baridimobEnabled || flexyEnabled || codEnabled || binanceEnabled || vodafoneEnabled || redotpayEnabled;
 
   return (
     <div className="container py-8 max-w-4xl">
@@ -353,7 +380,7 @@ export default function CheckoutPage() {
               <Input value={phone} onChange={e => handlePhoneChange(e.target.value)} placeholder="05/06/07XXXXXXXX" className={`font-roboto mt-1 ${errors.phone ? 'border-destructive' : ''}`} dir="ltr" />
               {errors.phone && <p className="text-destructive text-xs font-cairo mt-1">{errors.phone}</p>}
             </div>
-            {formConfig.wilaya?.visible !== false && (
+            {formConfig.wilaya?.visible !== false && !isDigitalOnly && (
               <div>
                 <Label className="font-cairo">الولاية {formConfig.wilaya?.required !== false ? '*' : ''}</Label>
                 <Select value={wilayaId} onValueChange={handleWilayaChange}>
@@ -371,7 +398,7 @@ export default function CheckoutPage() {
             )}
 
             {/* Baladiya */}
-            {formConfig.baladiya?.visible !== false && wilayaId && baladiyat && baladiyat.length > 0 && (
+            {formConfig.baladiya?.visible !== false && !isDigitalOnly && wilayaId && baladiyat && baladiyat.length > 0 && (
               <div>
                 <Label className="font-cairo">البلدية {formConfig.baladiya?.required ? '*' : ''}</Label>
                 <Select value={baladiyaName} onValueChange={setBaladiyaName}>
@@ -386,7 +413,7 @@ export default function CheckoutPage() {
             )}
 
             {/* Delivery Type */}
-            {formConfig.delivery_type?.visible !== false && wilayaId && selectedWilaya && (
+            {formConfig.delivery_type?.visible !== false && !isDigitalOnly && wilayaId && selectedWilaya && (
               <div>
                 <Label className="font-cairo">نوع التوصيل {formConfig.delivery_type?.required !== false ? '*' : ''}</Label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
@@ -413,7 +440,7 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {formConfig.address?.visible !== false && (
+            {formConfig.address?.visible !== false && !isDigitalOnly && (
               <div>
                 <Label className="font-cairo">العنوان التفصيلي {formConfig.address?.required ? '*' : ''}</Label>
                 <Textarea value={address} onChange={e => setAddress(e.target.value)} placeholder={formConfig.address?.required ? 'أدخل عنوانك' : 'اختياري'} className="font-cairo mt-1" />
@@ -518,6 +545,76 @@ export default function CheckoutPage() {
                               <button onClick={removeReceipt} className="text-destructive"><X className="w-3 h-3" /></button>
                             </div>
                           )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </label>
+              )}
+              {/* Binance Pay */}
+              {binanceEnabled && (
+                <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'binance' ? 'border-primary bg-accent' : ''}`}>
+                  <input type="radio" name="payment" value="binance" checked={paymentMethod === 'binance'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
+                  <div className="flex-1">
+                    <p className="font-cairo font-semibold">Binance Pay</p>
+                    {paymentMethod === 'binance' && settings && (
+                      <div className="mt-3 space-y-2 text-sm">
+                        <div className="flex items-center gap-2 bg-muted p-2 rounded">
+                          <span className="font-cairo">العنوان:</span>
+                          <span className="font-roboto font-bold text-xs break-all">{settings.binance_address}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => copyToClipboard(settings.binance_address)}><Copy className="w-3 h-3" /></Button>
+                        </div>
+                        <p className="font-cairo">المبلغ: <span className="font-roboto font-bold">{formatPrice(total)}</span></p>
+                        <div className="mt-2">
+                          <Label className="font-cairo text-xs">أرفق إيصال الدفع *</Label>
+                          <Input type="file" accept="image/*,.pdf" onChange={e => handleReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          {receiptPreview && (<div className="relative mt-2 inline-block"><img src={receiptPreview} alt="إيصال" className="w-32 h-32 object-cover rounded-lg border" /><button onClick={removeReceipt} className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button></div>)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </label>
+              )}
+              {/* Vodafone Cash */}
+              {vodafoneEnabled && (
+                <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'vodafone' ? 'border-primary bg-accent' : ''}`}>
+                  <input type="radio" name="payment" value="vodafone" checked={paymentMethod === 'vodafone'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
+                  <div className="flex-1">
+                    <p className="font-cairo font-semibold">Vodafone Cash</p>
+                    {paymentMethod === 'vodafone' && settings && (
+                      <div className="mt-3 space-y-2 text-sm">
+                        <div className="flex items-center gap-2 bg-muted p-2 rounded">
+                          <span className="font-cairo">الرقم:</span>
+                          <span className="font-roboto font-bold">{settings.vodafone_number}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(settings.vodafone_number)}><Copy className="w-3 h-3" /></Button>
+                        </div>
+                        <div className="mt-2">
+                          <Label className="font-cairo text-xs">أرفق إيصال الدفع *</Label>
+                          <Input type="file" accept="image/*,.pdf" onChange={e => handleReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          {receiptPreview && (<div className="relative mt-2 inline-block"><img src={receiptPreview} alt="إيصال" className="w-32 h-32 object-cover rounded-lg border" /><button onClick={removeReceipt} className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button></div>)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </label>
+              )}
+              {/* Redotpay */}
+              {redotpayEnabled && (
+                <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'redotpay' ? 'border-primary bg-accent' : ''}`}>
+                  <input type="radio" name="payment" value="redotpay" checked={paymentMethod === 'redotpay'} onChange={e => setPaymentMethod(e.target.value)} className="mt-1" />
+                  <div className="flex-1">
+                    <p className="font-cairo font-semibold">Redotpay</p>
+                    {paymentMethod === 'redotpay' && settings && (
+                      <div className="mt-3 space-y-2 text-sm">
+                        <div className="flex items-center gap-2 bg-muted p-2 rounded">
+                          <span className="font-cairo">العنوان:</span>
+                          <span className="font-roboto font-bold text-xs break-all">{settings.redotpay_address}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => copyToClipboard(settings.redotpay_address)}><Copy className="w-3 h-3" /></Button>
+                        </div>
+                        <div className="mt-2">
+                          <Label className="font-cairo text-xs">أرفق إيصال الدفع *</Label>
+                          <Input type="file" accept="image/*,.pdf" onChange={e => handleReceiptFile(e.target.files?.[0] || null)} className="mt-1" />
+                          {receiptPreview && (<div className="relative mt-2 inline-block"><img src={receiptPreview} alt="إيصال" className="w-32 h-32 object-cover rounded-lg border" /><button onClick={removeReceipt} className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button></div>)}
                         </div>
                       </div>
                     )}

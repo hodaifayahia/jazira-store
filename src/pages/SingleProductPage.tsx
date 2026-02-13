@@ -383,6 +383,9 @@ export default function SingleProductPage() {
 
   const baridimobEnabled = settings?.baridimob_enabled === 'true';
   const flexyEnabled = settings?.flexy_enabled === 'true';
+  const binanceEnabled = settings?.binance_enabled === 'true';
+  const vodafoneEnabled = settings?.vodafone_enabled === 'true';
+  const redotpayEnabled = settings?.redotpay_enabled === 'true';
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -402,7 +405,7 @@ export default function SingleProductPage() {
     if (!orderWilayaId) newErrors.orderWilayaId = 'يرجى اختيار الولاية';
     if (!orderDeliveryType) newErrors.orderDeliveryType = 'يرجى اختيار نوع التوصيل';
     if (!paymentMethod) newErrors.paymentMethod = 'يرجى اختيار طريقة الدفع';
-    if ((paymentMethod === 'baridimob' || paymentMethod === 'flexy') && !receiptFile) newErrors.receiptFile = 'يرجى إرفاق إيصال الدفع';
+    if (['baridimob', 'flexy', 'binance', 'vodafone', 'redotpay'].includes(paymentMethod) && !receiptFile) newErrors.receiptFile = 'يرجى إرفاق إيصال الدفع';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 

@@ -23,6 +23,7 @@ import HeroScene3D from '@/components/HeroScene3D';
 import MinimalTemplate from '@/components/templates/MinimalTemplate';
 import BoldTemplate from '@/components/templates/BoldTemplate';
 import LiquidTemplate from '@/components/templates/LiquidTemplate';
+import DigitalTemplate from '@/components/templates/DigitalTemplate';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt,
@@ -107,6 +108,9 @@ export default function IndexPage() {
   }
   if (storeTemplate === 'liquid') {
     return <LiquidTemplate products={allProducts} isLoading={isLoading} categories={categoriesData} heroSlides={heroSlides} />;
+  }
+  if (storeTemplate === 'digital') {
+    return <DigitalTemplate products={allProducts} isLoading={isLoading} categories={categoriesData} heroSlides={heroSlides} />;
   }
 
   const trustItems = [
