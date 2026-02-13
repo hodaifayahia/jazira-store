@@ -820,8 +820,7 @@ img{max-width:100%}
                           <Eye className="w-3.5 h-3.5" /> {t('common.view')}
                         </Button>
                          <Button size="sm" variant="outline" className="font-cairo gap-1" onClick={() => {
-                          const publishedUrl = 'https://algeria-souq-hub.lovable.app';
-                          navigator.clipboard.writeText(`${publishedUrl}/lp/${page.id}`);
+                          navigator.clipboard.writeText(`${window.location.origin}/lp/${page.id}`);
                           toast.success(t('landing.linkCopied') || 'Link copied!');
                         }}>
                           <Link2 className="w-3.5 h-3.5" />
@@ -1016,9 +1015,8 @@ img{max-width:100%}
                      {t('common.save')}
                    </Button>
                    {savedPageId && (
-                     <Button variant="outline" size="sm" className="gap-1.5 font-cairo" onClick={() => {
-                       const publishedUrl = 'https://algeria-souq-hub.lovable.app';
-                       navigator.clipboard.writeText(`${publishedUrl}/lp/${savedPageId}`);
+                      <Button variant="outline" size="sm" className="gap-1.5 font-cairo" onClick={() => {
+                       navigator.clipboard.writeText(`${window.location.origin}/lp/${savedPageId}`);
                        toast.success(t('landing.linkCopied') || 'Link copied!');
                      }}>
                        <Link2 className="w-3.5 h-3.5" />
