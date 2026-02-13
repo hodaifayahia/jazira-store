@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Loader2, Palette, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,8 @@ export default function AdminVariationsPage() {
   const [formValue, setFormValue] = useState('');
   const [formColorCode, setFormColorCode] = useState('');
   const [formActive, setFormActive] = useState(true);
+  const [isCustomType, setIsCustomType] = useState(false);
+  const [typeLockedFromGroup, setTypeLockedFromGroup] = useState(false);
 
   const { data: options, isLoading } = useQuery({
     queryKey: ['variation-options'],
@@ -81,6 +84,19 @@ export default function AdminVariationsPage() {
     setFormValue('');
     setFormColorCode('#000000');
     setFormActive(true);
+    setIsCustomType(existingTypes.length === 0);
+    setTypeLockedFromGroup(false);
+    setShowForm(true);
+  };
+
+  const openCreateForType = (type: string) => {
+    setEditing(null);
+    setFormType(type);
+    setFormValue('');
+    setFormColorCode('#000000');
+    setFormActive(true);
+    setIsCustomType(false);
+    setTypeLockedFromGroup(true);
     setShowForm(true);
   };
 
@@ -90,6 +106,8 @@ export default function AdminVariationsPage() {
     setFormValue(o.variation_value);
     setFormColorCode(o.color_code || '#000000');
     setFormActive(o.is_active);
+    setIsCustomType(false);
+    setTypeLockedFromGroup(false);
     setShowForm(true);
   };
 
@@ -169,6 +187,15 @@ export default function AdminVariationsPage() {
                 {isColorType(type) && <Palette className="w-4 h-4 text-primary" />}
                 <h3 className="font-cairo font-semibold text-sm">{type}</h3>
                 <Badge variant="secondary" className="font-roboto text-xs">{items.length}</Badge>
+                <div className="flex-1" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-cairo gap-1 h-7 text-xs hover:bg-primary/10 hover:text-primary"
+                  onClick={() => openCreateForType(type)}
+                >
+                  <Plus className="w-3.5 h-3.5" /> إضافة
+                </Button>
               </div>
               <div className="divide-y">
                 {items.map(o => (
@@ -212,10 +239,56 @@ export default function AdminVariationsPage() {
           <div className="space-y-4 pt-2">
             <div>
               <Label className="font-cairo text-sm">{t('common.type')} <span className="text-destructive">*</span></Label>
-              <Input value={formType} onChange={e => setFormType(e.target.value)} placeholder={t('variations.typePlaceholder')} className="font-cairo mt-1.5" list="variation-types" />
-              <datalist id="variation-types">
-                {existingTypes.map(tt => <option key={tt} value={tt} />)}
-              </datalist>
+              {typeLockedFromGroup ? (
+                <Input value={formType} disabled className="font-cairo mt-1.5 bg-muted" />
+              ) : isCustomType ? (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Input
+                    value={formType}
+                    onChange={e => setFormType(e.target.value)}
+                    placeholder={t('variations.typePlaceholder')}
+                    className="font-cairo flex-1"
+                    autoFocus
+                  />
+                  {existingTypes.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 shrink-0"
+                      onClick={() => { setIsCustomType(false); setFormType(existingTypes[0] || ''); }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Select
+                  value={formType}
+                  onValueChange={(val) => {
+                    if (val === '__new_type__') {
+                      setIsCustomType(true);
+                      setFormType('');
+                    } else {
+                      setFormType(val);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="font-cairo mt-1.5">
+                    <SelectValue placeholder="اختر النوع..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {existingTypes.map(tt => (
+                      <SelectItem key={tt} value={tt} className="font-cairo">{tt}</SelectItem>
+                    ))}
+                    <SelectItem value="__new_type__" className="font-cairo text-primary">
+                      <span className="flex items-center gap-1">
+                        <Plus className="w-3.5 h-3.5" /> نوع جديد...
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <Label className="font-cairo text-sm">{t('common.value')} <span className="text-destructive">*</span></Label>
