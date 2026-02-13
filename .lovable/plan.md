@@ -1,106 +1,101 @@
 
 
-# Fix Landing Page: Variations, Delivery/Order Bugs, and Enhanced Generation
+# Overhaul Landing Page: New Premium Template + Full Prompt Integration
 
-## Problems Identified
+## Root Cause
 
-### Bug 1: Product Variations Missing from Form
-The landing page order form (both admin preview and public `/lp/:id`) does not fetch or display product variations/variants. When a product has options (Size, Color, etc.), customers cannot select them.
+The landing page generation works in two parts:
+1. **Edge function** generates structured JSON content (text, headlines, etc.)
+2. **Frontend template** renders that JSON into HTML sections
 
-### Bug 2: Delivery Type Buttons & Order Submit Not Working
-The delivery type buttons (`office`/`home`) and the "Confirm Order" button in the admin preview form use `onClick` handlers that update state, but the form is inside the `contentEditable` preview container (`previewRef`). React event handlers inside a `contentEditable` parent can be swallowed or interfered with. Additionally, the `handleOrderSubmit` function requires `savedPageId` to be set before submission, but a user testing in the admin preview may not have saved yet.
-
-### Bug 3: Landing Page Generation Needs Enhancement
-The prompt requests a more "magical" experience with AI vision analysis, auto-generated contextual images, and a richer template.
-
----
+Currently, the template only renders: Hero, Trust Bar, Benefits, Product Details, Gallery, Testimonials, FAQ, Urgency. Your prompt asks for many more sections (counters, Before/After, authority logos, hotspots, etc.), but the template ignores them because those fields don't exist in the JSON schema or the rendering code.
 
 ## Plan
 
-### 1. Add Product Variations to the Order Form
+### 1. Expand the AI Generation Schema
 
-**Files: `src/pages/admin/AdminLandingPagePage.tsx`, `src/pages/LandingPage.tsx`**
+Add new fields to the `generate-landing` edge function's tool schema and prompt:
 
-- Fetch `product_option_groups` + `product_option_values` + `product_variants` for the selected product (same queries as SingleProductPage)
-- Also fetch legacy `product_variations` for backward compatibility
-- Add variant selection UI in the order form section:
-  - For new variant system (`has_variants`): Show option group buttons (Color, Size, etc.) with availability checking against `product_variants`
-  - For legacy variations: Show grouped buttons by `variation_type`
-- Selected variant affects the displayed price and is included in the order submission (`variant_id` in `order_items`)
-- Both admin preview form and public `/lp/:id` form get this treatment
+- `social_proof_stats`: Array of animated counter items (e.g., "50,000+ Sold", "98% Satisfaction", "30-Day Guarantee")
+- `before_after`: Object with `before_text`, `after_text`, and `switch_line` (e.g., "See why 2,400+ customers made the switch")
+- `authority_text`: "As featured in..." section text
+- `how_it_works`: 3-step timeline array with icon, title, description
+- `guarantee_text`: Money-back guarantee badge text
 
-### 2. Fix Delivery Type & Order Submit Bugs
+Keep existing fields (headline, subheadline, benefits, testimonials, faq, urgency_text).
 
-**Files: `src/pages/admin/AdminLandingPagePage.tsx`, `src/pages/LandingPage.tsx`**
+### 2. Redesign the Frontend Template (Both Admin + Public)
 
-- Move the order form section OUTSIDE the `contentEditable` preview container (`previewRef`) in the admin page. Render it as a separate React component below the preview, so React event handlers work properly
-- Remove the `savedPageId` requirement from `handleOrderSubmit` -- allow orders even before saving (use `null` for `landing_page_id` if not saved)
-- Wrap all async handlers (`handleOrderSubmit`, delivery type clicks) in proper `try...catch` blocks
-- In `LandingPage.tsx`: The delivery type buttons already work (they're native HTML buttons outside contentEditable), but add better error feedback -- show validation errors inline instead of silently failing
-- Add proper form validation with visible error messages for both files
+Update both `AdminLandingPagePage.tsx` and `LandingPage.tsx` to render a premium template with these sections in order:
 
-### 3. Enhance Landing Page Generation with Better Prompt
+1. **Hero** -- Split layout with floating product image + headline + glowing CTA + micro social-proof strip ("4.9/5 from 2,400+ reviews") + animated gradient background
+2. **Trust Bar** -- Keep existing (Fast Delivery, Secure Payment, etc.)
+3. **Before / After** -- Two side-by-side cards showing transformation with a compelling one-liner below
+4. **Benefits** -- Keep existing grid but add subtle hover animations
+5. **Authority & Social Validation** -- Grayscale logo strip placeholder + animated number counters (e.g., "50,000+ Sold")
+6. **Product Details** -- Keep existing with product image + description
+7. **How It Works** -- 3-step horizontal timeline with icons
+8. **Testimonials** -- Keep existing with verified badge added
+9. **Guarantee Badge** -- "100% Money-Back Guarantee" section
+10. **FAQ** -- Keep existing accordion style
+11. **Urgency Banner** -- Keep existing
+12. **Order Form** -- Keep existing (outside contentEditable in admin)
 
-**File: `supabase/functions/generate-landing/index.ts`**
+### 3. Redeploy the Edge Function
 
-- Enhance the system prompt to instruct the AI to:
-  - Analyze the product deeply (type, style, target audience, emotional vibe)
-  - Generate more compelling, emotionally-driven copy
-  - Create content that feels like a premium luxury brand
-  - Include FAQ section content in the generated JSON (add `faq` field)
-- Add a `faq` field to the tool schema (array of question/answer pairs)
+Deploy the updated `generate-landing` function so the new prompt and schema are active.
 
-**File: `src/pages/admin/AdminLandingPagePage.tsx`**
+### 4. Add Premium CSS Animations
 
-- Add FAQ section to the landing page template (between testimonials and urgency banner)
-- Update `LandingContent` interface to include `faq`
-
-**File: `src/pages/LandingPage.tsx`**
-
-- Add FAQ section rendering to the public page as well
-
-### 4. Auto-Generate Images with Product Context
-
-The current image generation already fires 3 parallel prompts based on category. Enhance the prompts in `getImagePrompts()` to be more specific:
-- Use the product description to make prompts more contextual
-- For clothing: explicitly request "person wearing" shots
-- For products: explicitly request "product in its environment" shots
-- Pass the product's existing image URL to the AI for reference (edit mode) if available
-
-### 5. Update i18n Keys
-
-**Files: `src/i18n/locales/ar.ts`, `en.ts`, `fr.ts`**
-
-- Add keys for: variation selection labels, FAQ section title, form validation error messages
-
----
+Add to both admin preview and public page:
+- Scroll-triggered fade-in/slide-up animations (using IntersectionObserver)
+- Animated number counters that count up when visible
+- Subtle gradient shifts on the hero section
+- Hover effects on benefit cards and testimonial cards
 
 ## Technical Details
 
-### Variant Selection in Landing Form
+### Updated Edge Function Schema (new fields)
 
 ```text
--- Fetch chain for a product with variants:
-1. product_option_groups (by product_id) -> get group names (e.g., "Size", "Color")
-2. product_option_values (by option_group_id) -> get values (e.g., "S", "M", "L")
-3. product_variants (by product_id, is_active) -> get available combinations with prices
+social_proof_stats: [
+  { number: "50,000+", label: "Products Sold" },
+  { number: "98%", label: "Customer Satisfaction" },
+  { number: "30", label: "Day Guarantee" }
+]
 
--- On form submit, include variant_id in order_items:
-INSERT INTO order_items (order_id, product_id, variant_id, quantity, unit_price)
+before_after: {
+  before_text: "Before using [Product]...",
+  after_text: "After 30 days with [Product]...",
+  switch_line: "See why 2,400+ customers made the switch."
+}
+
+how_it_works: [
+  { icon: "1", title: "Order", description: "Place your order in seconds" },
+  { icon: "2", title: "Receive", description: "Fast delivery to your door" },
+  { icon: "3", title: "Enjoy", description: "Experience the transformation" }
+]
+
+guarantee_text: "100% Money-Back Guarantee - No Questions Asked"
+authority_text: "Trusted by 50,000+ customers across Algeria"
 ```
 
-### Order Form Extraction from Preview
-
-The admin preview's order form will be rendered as a separate `<div>` AFTER the `previewRef` container, not inside it. This ensures all React event handlers (onClick, onChange) work correctly since they won't be inside a `contentEditable` ancestor.
-
-### Files Modified Summary
+### Files Modified
 
 | File | Changes |
 |------|---------|
-| `src/pages/admin/AdminLandingPagePage.tsx` | Move form outside preview, add variant selection, fix order submit, add FAQ section, enhance image prompts |
-| `src/pages/LandingPage.tsx` | Add variant selection, fix validation errors display, add FAQ section |
-| `supabase/functions/generate-landing/index.ts` | Enhanced prompt, add FAQ to schema |
-| `src/i18n/locales/ar.ts` | New keys for variants, FAQ, validation |
-| `src/i18n/locales/en.ts` | Same |
-| `src/i18n/locales/fr.ts` | Same |
+| `supabase/functions/generate-landing/index.ts` | Add new fields to schema, enhance prompt sections |
+| `src/pages/admin/AdminLandingPagePage.tsx` | Add new template sections (Before/After, Counters, How It Works, Guarantee), add animations, update LandingContent interface |
+| `src/pages/LandingPage.tsx` | Mirror all new template sections, add scroll animations, update LandingContent interface |
+
+### Animation Approach
+
+Using a lightweight IntersectionObserver pattern (no dependencies):
+
+```text
+// On each section wrapper:
+// - Start with opacity: 0, transform: translateY(30px)
+// - When intersecting viewport: transition to opacity: 1, translateY(0)
+// - Counter sections: animate numbers from 0 to target using requestAnimationFrame
+```
 
