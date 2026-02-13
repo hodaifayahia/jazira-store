@@ -754,4 +754,6 @@ export const ar: Record<string, string> = {
   'orders.sourceAll': 'الكل',
   'orders.sourceWebsite': 'الموقع',
   'orders.sourceLanding': 'صفحة هبوط',
+  'landing.copyLink': 'نسخ الرابط',
+  'landing.linkCopied': 'تم نسخ الرابط!',
 };

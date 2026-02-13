@@ -754,4 +754,6 @@ export const en: Record<string, string> = {
   'orders.sourceAll': 'All',
   'orders.sourceWebsite': 'Website',
   'orders.sourceLanding': 'Landing Page',
+  'landing.copyLink': 'Copy Link',
+  'landing.linkCopied': 'Link copied!',
 };
