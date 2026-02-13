@@ -749,7 +749,11 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
 
   const handleVariationTypeSelect = (gIdx: number, selectedType: string) => {
     if (selectedType === '__custom__') {
-      updateOptionGroup(gIdx, 'name', '');
+      const newGroups = optionGroups.map((g, i) =>
+        i === gIdx ? { ...g, name: '', displayType: 'button', values: [] } : g
+      );
+      setOptionGroups(newGroups);
+      regenerateVariants(newGroups);
       return;
     }
     const libraryValues = (variationLibrary || []).filter(v => v.variation_type === selectedType);
