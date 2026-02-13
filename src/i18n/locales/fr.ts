@@ -756,4 +756,7 @@ export const fr: Record<string, string> = {
   'orders.sourceLanding': "Page d'atterrissage",
   'landing.copyLink': 'Copier le lien',
   'landing.linkCopied': 'Lien copié !',
+  'landing.invalidPhone': 'Numéro de téléphone invalide (05/06/07XXXXXXXX)',
+  'landing.selectVariant': 'Veuillez sélectionner toutes les options',
+  'landing.faq': 'FAQ',
 };
