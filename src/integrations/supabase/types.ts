@@ -246,6 +246,50 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_pages: {
+        Row: {
+          content: Json
+          created_at: string
+          generated_images: string[] | null
+          id: string
+          language: string
+          product_id: string
+          selected_image: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          generated_images?: string[] | null
+          id?: string
+          language?: string
+          product_id: string
+          selected_image?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          generated_images?: string[] | null
+          id?: string
+          language?: string
+          product_id?: string
+          selected_image?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_pages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           created_at: string
@@ -336,6 +380,7 @@ export type Database = {
           delivery_type: string | null
           discount_amount: number | null
           id: string
+          landing_page_id: string | null
           order_number: string
           payment_method: string | null
           payment_receipt_url: string | null
@@ -356,6 +401,7 @@ export type Database = {
           delivery_type?: string | null
           discount_amount?: number | null
           id?: string
+          landing_page_id?: string | null
           order_number: string
           payment_method?: string | null
           payment_receipt_url?: string | null
@@ -376,6 +422,7 @@ export type Database = {
           delivery_type?: string | null
           discount_amount?: number | null
           id?: string
+          landing_page_id?: string | null
           order_number?: string
           payment_method?: string | null
           payment_receipt_url?: string | null
@@ -387,6 +434,13 @@ export type Database = {
           wilaya_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_wilaya_id_fkey"
             columns: ["wilaya_id"]
