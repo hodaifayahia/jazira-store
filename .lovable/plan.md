@@ -1,123 +1,83 @@
 
-
 # Manual Order Creation + Product Seeding with AI Images
 
 ## Overview
+Add a "Create Order" button to the admin orders page with a full-featured dialog for manually creating orders. Also seed the database with wilayas, product variations, and generate AI product images.
 
-Add a comprehensive "Create Order" dialog to the admin orders page, seed the wilayas table with shipping data, add product variants/variations, and generate AI product images for all seeded products.
+## Step 1: Seed Wilayas Table
+Insert all 58 Algerian wilayas with shipping rates into the `wilayas` table (currently empty). This is required for both the manual order dialog and the checkout flow.
+- Office delivery: 400-900 DZD based on distance
+- Home delivery: +200 DZD premium
 
-## Part 1: Manual Order Creation Dialog
+## Step 2: Seed Product Variations
+Add variations to the 6 existing products:
+- Medjool dates: Weight (500g, 1kg, 2kg)
+- Sidr honey: Size (250g, 500g, 1kg)
+- Deglet Noor: Weight (500g, 1kg)
+- Wild flower honey: Size (250g, 500g)
+- Gift box: Type (Classic, Premium)
+- Date paste: Size (350g, 700g)
 
-### New Component: `src/components/admin/ManualOrderDialog.tsx`
+## Step 3: AI Product Image Generation
+Create an edge function `generate-product-images` that:
+1. Calls Lovable AI (google/gemini-3-pro-image-preview) with tailored prompts for each product
+2. Uploads the generated images to the `products` storage bucket
+3. Updates each product's `images` array with the public URLs
 
-A responsive dialog with these sections:
+Update `supabase/config.toml` to register the new function.
 
-**Customer Information**
-- Name (required, text input)
-- Phone (required, validated with `05/06/07` prefix pattern)
-- Wilaya (searchable select from `wilayas` table)
-- Baladiya (filtered by selected wilaya, using `algeria-wilayas.ts` data)
-- Delivery type (office / home radio buttons)
-- Address (textarea, shown for home delivery)
-- Payment method (COD / BaridiMob / Flexy select)
+## Step 4: Create ManualOrderDialog Component
+New file: `src/components/admin/ManualOrderDialog.tsx`
 
-**Product Selection**
-- Searchable product list from `products` table
-- Each product shows name, price, available stock, and image thumbnail
-- Quantity input per selected product
-- Support for product variations/variants if applicable
-- "Add product" button to add items to the order
-- Running list of added items with remove button
+A responsive dialog with:
+
+**Customer Section**
+- Name (required), Phone (required, validated), Wilaya (searchable select from DB), Baladiya (filtered by wilaya using `algeria-wilayas.ts`), Delivery type (office/home radio), Address (shown for home), Payment method (COD/BaridiMob/Flexy)
+
+**Product Selection Section**
+- Searchable product list with images, prices, stock
+- Variation/variant selection when applicable
+- Quantity input, add/remove items
 
 **Order Summary (live-calculated)**
-- Subtotal (sum of item prices x quantities)
-- Shipping cost (calculated from selected wilaya's shipping rate + delivery type)
-- Coupon code input with "Apply" button (validates against `coupons` table)
-- Discount amount display
-- Total amount (bold)
+- Subtotal, shipping (from wilaya rates + delivery type), coupon input with validation, discount, total
 
 **Submit Logic**
-- Insert into `orders` table with all customer/order fields
-- Insert into `order_items` table for each product
-- Deduct stock from `products` table (and variant stock if applicable)
-- Show success toast with generated order number
-- Invalidate orders query to refresh the list
+- Insert into `orders` and `order_items` tables
+- Deduct stock from `products`
+- Show success toast with order number
+- Refresh orders list
 
-### Changes to `AdminOrdersPage.tsx`
+**Responsive**: 2-column grid on desktop, single column on mobile, `max-h-[90vh] overflow-y-auto`
 
-- Add a "+" or "Add Order" button next to the search/filter bar
-- State for controlling the dialog open/close
-- Import and render `ManualOrderDialog`
+## Step 5: Update AdminOrdersPage
+Add a "Create Order" button (Plus icon) to the filter bar and integrate the `ManualOrderDialog` component.
 
-## Part 2: Database Seeding -- Wilayas
+## Technical Details
 
-Insert all 58 Algerian wilayas into the `wilayas` table with realistic shipping prices:
-- Office delivery (shipping_price): 400-900 DZD depending on distance from Algiers
-- Home delivery (shipping_price_home): +200 DZD premium over office rate
-- All wilayas set to `is_active: true`
+### Files to Create
+| File | Purpose |
+|------|---------|
+| `src/components/admin/ManualOrderDialog.tsx` | Manual order creation dialog |
+| `supabase/functions/generate-product-images/index.ts` | AI image generation edge function |
 
-This is critical because the wilayas table is currently empty, which breaks both checkout and manual order creation.
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/pages/admin/AdminOrdersPage.tsx` | Add "Create Order" button + dialog |
+| `supabase/config.toml` | Register new edge function |
 
-## Part 3: Product Variants & Variations Seeding
+### Database Operations
+| Table | Operation |
+|-------|-----------|
+| `wilayas` | Insert 58 rows with shipping rates |
+| `product_variations` | Insert ~14 variation rows |
+| `products` | Update images array after AI generation |
 
-Add variations to existing products to cover different cases:
-
-| Product | Variation Type | Values |
-|---------|---------------|--------|
-| تمر المجهول الفاخر | الوزن (Weight) | 500g, 1kg, 2kg |
-| عسل السدر الطبيعي | الحجم (Size) | 250g, 500g, 1kg |
-| تمر دقلة نور | الوزن | 500g, 1kg |
-| عسل الزهور البرية | الحجم | 250g, 500g |
-| علبة هدايا فاخرة | النوع (Type) | كلاسيك, بريميوم |
-| معجون التمر الطبيعي | الحجم | 350g, 700g |
-
-Each variation includes a price adjustment and stock value.
-
-## Part 4: AI Product Image Generation
-
-Create a new edge function `generate-product-images` that:
-
-1. Takes a product name and description
-2. Calls the Lovable AI Gateway (google/gemini-3-pro-image-preview) to generate a professional product photo
-3. Uploads to the `products` storage bucket
-4. Returns the public URL
-
-Then invoke it for each of the 6 products with tailored prompts:
-- Premium Medjool dates: "Luxury Medjool dates in a premium wooden box, warm lighting, editorial food photography, dark background"
-- Sidr honey: "Natural golden Sidr honey in a glass jar with honeycomb, warm amber lighting, food photography"
-- Deglet Noor dates: "Deglet Noor dates arranged elegantly on a plate, natural lighting, editorial style"
-- Wild flower honey: "Wild flower honey in a rustic jar with wildflowers, natural soft lighting"
-- Gift box: "Premium gift box with assorted dates and honey jars, red ribbon, luxury packaging photography"
-- Date paste: "Natural date paste in a glass jar, dates around it, warm tones, food photography"
-
-After generation, update each product's `images` array in the `products` table with the generated URLs.
-
-## Part 5: Responsive Design
-
-The ManualOrderDialog will be fully responsive:
-- Desktop: `max-w-2xl` dialog with 2-column grid for customer fields
-- Mobile: Full-width single column, `max-h-[90vh] overflow-y-auto`
-- Product selection uses a scrollable list
-- Order summary sticky at bottom on mobile
-
-## Files Summary
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/components/admin/ManualOrderDialog.tsx` | Create | Full manual order creation dialog |
-| `src/pages/admin/AdminOrdersPage.tsx` | Modify | Add "Create Order" button + dialog integration |
-| `supabase/functions/generate-product-images/index.ts` | Create | Batch AI image generation for products |
-| Database | Insert | 58 wilayas with shipping rates |
-| Database | Insert | Product variations for all 6 products |
-| Database | Update | Product images after AI generation |
-
-## Implementation Sequence
-
-1. Seed wilayas table (needed for order creation to work)
+### Implementation Sequence
+1. Seed wilayas (dependency for order creation)
 2. Seed product variations
-3. Create and deploy `generate-product-images` edge function
+3. Create + deploy image generation edge function
 4. Generate and assign product images
-5. Create `ManualOrderDialog.tsx` component
-6. Update `AdminOrdersPage.tsx` with the create button and dialog
-7. Test end-to-end
-
+5. Create ManualOrderDialog component
+6. Update AdminOrdersPage with button + dialog
