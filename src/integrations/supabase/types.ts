@@ -1250,6 +1250,74 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_products: {
+        Row: {
+          category: string | null
+          created_at: string
+          date: string
+          document_name: string | null
+          document_url: string | null
+          id: string
+          low_stock_threshold: number
+          notes: string | null
+          product_name: string
+          quantity_received: number
+          quantity_returned: number
+          reference_sku: string | null
+          remaining_stock: number | null
+          supplier_id: string
+          total_price: number | null
+          unit: string
+          unit_price: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          date?: string
+          document_name?: string | null
+          document_url?: string | null
+          id?: string
+          low_stock_threshold?: number
+          notes?: string | null
+          product_name: string
+          quantity_received?: number
+          quantity_returned?: number
+          reference_sku?: string | null
+          remaining_stock?: number | null
+          supplier_id: string
+          total_price?: number | null
+          unit?: string
+          unit_price?: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          date?: string
+          document_name?: string | null
+          document_url?: string | null
+          id?: string
+          low_stock_threshold?: number
+          notes?: string | null
+          product_name?: string
+          quantity_received?: number
+          quantity_returned?: number
+          reference_sku?: string | null
+          remaining_stock?: number | null
+          supplier_id?: string
+          total_price?: number | null
+          unit?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_transactions: {
         Row: {
           created_at: string
