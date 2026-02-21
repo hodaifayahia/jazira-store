@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, CreditCard, Bot, RotateCcw, FormInput, Paintbrush, Shield } from 'lucide-react';
+import { Store, CreditCard, Bot, RotateCcw, FormInput, Paintbrush, Shield, FileText } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useTranslation } from '@/i18n';
 
@@ -10,6 +10,7 @@ const SETTINGS_CARDS = [
   { href: '/admin/settings/returns', key: 'settings.returnsTab', descKey: 'settings.returnsDesc', icon: RotateCcw },
   { href: '/admin/settings/form', key: 'sidebar.form', descKey: 'settings.formDesc', icon: FormInput },
   { href: '/admin/settings/appearance', key: 'sidebar.appearance', descKey: 'settings.appearanceDesc', icon: Paintbrush },
+  { href: '/admin/settings/content', key: 'settings.content', descKey: 'settings.contentDesc', icon: FileText },
   { href: '/admin/settings/security', key: 'settings.security', descKey: 'settings.securityDesc', icon: Shield },
 ];
 

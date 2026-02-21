@@ -10,9 +10,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap } from 'lucide-react';
+import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap, Plus } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
 import { useTranslation } from '@/i18n';
+import CreateOrderDialog from '@/components/admin/CreateOrderDialog';
 
 const STATUSES = ['جديد', 'قيد المعالجة', 'تم الشحن', 'تم التسليم', 'ملغي'];
 
@@ -50,6 +51,9 @@ export default function AdminOrdersPage() {
   const [dateTo, setDateTo] = useState('');
   const [minTotal, setMinTotal] = useState('');
   const [maxTotal, setMaxTotal] = useState('');
+
+  // Create order dialog
+  const [showCreateOrder, setShowCreateOrder] = useState(false);
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -225,6 +229,9 @@ export default function AdminOrdersPage() {
             {t('orders.advancedFilter')}
             {hasAdvancedFilters && <span className="w-2 h-2 rounded-full bg-destructive" />}
             {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </Button>
+          <Button onClick={() => setShowCreateOrder(true)} className="font-cairo gap-1.5">
+            <Plus className="w-4 h-4" /> إضافة طلب
           </Button>
         </div>
 
@@ -520,6 +527,7 @@ export default function AdminOrdersPage() {
             )}
           </DialogContent>
         </Dialog>
+        <CreateOrderDialog open={showCreateOrder} onOpenChange={setShowCreateOrder} />
       </div>
     </TooltipProvider>
   );
