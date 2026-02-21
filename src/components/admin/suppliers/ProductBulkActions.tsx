@@ -54,7 +54,7 @@ export default function ProductBulkActions({ selected, onDelete, onBulkEdit, del
 
   return (
     <>
-      <div className="fixed bottom-6 start-1/2 -translate-x-1/2 z-50 bg-card border rounded-xl shadow-lg p-3 flex items-center gap-3 animate-fade-in glass">
+      <div className="fixed bottom-6 start-4 end-4 sm:start-1/2 sm:end-auto sm:-translate-x-1/2 z-50 bg-card border rounded-xl shadow-lg p-3 flex flex-wrap items-center gap-2 sm:gap-3 animate-fade-in glass">
         <span className="font-cairo text-sm font-medium px-2">
           {t('suppliers.selectedCount').replace('{n}', String(count))}
         </span>
