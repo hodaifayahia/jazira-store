@@ -48,7 +48,7 @@ export default function Navbar() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const displayName = storeName || 'DZ Store';
+  const displayName = storeName || 'جزيرة الطبيعة';
 
   const handleCatEnter = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -69,8 +69,8 @@ export default function Navbar() {
             {logoUrl ? (
               <img src={logoUrl} alt={displayName} className="w-9 h-9 rounded-lg object-contain transition-transform group-hover:scale-105" />
             ) : (
-              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center transition-transform group-hover:scale-105">
-                <span className="text-primary-foreground font-cairo font-bold text-base">DZ</span>
+              <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center transition-transform group-hover:scale-105">
+                <span className="text-primary-foreground font-cairo font-bold text-sm">🌴</span>
               </div>
             )}
             <span className="font-cairo font-bold text-lg text-foreground">{displayName}</span>

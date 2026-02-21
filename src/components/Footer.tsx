@@ -19,8 +19,8 @@ export default function Footer() {
     },
   });
 
-  const storeName = settings?.store_name || 'DZ Store';
-  const description = settings?.footer_description || 'متجرك الإلكتروني الأول في الجزائر للأدوات المنزلية، منتجات الزينة والإكسسوارات.';
+  const storeName = settings?.store_name || 'جزيرة الطبيعة';
+  const description = settings?.footer_description || 'أجود أنواع التمور والعسل الطبيعي والهدايا الفاخرة. منتجات طبيعية 100% بجودة استثنائية.';
   const phone = settings?.footer_phone;
   const email = settings?.footer_email;
   const address = settings?.footer_address || 'الجزائر';
@@ -44,8 +44,8 @@ export default function Footer() {
               {logoUrl ? (
                 <img src={logoUrl} alt={storeName} className="w-9 h-9 rounded-lg object-contain bg-background/10 p-0.5" />
               ) : (
-                <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-cairo font-bold text-sm">DZ</span>
+                <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground font-cairo font-bold text-sm">🌴</span>
                 </div>
               )}
               <h3 className="font-cairo font-bold text-xl">{storeName}</h3>
