@@ -80,12 +80,12 @@ export default function TransactionForm({ open, onOpenChange, supplierId, onSave
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto glass">
+      <DialogContent className="sm:max-w-md glass">
         <DialogHeader>
           <DialogTitle className="font-cairo">{t('suppliers.addTransaction')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="glow-focus rounded-lg">
               <Label className="font-cairo">{t('common.date')}</Label>
               <Input type="date" value={form.date} onChange={e => setForm(f => ({...f, date: e.target.value}))} className="font-roboto mt-1" dir="ltr" />

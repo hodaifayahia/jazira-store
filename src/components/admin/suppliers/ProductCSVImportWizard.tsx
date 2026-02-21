@@ -106,7 +106,7 @@ export default function ProductCSVImportWizard({ open, onOpenChange, supplierId,
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) reset(); onOpenChange(v); }}>
-      <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-cairo">{t('supplierProducts.csvImport')}</DialogTitle>
         </DialogHeader>
@@ -142,11 +142,11 @@ export default function ProductCSVImportWizard({ open, onOpenChange, supplierId,
             <p className="font-cairo text-sm text-muted-foreground">{t('supplierProducts.step2Map')}</p>
             <div className="space-y-2">
               {csvHeaders.map(h => (
-                <div key={h} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                  <span className="font-cairo text-sm sm:w-40 truncate">{h}</span>
-                  <span className="text-muted-foreground hidden sm:inline">→</span>
+                <div key={h} className="flex items-center gap-3">
+                  <span className="font-cairo text-sm w-40 truncate">{h}</span>
+                  <span className="text-muted-foreground">→</span>
                   <Select value={mapping[h] || '__skip'} onValueChange={v => setMapping(prev => ({ ...prev, [h]: v === '__skip' ? '' : v }))}>
-                    <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__skip">{t('supplierProducts.skip')}</SelectItem>
                       {APP_FIELDS.map(f => <SelectItem key={f} value={f}>{t(`supplierProducts.${f === 'product_name' ? 'productName' : f === 'reference_sku' ? 'referenceSku' : f === 'quantity_received' ? 'qtyReceived' : f === 'quantity_returned' ? 'qtyReturned' : f === 'unit_price' ? 'unitPrice' : f}`)}</SelectItem>)}
