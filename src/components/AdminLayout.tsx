@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe, Store, CreditCard, Bot, FormInput, Paintbrush, Shield, Rocket } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe, Store, CreditCard, Bot, FormInput, Paintbrush, Shield, Rocket, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,7 @@ const NAV_KEYS = [
   { href: '/admin/wilayas', key: 'sidebar.wilayas', icon: MapPin },
   { href: '/admin/coupons', key: 'sidebar.coupons', icon: Tag },
   { href: '/admin/landing', key: 'sidebar.landing', icon: Rocket },
+  { href: '/admin/suppliers', key: 'sidebar.suppliers', icon: Truck },
 ];
 
 const SETTINGS_SUB_KEYS = [

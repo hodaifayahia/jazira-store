@@ -183,6 +183,50 @@
   .liquid-category-card:hover::before {
     opacity: 1;
   }
+
+  /* === Premium Supplier Module Utilities === */
+
+  /* Glassmorphism */
+  .glass {
+    backdrop-filter: blur(12px);
+    background: hsl(var(--card) / 0.85);
+  }
+
+  /* Button hover lift */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.1);
+  }
+
+  /* Animated focus ring */
+  .glow-focus:focus-within {
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.3);
+    transition: box-shadow 0.2s ease;
+  }
+
+  /* Table row accent border on hover */
+  .row-accent {
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+    border-left: 3px solid transparent;
+  }
+  .row-accent:hover {
+    border-left-color: hsl(var(--primary));
+    background-color: hsl(var(--muted) / 0.5);
+  }
+
+  /* Upload zone animated dashed border */
+  .upload-zone {
+    border: 2px dashed hsl(var(--border));
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+  }
+  .upload-zone:hover,
+  .upload-zone.dragging {
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary) / 0.05);
+  }
 }
 
 /* Reduced motion */

@@ -1250,6 +1250,95 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_transactions: {
+        Row: {
+          created_at: string
+          date: string
+          description: string | null
+          document_name: string | null
+          document_url: string | null
+          id: string
+          items_given: number
+          items_received: number
+          notes: string | null
+          supplier_id: string
+          transaction_type: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          document_name?: string | null
+          document_url?: string | null
+          id?: string
+          items_given?: number
+          items_received?: number
+          notes?: string | null
+          supplier_id: string
+          transaction_type?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          document_name?: string | null
+          document_url?: string | null
+          id?: string
+          items_given?: number
+          items_received?: number
+          notes?: string | null
+          supplier_id?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          category: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       telegram_bot_state: {
         Row: {
           chat_id: string

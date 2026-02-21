@@ -110,6 +110,16 @@ export default {
           "0%": { backgroundPosition: "0% center" },
           "100%": { backgroundPosition: "200% center" },
         },
+        "shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-4px)" },
+          "20%, 40%, 60%, 80%": { transform: "translateX(4px)" },
+        },
+        "check-pulse": {
+          "0%": { transform: "scale(0)", opacity: "0" },
+          "50%": { transform: "scale(1.2)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -121,6 +131,8 @@ export default {
         "gradient-shift": "gradient-shift 6s ease infinite",
         "blob-morph": "blob-morph 8s ease-in-out infinite",
         "gradient-shimmer": "gradient-shimmer 4s ease infinite",
+        "shake": "shake 0.5s ease-in-out",
+        "check-pulse": "check-pulse 0.4s ease-out forwards",
       },
     },
   },
