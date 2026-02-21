@@ -1,148 +1,198 @@
 
 
-# Bulk Product Management (Per Supplier)
+# Premium Storefront Redesign + Database Seeding
 
 ## Overview
 
-Add a Products/Stock tab to the Supplier Detail Page (`/admin/suppliers/:id`) that enables managing products linked to a specific supplier -- with inline multi-row entry, bulk actions, CSV import/export, and smart stock indicators.
+Redesign the homepage and product page with a warm, natural, luxurious aesthetic for a dates/honey/natural foods brand. Update the color system project-wide (including admin dashboard), generate hero/product images using Lovable AI, and seed the database with sample data so the store has a complete preview.
 
-## Database Changes
+## Part 1: Color System Overhaul
 
-### New Table: `supplier_products`
+### CSS Variables Update (`src/index.css`)
 
-| Column | Type | Default | Notes |
-|--------|------|---------|-------|
-| id | uuid (PK) | gen_random_uuid() | |
-| supplier_id | uuid (FK -> suppliers) | NOT NULL | |
-| product_name | text | NOT NULL | |
-| reference_sku | text | nullable | Reference / SKU code |
-| unit | text | 'pcs' | kg, pcs, box, etc. |
-| quantity_received | numeric | 0 | |
-| quantity_returned | numeric | 0 | Given back / returned |
-| remaining_stock | numeric | GENERATED (received - returned) | Stored generated column |
-| unit_price | numeric | 0 | |
-| total_price | numeric | GENERATED (unit_price * quantity_received) | Stored generated column |
-| date | date | CURRENT_DATE | |
-| notes | text | nullable | |
-| document_url | text | nullable | Bon de Reception file |
-| document_name | text | nullable | |
-| low_stock_threshold | integer | 5 | User-configurable per product |
-| category | text | nullable | Optional category grouping |
-| created_at | timestamptz | now() | |
+Replace the current green/blue theme with the warm amber palette:
 
-- RLS: Admin-only (same pattern as `suppliers` and `supplier_transactions`)
-- Enable realtime for live updates
+| Variable | Current | New (HSL) | Hex Reference |
+|----------|---------|-----------|---------------|
+| --primary | 145 63% 49% (green) | 25 95% 37% | #B45309 Deep Amber |
+| --primary-foreground | 0 0% 100% | 0 0% 100% | white |
+| --secondary | 207 71% 53% (blue) | 40 96% 50% | #F59E0B Honey Gold |
+| --secondary-foreground | 0 0% 100% | 25 95% 10% | dark text |
+| --background | 0 0% 100% | 40 100% 98% | #FFFBF2 Soft Cream |
+| --card | 0 0% 100% | 36 100% 97% | #FEF9EE Warm White |
+| --foreground | 210 29% 24% | 30 70% 7% | #1C1005 Deep Walnut |
+| --muted-foreground | 210 10% 50% | 30 25% 38% | #78644A Warm Taupe |
+| --accent | derived from primary | 160 84% 39% | #059669 Emerald Green |
+| --accent-foreground | derived | 160 84% 20% | dark emerald |
 
-## Implementation Steps
+Also update dark mode equivalents, sidebar variables, and semantic colors (--success to emerald, --warning to amber).
 
-### Step 1: Database Migration
-- Create `supplier_products` table with generated columns for `remaining_stock` and `total_price`
-- Add RLS policy using `has_role(auth.uid(), 'admin')` for ALL operations
-- Enable realtime
+This change automatically propagates to the entire app including the admin dashboard since all components use CSS variables.
 
-### Step 2: i18n Translation Keys (~40 new keys)
-Add to `ar.ts`, `en.ts`, `fr.ts`:
-- Product management labels (product name, SKU, unit, qty received, qty returned, remaining stock, unit price, total price, low stock threshold)
-- Bulk action labels (bulk delete, bulk export, bulk edit, import products, download template)
-- Stock status labels (in stock, low stock, out of stock)
-- Summary bar labels (total products, total stock value, low stock alerts, last updated)
-- CSV import wizard step labels
+### Typography Addition
 
-### Step 3: React Query Hook
-**New file: `src/hooks/useSupplierProducts.ts`**
-- `useSupplierProducts(supplierId)` -- fetch all products for a supplier
-- `useCreateSupplierProducts()` -- bulk insert multiple product rows at once
-- `useUpdateSupplierProduct()` -- update single product
-- `useBulkUpdateSupplierProducts()` -- update multiple products (dates, category, quantities)
-- `useDeleteSupplierProducts()` -- bulk delete by array of IDs
-- `uploadSupplierProductDocument(file)` -- upload to `supplier-documents` bucket
+Add Playfair Display for Latin serif headings:
 
-### Step 4: Supplier Products Tab Component
-**New file: `src/components/admin/suppliers/SupplierProductsTab.tsx`**
+```css
+@import url('...&family=Playfair+Display:wght@400;500;600;700&...');
+```
 
-This is the main component added as a new tab on the Supplier Detail Page.
+Add `.font-playfair` utility in tailwind config.
 
-**Product Summary Bar (top)**
-- 4 stat cards: Total Products | Total Stock Value | Low Stock Alerts | Last Updated
-- Uses the same `hover-lift` and premium card styling
+### New Keyframes (`tailwind.config.ts`)
 
-**Search, Filter, Sort Controls**
-- Search by product name or SKU (live filtering)
-- Filter by: stock status (all/in-stock/low/out), category, date range
-- Sort by: date, quantity, price, remaining stock
+- `parallax-float`: subtle vertical drift for hero background
+- `golden-shimmer`: animated golden line drawing effect
+- `count-up`: number counter animation
+- `drip`: honey drip SVG animation
 
-**Product Table**
-- Columns: Checkbox | Product Name | SKU | Unit | Qty Received | Qty Returned | Remaining | Unit Price | Total | Date | Stock Badge | Doc | Actions
-- Stock badges:
-  - Green "In Stock" when remaining > threshold
-  - Yellow "Low Stock" when remaining <= threshold and > 0
-  - Red "Out of Stock" when remaining = 0
-- Each row has edit/delete action buttons
-- Row hover uses existing `row-accent` CSS class
-- Document icon opens the existing `DocumentViewer` component
+## Part 2: Homepage Redesign (`src/pages/Index.tsx`)
 
-### Step 5: Inline Multi-Row Form
-**New file: `src/components/admin/suppliers/ProductBulkEntryForm.tsx`**
+Completely rewrite the classic template (keeping the template routing system and all data queries intact). The new sections in order:
 
-- Opens in a slide-in drawer (Sheet) when clicking "Add Products"
-- Starts with one empty row; user clicks "+ Add Row" to append more
-- Each row: Product Name, SKU, Unit (select), Qty Received, Qty Returned, Unit Price, Date, Notes, Upload icon
-- Remaining Stock and Total Price shown as auto-calculated read-only fields
-- "Save All" button saves all rows in a single batch insert
-- Cancel clears and closes
+### Hero Section
+- Full-screen with AI-generated hero image (dates + honey on dark wood)
+- Poetic Arabic headline with golden decorative line
+- Two CTA buttons (amber filled + ghost outlined)
+- Floating "100% طبيعي" badge with pulse animation
+- Staggered fade-in for text elements
 
-### Step 6: Bulk Actions Toolbar
-**New file: `src/components/admin/suppliers/ProductBulkActions.tsx`**
+### Trust Bar
+- Horizontal strip with 4 trust icons on soft amber background
+- Icons: honey jar, fast delivery, quality certified, preservative-free
 
-- Floating bar appears at the bottom when rows are selected via checkboxes
-- Actions:
-  - Bulk Delete: confirmation modal with shake animation, then deletes
-  - Bulk Export CSV: generates CSV from selected rows and downloads
-  - Bulk Edit: opens a small modal to set date/category for all selected
-  - Bulk Update Stock: enables inline editing of qty fields on selected rows
+### Featured Categories
+- 3 large cards: تمور / عسل / هدايا وتشكيلات
+- Full-bleed AI-generated images with title overlay
+- Golden shimmer border on hover + image zoom
 
-### Step 7: CSV Import Wizard
-**New file: `src/components/admin/suppliers/ProductCSVImportWizard.tsx`**
+### Bestsellers Section
+- "الأكثر مبيعاً" heading with golden underline accent
+- 4-column grid on desktop, horizontal scroll on mobile
+- Uses the redesigned ProductCard component
 
-- 3-step dialog:
-  1. Upload: drag-and-drop zone (reusing existing `upload-zone` CSS), accepts .csv files
-  2. Map Columns: visual mapping of CSV headers to app fields via dropdowns
-  3. Preview and Confirm: table preview, errors highlighted in red
-- "Download Template" button generates a pre-filled CSV with correct headers
-- Progress bar during import
+### Brand Story Section
+- Split layout: image left + brand story text right
+- Animated counters: +50 types of dates, +20 types of honey, 10,000+ customers
+- Decorative quote in serif italic
 
-### Step 8: Integrate into Supplier Detail Page
+### Testimonials
+- Card carousel with gold stars, customer quotes
+- Warm beige cards, auto-scroll with dot navigation
+- Data from `reviews` table (will seed reviews)
 
-Modify `src/pages/admin/AdminSupplierDetailPage.tsx`:
-- Add a Tabs component (from existing `@/components/ui/tabs`) with two tabs:
-  - "Transactions" (existing ledger content)
-  - "Products / Stock" (new `SupplierProductsTab`)
-- Keep all existing transaction logic intact
+### Newsletter Section
+- Full-width amber background with grain texture
+- Email input + subscribe CTA
+- Leads are inserted into the existing `leads` table
+
+## Part 3: Product Card Redesign (`src/components/ProductCard.tsx`)
+
+- Warm white card with thin golden border (#F59E0B/20)
+- 16px border radius
+- Badge overlay top-left: "جديد" / "الأكثر مبيعاً" / "خصم" pills
+- Price in amber, old price in gray strikethrough
+- "أضف للسلة" button with slide-up animation on hover
+- Star rating display (from reviews data)
+- All existing logic (variations, add to cart, navigation) preserved
+
+## Part 4: Product Page Redesign (`src/pages/SingleProductPage.tsx`)
+
+Visual-only changes -- all existing logic stays identical:
+
+- Product name in large bold Cairo heading
+- Price in deep amber with green "وفّر X%" pill badge
+- Weight/volume selector as pill-shaped toggle buttons with amber fill
+- "أضف إلى السلة" button: full width, amber gradient, pulse glow
+- "اشتر الآن" button: dark walnut background
+- Trust badges row: secure payment, free delivery, easy returns
+- Product details tabs with warm styling
+- Reviews section with gold star bar chart distribution
+- Related products carousel at bottom
+
+## Part 5: AI Image Generation
+
+Use the Lovable AI image generation API (google/gemini-2.5-flash-image) via an edge function to generate:
+
+1. Hero image: dates and honey jars on dark wood surface with warm lighting
+2. Category images: dates, honey jar with drizzle, gift boxed sets
+3. Brand story image: date farm / harvest scene
+
+The edge function `generate-store-images` will:
+- Generate images via AI
+- Upload them to the `store` storage bucket
+- Save the public URLs in the `settings` table
+
+## Part 6: Database Seeding
+
+Insert sample data via Supabase insert operations so the user has a complete overview:
+
+### Products (6 items)
+| Name | Category | Price | Old Price | Description |
+|------|----------|-------|-----------|-------------|
+| تمر المجهول الفاخر | تمور | 2500 | 3000 | Premium Medjool dates |
+| عسل السدر الطبيعي | عسل | 3500 | 4000 | Natural Sidr honey |
+| تمر دقلة نور | تمور | 1800 | 2200 | Deglet Noor dates |
+| عسل الزهور البرية | عسل | 2800 | - | Wild flower honey |
+| علبة هدايا فاخرة | هدايا | 5000 | 6000 | Premium gift set |
+| معجون التمر الطبيعي | تمور | 1200 | - | Natural date paste |
+
+### Categories (3)
+- تمور (Dates), عسل (Honey), هدايا وتشكيلات (Gift Sets)
+
+### Reviews (8-10 sample reviews)
+Seeded across products with Arabic names and comments
+
+### Suppliers (2 sample suppliers)
+With sample transactions and products
+
+### Wilayas
+Ensure existing wilayas have data (should already exist)
+
+### Settings
+- store_name: "جزيرة الطبيعة"
+- footer_description: updated brand description
+- Hero slides with generated images
+
+## Part 7: Admin Dashboard Color Harmony
+
+Since the admin dashboard uses CSS variables (`bg-primary/10 text-primary`, `bg-secondary/10 text-secondary`, etc.), the color change in Part 1 will automatically update it. No code changes needed for the dashboard -- it will use the new amber/gold/cream palette automatically.
+
+The supplier detail page, KPI cards, and all admin components will inherit the warm theme.
 
 ## Files Summary
 
-| File | Action |
-|------|--------|
-| Database migration | New `supplier_products` table + RLS |
-| `src/i18n/locales/ar.ts` | Add ~40 translation keys |
-| `src/i18n/locales/en.ts` | Add ~40 translation keys |
-| `src/i18n/locales/fr.ts` | Add ~40 translation keys |
-| `src/hooks/useSupplierProducts.ts` | New -- CRUD hooks |
-| `src/components/admin/suppliers/SupplierProductsTab.tsx` | New -- main tab component |
-| `src/components/admin/suppliers/ProductBulkEntryForm.tsx` | New -- multi-row inline form |
-| `src/components/admin/suppliers/ProductBulkActions.tsx` | New -- floating bulk toolbar |
-| `src/components/admin/suppliers/ProductCSVImportWizard.tsx` | New -- 3-step import wizard |
-| `src/pages/admin/AdminSupplierDetailPage.tsx` | Modified -- add Tabs with Products tab |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/index.css` | Modify | New warm color palette + dark mode + grain texture utility |
+| `tailwind.config.ts` | Modify | Add Playfair Display font + new keyframes |
+| `src/pages/Index.tsx` | Rewrite | Complete homepage redesign with new sections |
+| `src/components/ProductCard.tsx` | Rewrite | Premium warm card design |
+| `src/pages/SingleProductPage.tsx` | Modify | Visual update (warm colors, amber buttons, tabs) |
+| `src/components/Navbar.tsx` | Modify | Warm styling, golden accents |
+| `src/components/Footer.tsx` | Modify | Dark walnut footer with warm accents |
+| `src/components/AnnouncementBar.tsx` | Modify | Amber gradient styling |
+| `supabase/functions/generate-store-images/index.ts` | Create | AI image generation + upload |
+| `src/i18n/locales/ar.ts` | Modify | Add homepage section translations |
+| `src/i18n/locales/en.ts` | Modify | Add homepage section translations |
+| `src/i18n/locales/fr.ts` | Modify | Add homepage section translations |
+| Database seed data | Insert | Products, categories, reviews, suppliers, settings |
 
-## Design Notes
+## Implementation Sequence
 
-- Follows the existing premium SaaS aesthetic (glassmorphism, hover-lift, glow-focus, row-accent)
-- Stock badges use the same pill-shaped badge pattern: green/yellow/red with `/10` opacity backgrounds
-- Auto-calculated fields (remaining stock, total price) update in real-time as user types
-- All destructive actions use confirmation dialogs with the existing `AlertDialog` component
-- Skeleton loaders for all loading states
-- Empty state with illustrated placeholder when no products exist
-- Toast notifications for all CRUD actions
-- Fully RTL-compatible using existing `dir` from `useTranslation`
-- Reuses `DocumentViewer` component for viewing uploaded documents
+1. Color system update (index.css + tailwind.config.ts) -- immediately affects entire app including admin
+2. Database seeding (products, categories, reviews, suppliers, settings)
+3. AI image generation edge function + deploy + invoke to generate images
+4. Homepage redesign (Index.tsx)
+5. ProductCard redesign
+6. SingleProductPage visual update
+7. Navbar + Footer + AnnouncementBar warm styling
+8. Testing and verification
+
+## Technical Notes
+
+- The `useStoreTheme` hook dynamically overrides CSS variables from `settings.primary_color` / `settings.secondary_color`. We will seed those settings with the new amber/gold colors so the theme persists.
+- All existing template routing (minimal, bold, liquid, digital) is preserved -- only the "classic" template gets the redesign.
+- All existing logic (cart, orders, variations, checkout, reviews, admin) remains completely untouched.
+- The color change propagates to the admin dashboard automatically through CSS variables -- no admin component code changes needed.
 
