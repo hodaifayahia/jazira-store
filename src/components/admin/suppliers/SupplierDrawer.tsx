@@ -66,7 +66,7 @@ export default function SupplierDrawer({ open, onOpenChange, supplier, onSave, s
             <Label className="font-cairo">{t('suppliers.contactName')}</Label>
             <Input value={form.contact_name} onChange={e => setForm(f => ({...f, contact_name: e.target.value}))} className="font-cairo mt-1" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="glow-focus rounded-lg">
               <Label className="font-cairo">{t('suppliers.contactPhone')}</Label>
               <Input value={form.contact_phone} onChange={e => setForm(f => ({...f, contact_phone: e.target.value}))} className="font-roboto mt-1" dir="ltr" />

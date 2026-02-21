@@ -93,7 +93,7 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
                   <Trash2 className="w-4 h-4" />
                 </Button>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.productName')} *</label>
                   <Input value={row.product_name} onChange={e => updateRow(i, 'product_name', e.target.value)} className="glow-focus" />
@@ -103,7 +103,7 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
                   <Input value={row.reference_sku} onChange={e => updateRow(i, 'reference_sku', e.target.value)} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.unit')}</label>
                   <Select value={row.unit} onValueChange={v => updateRow(i, 'unit', v)}>
