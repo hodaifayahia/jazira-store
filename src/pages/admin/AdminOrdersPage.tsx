@@ -10,7 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap } from 'lucide-react';
+import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap, Plus } from 'lucide-react';
+import ManualOrderDialog from '@/components/admin/ManualOrderDialog';
 import { formatPrice, formatDate } from '@/lib/format';
 import { useTranslation } from '@/i18n';
 
@@ -37,6 +38,7 @@ export default function AdminOrdersPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
+  const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [statusFilter, setStatusFilter] = useState('الكل');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -225,6 +227,9 @@ export default function AdminOrdersPage() {
             {t('orders.advancedFilter')}
             {hasAdvancedFilters && <span className="w-2 h-2 rounded-full bg-destructive" />}
             {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+           </Button>
+          <Button className="font-cairo gap-1.5" onClick={() => setShowCreateOrder(true)}>
+            <Plus className="w-4 h-4" /> إنشاء طلب
           </Button>
         </div>
 
@@ -520,6 +525,7 @@ export default function AdminOrdersPage() {
             )}
           </DialogContent>
         </Dialog>
+        <ManualOrderDialog open={showCreateOrder} onOpenChange={setShowCreateOrder} />
       </div>
     </TooltipProvider>
   );
