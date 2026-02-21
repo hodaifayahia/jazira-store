@@ -32,7 +32,6 @@ import AdminReturnsSettingsPage from "./pages/admin/settings/AdminReturnsSetting
 import AdminFormSettingsPage from "./pages/admin/settings/AdminFormSettingsPage";
 import AdminAppearancePage from "./pages/admin/settings/AdminAppearancePage";
 import AdminSecurityPage from "./pages/admin/settings/AdminSecurityPage";
-import AdminContentPage from "./pages/admin/settings/AdminContentPage";
 import AdminLeadsPage from "./pages/admin/AdminLeadsPage";
 import AdminVariationsPage from "./pages/admin/AdminVariationsPage";
 import AdminAbandonedPage from "./pages/admin/AdminAbandonedPage";
@@ -119,7 +118,6 @@ const App = () => (
             <Route path="/admin/settings/form" element={<LanguageProvider><AdminLayout><AdminFormSettingsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/appearance" element={<LanguageProvider><AdminLayout><AdminAppearancePage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/security" element={<LanguageProvider><AdminLayout><AdminSecurityPage /></AdminLayout></LanguageProvider>} />
-            <Route path="/admin/settings/content" element={<LanguageProvider><AdminLayout><AdminContentPage /></AdminLayout></LanguageProvider>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -602,8 +602,6 @@ export const ar: Record<string, string> = {
   'settings.returnsDesc': 'سياسة الاسترجاع والاستبدال',
   'settings.formDesc': 'حقول نموذج الطلب',
   'settings.appearanceDesc': 'القالب والبانر والتذييل',
-  'settings.content': 'إدارة المحتوى',
-  'settings.contentDesc': 'النصوص والصور في جميع صفحات الموقع',
   'settings.securityDesc': 'كلمة المرور وإدارة المستخدمين',
   'settings.storeName': 'اسم المتجر',
   'settings.storeLogo': 'شعار المتجر',
