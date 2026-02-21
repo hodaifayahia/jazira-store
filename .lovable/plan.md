@@ -1,213 +1,148 @@
 
 
-# Premium Supplier Management Module
+# Bulk Product Management (Per Supplier)
 
 ## Overview
 
-Build a full-featured Supplier Management module integrated into the existing admin panel, following the project's established patterns (RTL support, i18n, Supabase queries, AdminLayout, Cairo/Roboto fonts). The design will be elevated to a premium SaaS aesthetic with refined micro-interactions and data-rich layouts.
+Add a Products/Stock tab to the Supplier Detail Page (`/admin/suppliers/:id`) that enables managing products linked to a specific supplier -- with inline multi-row entry, bulk actions, CSV import/export, and smart stock indicators.
 
-## Database Design
+## Database Changes
 
-### New Tables
+### New Table: `supplier_products`
 
-**`suppliers`**
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid (PK) | default gen_random_uuid() |
-| name | text | NOT NULL |
-| category | text | nullable |
-| contact_name | text | nullable |
-| contact_phone | text | nullable |
-| contact_email | text | nullable |
-| notes | text | nullable |
-| status | text | default 'active' (active/pending/inactive) |
-| created_at | timestamptz | default now() |
-| updated_at | timestamptz | default now() |
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| id | uuid (PK) | gen_random_uuid() | |
+| supplier_id | uuid (FK -> suppliers) | NOT NULL | |
+| product_name | text | NOT NULL | |
+| reference_sku | text | nullable | Reference / SKU code |
+| unit | text | 'pcs' | kg, pcs, box, etc. |
+| quantity_received | numeric | 0 | |
+| quantity_returned | numeric | 0 | Given back / returned |
+| remaining_stock | numeric | GENERATED (received - returned) | Stored generated column |
+| unit_price | numeric | 0 | |
+| total_price | numeric | GENERATED (unit_price * quantity_received) | Stored generated column |
+| date | date | CURRENT_DATE | |
+| notes | text | nullable | |
+| document_url | text | nullable | Bon de Reception file |
+| document_name | text | nullable | |
+| low_stock_threshold | integer | 5 | User-configurable per product |
+| category | text | nullable | Optional category grouping |
+| created_at | timestamptz | now() | |
 
-**`supplier_transactions`**
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid (PK) | default gen_random_uuid() |
-| supplier_id | uuid (FK -> suppliers) | NOT NULL |
-| date | date | NOT NULL, default CURRENT_DATE |
-| description | text | nullable |
-| items_received | numeric | default 0 (value of goods received from supplier) |
-| items_given | numeric | default 0 (value of goods/payments given to supplier) |
-| transaction_type | text | default 'receipt' (receipt/payment/return/adjustment) |
-| notes | text | nullable |
-| document_url | text | nullable (uploaded bon de reception) |
-| document_name | text | nullable |
-| created_at | timestamptz | default now() |
+- RLS: Admin-only (same pattern as `suppliers` and `supplier_transactions`)
+- Enable realtime for live updates
 
-RLS policies: Authenticated users with admin role can SELECT, INSERT, UPDATE, DELETE on both tables.
+## Implementation Steps
 
-Enable realtime on `supplier_transactions` for live balance updates.
+### Step 1: Database Migration
+- Create `supplier_products` table with generated columns for `remaining_stock` and `total_price`
+- Add RLS policy using `has_role(auth.uid(), 'admin')` for ALL operations
+- Enable realtime
 
-## File Changes
+### Step 2: i18n Translation Keys (~40 new keys)
+Add to `ar.ts`, `en.ts`, `fr.ts`:
+- Product management labels (product name, SKU, unit, qty received, qty returned, remaining stock, unit price, total price, low stock threshold)
+- Bulk action labels (bulk delete, bulk export, bulk edit, import products, download template)
+- Stock status labels (in stock, low stock, out of stock)
+- Summary bar labels (total products, total stock value, low stock alerts, last updated)
+- CSV import wizard step labels
 
-### 1. Database Migration
-- Create `suppliers` and `supplier_transactions` tables
-- Add RLS policies for admin access
-- Add a database function `get_supplier_balance(supplier_uuid)` that returns total_received, total_given, balance
+### Step 3: React Query Hook
+**New file: `src/hooks/useSupplierProducts.ts`**
+- `useSupplierProducts(supplierId)` -- fetch all products for a supplier
+- `useCreateSupplierProducts()` -- bulk insert multiple product rows at once
+- `useUpdateSupplierProduct()` -- update single product
+- `useBulkUpdateSupplierProducts()` -- update multiple products (dates, category, quantities)
+- `useDeleteSupplierProducts()` -- bulk delete by array of IDs
+- `uploadSupplierProductDocument(file)` -- upload to `supplier-documents` bucket
 
-### 2. New Files
+### Step 4: Supplier Products Tab Component
+**New file: `src/components/admin/suppliers/SupplierProductsTab.tsx`**
 
-| File | Purpose |
-|------|---------|
-| `src/pages/admin/AdminSuppliersPage.tsx` | Main supplier directory with table/grid views, search, filters, KPI dashboard |
-| `src/pages/admin/AdminSupplierDetailPage.tsx` | Per-supplier ledger, transaction history, document viewer |
-| `src/components/admin/suppliers/SupplierDrawer.tsx` | Slide-in drawer for add/edit supplier |
-| `src/components/admin/suppliers/TransactionForm.tsx` | Add/edit transaction with document upload |
-| `src/components/admin/suppliers/SupplierKPICards.tsx` | 4 KPI stat cards with sparkline-style indicators |
-| `src/components/admin/suppliers/SupplierCard.tsx` | Grid-view card for a single supplier |
-| `src/components/admin/suppliers/DocumentViewer.tsx` | Fullscreen modal for viewing uploaded documents (zoom + download) |
-| `src/components/admin/suppliers/BulkActions.tsx` | Floating toolbar for multi-select bulk operations |
-| `src/components/admin/suppliers/CSVImportWizard.tsx` | 3-step guided CSV import modal |
-| `src/hooks/useSuppliers.ts` | React Query hooks for suppliers CRUD |
-| `src/hooks/useSupplierTransactions.ts` | React Query hooks for transactions CRUD |
+This is the main component added as a new tab on the Supplier Detail Page.
 
-### 3. Modified Files
+**Product Summary Bar (top)**
+- 4 stat cards: Total Products | Total Stock Value | Low Stock Alerts | Last Updated
+- Uses the same `hover-lift` and premium card styling
 
-| File | Change |
+**Search, Filter, Sort Controls**
+- Search by product name or SKU (live filtering)
+- Filter by: stock status (all/in-stock/low/out), category, date range
+- Sort by: date, quantity, price, remaining stock
+
+**Product Table**
+- Columns: Checkbox | Product Name | SKU | Unit | Qty Received | Qty Returned | Remaining | Unit Price | Total | Date | Stock Badge | Doc | Actions
+- Stock badges:
+  - Green "In Stock" when remaining > threshold
+  - Yellow "Low Stock" when remaining <= threshold and > 0
+  - Red "Out of Stock" when remaining = 0
+- Each row has edit/delete action buttons
+- Row hover uses existing `row-accent` CSS class
+- Document icon opens the existing `DocumentViewer` component
+
+### Step 5: Inline Multi-Row Form
+**New file: `src/components/admin/suppliers/ProductBulkEntryForm.tsx`**
+
+- Opens in a slide-in drawer (Sheet) when clicking "Add Products"
+- Starts with one empty row; user clicks "+ Add Row" to append more
+- Each row: Product Name, SKU, Unit (select), Qty Received, Qty Returned, Unit Price, Date, Notes, Upload icon
+- Remaining Stock and Total Price shown as auto-calculated read-only fields
+- "Save All" button saves all rows in a single batch insert
+- Cancel clears and closes
+
+### Step 6: Bulk Actions Toolbar
+**New file: `src/components/admin/suppliers/ProductBulkActions.tsx`**
+
+- Floating bar appears at the bottom when rows are selected via checkboxes
+- Actions:
+  - Bulk Delete: confirmation modal with shake animation, then deletes
+  - Bulk Export CSV: generates CSV from selected rows and downloads
+  - Bulk Edit: opens a small modal to set date/category for all selected
+  - Bulk Update Stock: enables inline editing of qty fields on selected rows
+
+### Step 7: CSV Import Wizard
+**New file: `src/components/admin/suppliers/ProductCSVImportWizard.tsx`**
+
+- 3-step dialog:
+  1. Upload: drag-and-drop zone (reusing existing `upload-zone` CSS), accepts .csv files
+  2. Map Columns: visual mapping of CSV headers to app fields via dropdowns
+  3. Preview and Confirm: table preview, errors highlighted in red
+- "Download Template" button generates a pre-filled CSV with correct headers
+- Progress bar during import
+
+### Step 8: Integrate into Supplier Detail Page
+
+Modify `src/pages/admin/AdminSupplierDetailPage.tsx`:
+- Add a Tabs component (from existing `@/components/ui/tabs`) with two tabs:
+  - "Transactions" (existing ledger content)
+  - "Products / Stock" (new `SupplierProductsTab`)
+- Keep all existing transaction logic intact
+
+## Files Summary
+
+| File | Action |
 |------|--------|
-| `src/App.tsx` | Add routes: `/admin/suppliers` and `/admin/suppliers/:id` |
-| `src/components/AdminLayout.tsx` | Add "Suppliers" nav item with `Truck` icon |
-| `src/i18n/locales/ar.ts` | Add ~60 supplier-related translation keys |
-| `src/i18n/locales/en.ts` | Add ~60 supplier-related translation keys |
-| `src/i18n/locales/fr.ts` | Add ~60 supplier-related translation keys |
-| `src/index.css` | Add premium micro-interaction utilities (glassmorphism, hover-lift, glow-focus, pulse-dash, shake) |
-| `tailwind.config.ts` | Add new keyframes for shake, pulse-border, check-pulse animations |
+| Database migration | New `supplier_products` table + RLS |
+| `src/i18n/locales/ar.ts` | Add ~40 translation keys |
+| `src/i18n/locales/en.ts` | Add ~40 translation keys |
+| `src/i18n/locales/fr.ts` | Add ~40 translation keys |
+| `src/hooks/useSupplierProducts.ts` | New -- CRUD hooks |
+| `src/components/admin/suppliers/SupplierProductsTab.tsx` | New -- main tab component |
+| `src/components/admin/suppliers/ProductBulkEntryForm.tsx` | New -- multi-row inline form |
+| `src/components/admin/suppliers/ProductBulkActions.tsx` | New -- floating bulk toolbar |
+| `src/components/admin/suppliers/ProductCSVImportWizard.tsx` | New -- 3-step import wizard |
+| `src/pages/admin/AdminSupplierDetailPage.tsx` | Modified -- add Tabs with Products tab |
 
-## Feature Breakdown
+## Design Notes
 
-### Supplier Directory Page (`/admin/suppliers`)
-
-**Top Section: KPI Dashboard**
-- 4 cards: Total Suppliers / Total Balance Owed / Total Received This Month / Overdue count
-- Each card has an icon, value, and subtle background gradient
-- Skeleton loaders while data fetches
-
-**View Toggle**
-- Table view (default) and grid card view, toggled with icon buttons
-- Persisted in localStorage
-
-**Search + Filters**
-- Live search input with magnifying glass icon
-- Category filter chips (All, custom categories from data)
-- Status filter dropdown
-
-**Data Table (Table View)**
-- Sticky header, full-width
-- Columns: Checkbox | Supplier Name | Category | Contact | Total Received | Total Given | Balance | Status Badge | Actions
-- Sortable by clicking column headers
-- Hover effect: subtle left border accent + row highlight
-- Empty state with illustrated placeholder
-
-**Grid View**
-- Card layout with supplier info, balance, status badge
-- Hover lift animation on cards
-
-**Add Supplier CTA**
-- Opens a right-side slide-in drawer (Sheet component)
-- Form: Name, Category, Contact Name, Phone, Email, Notes, Status
-- Animated focus rings on inputs
-- Save button with checkmark pulse on success
-
-**Bulk Actions**
-- Checkbox multi-select on table rows
-- Floating action bar appears at bottom when items selected
-- Actions: Delete (with shake + red confirmation), Export CSV, Update Status
-
-### Supplier Detail Page (`/admin/suppliers/:id`)
-
-**Header**
-- Breadcrumb: Suppliers > Supplier Name
-- Supplier info summary with status badge
-- Edit button to open drawer
-
-**Stat Cards**
-- 3 summary cards: Total Received / Total Given / Outstanding Balance
-- Color-coded (green for received, red for given, blue/amber for balance)
-
-**Transaction Ledger**
-- Full table with columns: Date | Description | Type | Items Received | Items Given | Running Balance | Document
-- Running balance computed and displayed per row
-- Each row expandable (accordion) to show notes and document thumbnail
-- Filter by date range (date picker), transaction type, amount range
-
-**Add Transaction**
-- Button opens a dialog/drawer
-- Fields: Date, Description, Type (receipt/payment/return/adjustment), Amount, Notes
-- Drag-and-drop document upload zone with animated dashed border
-- Supports PDF, JPG, PNG -- uploaded to Supabase storage bucket `supplier-documents`
-
-**Document Viewer**
-- Click on document thumbnail opens fullscreen modal
-- Zoom controls, download button
-- File metadata displayed
-
-### CSV Import Wizard
-- Step 1: Upload CSV file (drag-and-drop zone)
-- Step 2: Map CSV columns to supplier fields
-- Step 3: Preview and confirm
-- Progress bar animation during import
-
-## Design Details
-
-### Premium Utilities (added to index.css)
-
-```css
-/* Glassmorphism for drawers/modals */
-.glass { backdrop-filter: blur(12px); background: hsl(var(--card) / 0.85); }
-
-/* Button hover lift */
-.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.1); }
-
-/* Animated focus ring */
-.glow-focus:focus-within { box-shadow: 0 0 0 3px hsl(var(--ring) / 0.3); }
-
-/* Table row accent border on hover */
-.row-accent:hover { border-left: 3px solid hsl(var(--primary)); }
-```
-
-### Micro-Interactions (via tailwind keyframes)
-
-- `check-pulse`: checkmark scale pulse for success feedback
-- `shake`: horizontal shake for destructive action confirmation
-- `pulse-dash`: animated dashed border for upload zones
-
-### Color System
-Uses the existing theme variables (primary green, secondary blue) plus semantic colors for supplier statuses:
-- Active: `bg-green-500/10 text-green-700`
-- Pending: `bg-yellow-500/10 text-yellow-700`
-- Inactive: `bg-gray-500/10 text-gray-500`
-
-### Typography
-- Follows existing pattern: `font-cairo` for UI text, `font-roboto` for numbers/prices
-- Large bold titles (text-2xl font-bold), medium subheadings, small body text
-
-### Responsive
-- Desktop: full table with all columns
-- Tablet: horizontally scrollable table or card view auto-switch
-- Mobile: card view default, drawer becomes full-screen sheet
-
-### Accessibility
-- All interactive elements have ARIA labels
-- Keyboard navigation with visible focus indicators
-- Tooltips on icon-only buttons
-- High contrast text throughout
-
-## Implementation Sequence
-
-1. Database migration (tables + RLS + storage bucket)
-2. i18n translation keys (ar, en, fr)
-3. CSS utilities + tailwind keyframes
-4. React Query hooks (useSuppliers, useSupplierTransactions)
-5. Supplier components (KPI cards, drawer, card, document viewer, bulk actions)
-6. AdminSuppliersPage (directory)
-7. AdminSupplierDetailPage (ledger)
-8. CSV Import Wizard
-9. Route registration + sidebar nav item
-10. Testing all interactions
+- Follows the existing premium SaaS aesthetic (glassmorphism, hover-lift, glow-focus, row-accent)
+- Stock badges use the same pill-shaped badge pattern: green/yellow/red with `/10` opacity backgrounds
+- Auto-calculated fields (remaining stock, total price) update in real-time as user types
+- All destructive actions use confirmation dialogs with the existing `AlertDialog` component
+- Skeleton loaders for all loading states
+- Empty state with illustrated placeholder when no products exist
+- Toast notifications for all CRUD actions
+- Fully RTL-compatible using existing `dir` from `useTranslation`
+- Reuses `DocumentViewer` component for viewing uploaded documents
 
