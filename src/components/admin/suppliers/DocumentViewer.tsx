@@ -18,7 +18,7 @@ export default function DocumentViewer({ open, onOpenChange, url, name }: Props)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="w-[95vw] sm:max-w-4xl h-[80vh] sm:h-[85vh] flex flex-col p-0 gap-0">
         <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
           <span className="font-cairo text-sm font-medium truncate max-w-[300px]">{name}</span>
           <div className="flex items-center gap-2">

@@ -1,51 +1,128 @@
+# Manual Order Creation + Product Image Seeding
 
-# Fix Supplier Modals/Dialogs Responsiveness
+## Overview
 
-## Problem
-All supplier-related modals, sheets, and dialogs break on small screens (mobile/tablet). Issues include fixed widths, grid layouts that don't stack, overflow problems, and the floating bulk actions bar getting cut off.
+Two tasks: (1) Add a "Create Order" dialog in the admin orders page so admins can manually add orders with full client info and product selection, and (2) generate AI product images for all 6 seeded products and update them in the database.
 
-## Changes
+---
 
-### 1. SupplierDrawer.tsx (Sheet)
-- Phone/email grid: change `grid-cols-2` to `grid-cols-1 sm:grid-cols-2` so fields stack on mobile
+## Part 1: Manual Order Creation Dialog
 
-### 2. TransactionForm.tsx (Dialog)
-- Date/type grid: change `grid-cols-2` to `grid-cols-1 sm:grid-cols-2` so fields stack on mobile
-- Add `max-h-[90vh] overflow-y-auto` to DialogContent for small viewports
+### New Component: `CreateOrderDialog`
 
-### 3. ProductBulkEntryForm.tsx (Sheet)
-- Each product row's grids (`grid-cols-2`, `grid-cols-3`): change to `grid-cols-1 sm:grid-cols-2` and `grid-cols-1 sm:grid-cols-3` respectively
-- The sheet already has `sm:max-w-2xl` which is fine; ensure full width on mobile via existing `w-full`
+Add an inline dialog component within `AdminOrdersPage.tsx` (or a separate file `src/components/admin/CreateOrderDialog.tsx`) that provides a complete manual order form.
 
-### 4. ProductCSVImportWizard.tsx (Dialog)
-- Change `max-w-2xl` to `w-[95vw] sm:max-w-2xl` so it doesn't overflow on mobile
-- Step 2 mapping rows: change `flex items-center gap-3` layout to stack vertically on mobile -- use `flex flex-col sm:flex-row` and make the select full width on mobile
-- Add `max-h-[85vh]` to ensure it fits small screens
+#### Form Fields
 
-### 5. ProductBulkActions.tsx (Floating toolbar)
-- The fixed bottom bar with `start-1/2 -translate-x-1/2`: make it full-width on mobile with `start-4 end-4 translate-x-0 sm:start-1/2 sm:end-auto sm:-translate-x-1/2`
-- Wrap buttons with `flex-wrap` so they don't overflow
-- Use smaller text/buttons on mobile
 
-### 6. DocumentViewer.tsx (Dialog)
-- Change `max-w-4xl h-[85vh]` to `w-[95vw] sm:max-w-4xl h-[80vh] sm:h-[85vh]` for mobile fit
-- Toolbar buttons: ensure they wrap on small screens
+| Field          | Type                                        | Required                       | Source                            |
+| -------------- | ------------------------------------------- | ------------------------------ | --------------------------------- |
+| Customer Name  | Text input                                  | Yes                            | Manual entry                      |
+| Customer Phone | Text input (validated 05/06/07 + 10 digits) | Yes                            | Manual entry                      |
+| Wilaya         | Select dropdown                             | Yes                            | `wilayas` table                   |
+| Baladiya       | Select dropdown (loads after wilaya)        | No                             | `baladiyat` table                 |
+| Delivery Type  | Radio/Select: "office" or "home"            | Yes                            | Manual                            |
+| Address        | Textarea                                    | No (required if home delivery) | Manual entry                      |
+| Payment Method | Select: cod / baridimob / flexy             | Yes                            | Manual                            |
+| Products       | Multi-product selector with quantity        | Yes                            | `products` table                  |
+| Coupon Code    | Text input (optional)                       | No                             | Validated against `coupons` table |
+| Notes/Status   | Select initial status                       | No                             | Default "جديد"                    |
 
-### 7. SupplierProductsTab.tsx (Main tab content)
-- Controls row: already uses `flex-wrap` which is good
-- Table: already has `overflow-x-auto` which is good
-- Summary cards: already use `grid-cols-2 sm:grid-cols-4` which is good
 
-### 8. AdminSupplierDetailPage.tsx
-- Stat cards: already `grid-cols-1 sm:grid-cols-3` which is fine
-- Transaction table: already has `overflow-x-auto`
+#### Product Selector
 
-## Technical Details
+- Searchable dropdown listing all active products from the `products` table
+- Each added product shows: name, unit price, quantity stepper (+/-)
+- If product `has_variants`, show variant selector (from `product_variants` table)
+- Running subtotal calculated live
+- Shipping cost auto-calculated based on wilaya + delivery type (reuse logic from `src/lib/shipping.ts`)
+- Total = subtotal + shipping - discount
 
-All changes are CSS-only (Tailwind classes). No logic, routing, or data changes. The key patterns applied:
-- Replace fixed `grid-cols-N` with responsive `grid-cols-1 sm:grid-cols-N`
-- Add viewport-relative max dimensions (`max-h-[90vh]`, `w-[95vw]`)  
-- Make floating elements full-width on mobile with edge insets instead of centered positioning
-- Add `flex-wrap` and `overflow-y-auto` where content can overflow
+#### Order Submission Flow
 
-Files to modify: 6 component files in `src/components/admin/suppliers/`
+1. Validate all required fields
+2. Insert into `orders` table with all fields (order_number is auto-generated by trigger)
+3. Insert each product into `order_items` table with `order_id`, `product_id`, `quantity`, `unit_price`, `variant_id`
+4. Show success toast and refresh orders list
+5. Close dialog
+
+#### UI Integration
+
+- Add a "+" button next to the search bar in AdminOrdersPage header area
+- Button text: "إضافة طلب" (Add Order)
+- Dialog is responsive: full-screen sheet on mobile, centered dialog on desktop
+- Form uses `grid-cols-1 sm:grid-cols-2` for field layout
+
+### Files Changed
+
+
+| File                                         | Action                                       |
+| -------------------------------------------- | -------------------------------------------- |
+| `src/components/admin/CreateOrderDialog.tsx` | Create -- full order creation form component |
+| `src/pages/admin/AdminOrdersPage.tsx`        | Modify -- add button + import dialog         |
+
+
+---
+
+## Part 2: Generate Product Images with AI
+
+### Approach
+
+Use the existing `gemini-image` edge function to generate images for each of the 6 seeded products. The edge function already handles AI image generation and uploads to the `products` storage bucket.
+
+### Image Prompts
+
+
+| Product             | Prompt                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| تمر المجهول الفاخر  | Premium Medjool dates arranged on a dark wooden plate, warm studio lighting, honey-gold color, close-up food photography |
+| عسل السدر الطبيعي   | Natural Sidr honey in a glass jar with wooden dipper, golden amber color, honeycomb backdrop, warm studio lighting       |
+| تمر دقلة نور        | Deglet Noor dates in an elegant bowl, translucent golden-brown, natural daylight, clean white background                 |
+| عسل الزهور البرية   | Wildflower honey in a rustic ceramic pot, flowers scattered around, soft natural lighting, food photography              |
+| علبة هدايا فاخرة    | Luxury gift box with assorted dates and honey jars, red ribbon, premium packaging, dark background                       |
+| معجون التمر الطبيعي | Natural date paste in a glass jar, smooth dark brown texture, dates and nuts around it, warm tones                       |
+
+
+### Implementation
+
+Create a one-time admin action (button in settings or run via edge function) that:
+
+1. Calls the `gemini-image` edge function for each product prompt
+2. Gets back the public URL of the uploaded image
+3. Updates the `products` table: sets `images` array to `[generated_url]`
+
+This will be implemented as a helper function invoked during seeding or as a button in the admin products page. Since the products already exist with empty `images` arrays, we will update them with the generated URLs.
+
+### Edge Function Enhancement
+
+The existing `gemini-image` edge function already works. We need to add `modalities: ["image", "text"]` to the request body for proper image generation support.
+
+### Files Changed
+
+
+| File                                       | Action                                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `supabase/functions/gemini-image/index.ts` | Modify -- add `modalities` param to AI request                                                |
+| `src/pages/admin/AdminProductsPage.tsx`    | Modify -- add "Generate Images" button that calls gemini-image for products with empty images |
+
+
+---
+
+## Implementation Sequence
+
+1. Fix `gemini-image` edge function (add `modalities` field)
+2. Create `CreateOrderDialog.tsx` component
+3. Integrate dialog into `AdminOrdersPage.tsx`
+4. Generate product images (call edge function for each product, update DB)
+5. Test manual order creation flow end-to-end
+
+## Technical Notes
+
+- Order number is auto-generated by the `generate_order_number` database trigger -- no need to manually set it
+- Shipping calculation reuses `calculateShippingForOrder` from `src/lib/shipping.ts`
+- The wilayas table is currently empty -- may need to seed wilayas first for the order form to work properly
+- All form inputs use Arabic labels consistent with existing admin pages
+- RLS policies allow admin users to insert orders (admin has ALL access on orders table)
+- Product images are stored in the `products` storage bucket under `generated/` path (already public)  
+  
+add also in dashobrad in settings a page wher ei have contrller over all of the banner image and images that are used in homage and the all of the text and tank u page all of the page i have controll over them in text and image
