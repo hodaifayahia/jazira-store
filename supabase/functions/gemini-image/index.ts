@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
             content: `Generate a high-quality product image: ${prompt}. Only output the image, no text.`,
           },
         ],
+        modalities: ['image', 'text'],
       }),
     })
 
@@ -55,8 +56,24 @@ Deno.serve(async (req) => {
     let base64Data: string | null = null
     let mimeType = 'image/png'
 
+    // Check for images array in the message (Lovable AI Gateway format)
+    const images = data?.choices?.[0]?.message?.images
+    if (Array.isArray(images)) {
+      for (const img of images) {
+        if (img?.image_url?.url?.startsWith('data:')) {
+          const dataUrl = img.image_url.url
+          const matches = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/)
+          if (matches) {
+            mimeType = matches[1]
+            base64Data = matches[2]
+            break
+          }
+        }
+      }
+    }
+
     // Check if content is an array with image parts (multimodal response)
-    if (Array.isArray(content)) {
+    if (!base64Data && Array.isArray(content)) {
       for (const part of content) {
         if (part.type === 'image_url' && part.image_url?.url?.startsWith('data:')) {
           const dataUrl = part.image_url.url
