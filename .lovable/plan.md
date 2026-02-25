@@ -1,83 +1,72 @@
 
-# Manual Order Creation + Product Seeding with AI Images
 
-## Overview
-Add a "Create Order" button to the admin orders page with a full-featured dialog for manually creating orders. Also seed the database with wilayas, product variations, and generate AI product images.
+# Plan: Fix Coupon, Add Coupon to Product Page, Supplier-Product Sync, and Transaction Improvements
 
-## Step 1: Seed Wilayas Table
-Insert all 58 Algerian wilayas with shipping rates into the `wilayas` table (currently empty). This is required for both the manual order dialog and the checkout flow.
-- Office delivery: 400-900 DZD based on distance
-- Home delivery: +200 DZD premium
+## 1. Fix 100% Coupon Code Issue
 
-## Step 2: Seed Product Variations
-Add variations to the 6 existing products:
-- Medjool dates: Weight (500g, 1kg, 2kg)
-- Sidr honey: Size (250g, 500g, 1kg)
-- Deglet Noor: Weight (500g, 1kg)
-- Wild flower honey: Size (250g, 500g)
-- Gift box: Type (Classic, Premium)
-- Date paste: Size (350g, 700g)
+**Problem**: When a percentage coupon is set to 100%, the discount equals the full subtotal, which can cause the total to become 0 or negative when shipping is factored in incorrectly, or the discount isn't properly capped.
 
-## Step 3: AI Product Image Generation
-Create an edge function `generate-product-images` that:
-1. Calls Lovable AI (google/gemini-3-pro-image-preview) with tailored prompts for each product
-2. Uploads the generated images to the `products` storage bucket
-3. Updates each product's `images` array with the public URLs
+**Fix**:
+- In `src/pages/CheckoutPage.tsx` (line ~250-253): Cap the percentage discount so it never exceeds `eligibleSubtotal`. Add `Math.round()` for clean values.
+- In `src/components/admin/ManualOrderDialog.tsx` (line ~106-111): Same cap logic.
+- In `src/pages/SingleProductPage.tsx`: Will be addressed in item #2.
 
-Update `supabase/config.toml` to register the new function.
+## 2. Add Coupon Code Input to SingleProductPage
 
-## Step 4: Create ManualOrderDialog Component
-New file: `src/components/admin/ManualOrderDialog.tsx`
+**Problem**: The inline order form on the product page has no coupon code field.
 
-A responsive dialog with:
+**Changes in `src/pages/SingleProductPage.tsx`**:
+- Add state variables: `couponCode`, `couponApplied`, `discount`, `couponLoading`
+- Add an `applyCoupon` function (similar to CheckoutPage) that validates the coupon, checks product eligibility, and calculates the discount
+- Add a coupon input UI section between the payment step and order summary (a text input + apply button with Tag icon)
+- Update `orderTotal` calculation to subtract the discount
+- Include `coupon_code` and `discount_amount` in the order insert payload
 
-**Customer Section**
-- Name (required), Phone (required, validated), Wilaya (searchable select from DB), Baladiya (filtered by wilaya using `algeria-wilayas.ts`), Delivery type (office/home radio), Address (shown for home), Payment method (COD/BaridiMob/Flexy)
+## 3. Auto-Create Product in Products Table When Adding Supplier Product
 
-**Product Selection Section**
-- Searchable product list with images, prices, stock
-- Variation/variant selection when applicable
-- Quantity input, add/remove items
+**Problem**: When a product is added via the supplier products tab, it should also be created in the main `products` table as inactive (`is_active: false`) so the admin can later complete the listing.
 
-**Order Summary (live-calculated)**
-- Subtotal, shipping (from wilaya rates + delivery type), coupon input with validation, discount, total
+**Changes in `src/hooks/useSupplierProducts.ts`**:
+- In `useCreateSupplierProducts` mutation, after inserting into `supplier_products`, also insert into the `products` table with:
+  - `name`: from `product_name`
+  - `price`: from `unit_price`
+  - `sku`: from `reference_sku`
+  - `stock`: from `quantity_received - quantity_returned`
+  - `is_active`: `false`
+  - `category`: `['general']` (default)
+  - `product_type`: `'physical'`
 
-**Submit Logic**
-- Insert into `orders` and `order_items` tables
-- Deduct stock from `products`
-- Show success toast with order number
-- Refresh orders list
+## 4. Remove "Quantity Returned" Field from Supplier Product Entry
 
-**Responsive**: 2-column grid on desktop, single column on mobile, `max-h-[90vh] overflow-y-auto`
+**Problem**: The user does not need the "مرتجع" (quantity returned) field in the supplier product bulk entry form.
 
-## Step 5: Update AdminOrdersPage
-Add a "Create Order" button (Plus icon) to the filter bar and integrate the `ManualOrderDialog` component.
+**Changes**:
+- `src/components/admin/suppliers/ProductBulkEntryForm.tsx`: Remove the `quantity_returned` input field. Set it to 0 by default. Update remaining stock calculation to just use `quantity_received`.
+- `src/components/admin/suppliers/ProductCSVImportWizard.tsx`: Remove `quantity_returned` from `APP_FIELDS`.
+- `src/components/admin/suppliers/SupplierProductsTab.tsx`: Remove the "Qty Returned" column from the table header and rows. Remove it from the inline edit fields.
 
-## Technical Details
+## 5. Improve Transaction Form (Best Practices)
 
-### Files to Create
-| File | Purpose |
-|------|---------|
-| `src/components/admin/ManualOrderDialog.tsx` | Manual order creation dialog |
-| `supabase/functions/generate-product-images/index.ts` | AI image generation edge function |
+**Changes in `src/components/admin/suppliers/TransactionForm.tsx`**:
+- Add proper form validation with error messages (required fields highlighted)
+- Add a description field that auto-suggests based on transaction type
+- Separate "items_received" and "items_given" into explicit labeled fields instead of a single "amount" that flips based on type
+- Add a running balance preview showing current balance and projected balance after the transaction
+- Reset form properly after successful save
+- Add confirmation for large amounts
+- Improve the transaction type labels and add icons for clarity
 
-### Files to Modify
-| File | Change |
-|------|--------|
-| `src/pages/admin/AdminOrdersPage.tsx` | Add "Create Order" button + dialog |
-| `supabase/config.toml` | Register new edge function |
+### Technical Details
 
-### Database Operations
-| Table | Operation |
-|-------|-----------|
-| `wilayas` | Insert 58 rows with shipping rates |
-| `product_variations` | Insert ~14 variation rows |
-| `products` | Update images array after AI generation |
+**Files to modify**:
+1. `src/pages/CheckoutPage.tsx` - Cap discount at subtotal for 100% coupons
+2. `src/pages/SingleProductPage.tsx` - Add coupon code section to inline order form
+3. `src/components/admin/ManualOrderDialog.tsx` - Cap discount at subtotal
+4. `src/hooks/useSupplierProducts.ts` - Auto-create inactive product in products table
+5. `src/components/admin/suppliers/ProductBulkEntryForm.tsx` - Remove quantity_returned field
+6. `src/components/admin/suppliers/ProductCSVImportWizard.tsx` - Remove quantity_returned from fields
+7. `src/components/admin/suppliers/SupplierProductsTab.tsx` - Remove quantity_returned column
+8. `src/components/admin/suppliers/TransactionForm.tsx` - Improve with best practices
 
-### Implementation Sequence
-1. Seed wilayas (dependency for order creation)
-2. Seed product variations
-3. Create + deploy image generation edge function
-4. Generate and assign product images
-5. Create ManualOrderDialog component
-6. Update AdminOrdersPage with button + dialog
+**No database changes needed** - all existing tables support the required functionality.
+
