@@ -113,6 +113,10 @@ export default function SingleProductPage() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   // Touch swipe for images
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -441,7 +445,51 @@ export default function SingleProductPage() {
   const shippingRate = productShippingRate > 0 ? productShippingRate : baseRate;
   const shippingCost = shippingRate * qty;
   const itemSubtotal = effectivePrice * qty;
-  const orderTotal = itemSubtotal + shippingCost;
+  const orderTotal = itemSubtotal + shippingCost - couponDiscount;
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    try {
+      const { data } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', couponCode.trim())
+        .eq('is_active', true)
+        .single();
+      if (!data) {
+        toast({ title: 'خطأ', description: 'كود الخصم غير صالح', variant: 'destructive' });
+        return;
+      }
+      if (data.expiry_date && new Date(data.expiry_date) < new Date()) {
+        toast({ title: 'خطأ', description: 'كود الخصم منتهي الصلاحية', variant: 'destructive' });
+        return;
+      }
+      // Check product eligibility
+      const { data: couponProds } = await supabase
+        .from('coupon_products')
+        .select('product_id')
+        .eq('coupon_id', data.id);
+      if (couponProds && couponProds.length > 0) {
+        const eligible = couponProds.some(cp => cp.product_id === product.id);
+        if (!eligible) {
+          toast({ title: 'خطأ', description: 'كود الخصم لا ينطبق على هذا المنتج', variant: 'destructive' });
+          return;
+        }
+      }
+      const rawDiscount = data.discount_type === 'percentage'
+        ? Math.round(itemSubtotal * Number(data.discount_value) / 100)
+        : Number(data.discount_value);
+      const discountVal = Math.min(rawDiscount, itemSubtotal);
+      setCouponDiscount(discountVal);
+      setCouponApplied(true);
+      toast({ title: 'تم تطبيق الخصم', description: `خصم ${formatPrice(discountVal)}` });
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء التحقق من الكود', variant: 'destructive' });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const baridimobEnabled = settings?.baridimob_enabled === 'true';
   const flexyEnabled = settings?.flexy_enabled === 'true';
@@ -495,6 +543,8 @@ export default function SingleProductPage() {
         address: orderAddress || null,
         subtotal: itemSubtotal, shipping_cost: shippingCost, total_amount: orderTotal,
         payment_method: paymentMethod, payment_receipt_url: receiptUrl || null,
+        coupon_code: couponApplied ? couponCode : null,
+        discount_amount: couponDiscount,
         user_id: user?.id || null,
       }).select().single();
       if (error) throw error;
@@ -998,6 +1048,33 @@ export default function SingleProductPage() {
                 {errors.paymentMethod && <p className="text-destructive text-xs font-cairo mt-1">{errors.paymentMethod}</p>}
               </div>
 
+              {/* Coupon Code */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 mb-1">
+                  <Tag className="w-4 h-4 text-primary" />
+                  <span className="font-cairo font-semibold text-sm">كود الخصم</span>
+                </div>
+                {couponApplied ? (
+                  <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl p-3">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-cairo text-sm text-green-700">تم تطبيق الخصم: {formatPrice(couponDiscount)}</span>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={couponCode}
+                      onChange={e => setCouponCode(e.target.value)}
+                      placeholder="أدخل كود الخصم"
+                      className="font-cairo flex-1"
+                      dir="ltr"
+                    />
+                    <Button variant="outline" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()} className="font-cairo">
+                      {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تطبيق'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {/* Order Summary */}
               {orderWilayaId && orderDeliveryType && (
                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5 text-sm font-cairo">
@@ -1009,6 +1086,12 @@ export default function SingleProductPage() {
                     <span>التوصيل ({orderDeliveryType === 'home' ? 'منزل' : 'مكتب'})</span>
                     <span className="font-roboto font-bold">{formatPrice(shippingCost)}</span>
                   </div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>الخصم</span>
+                      <span className="font-roboto font-bold">-{formatPrice(couponDiscount)}</span>
+                    </div>
+                  )}
                   <hr className="my-1 border-primary/20" />
                   <div className="flex justify-between font-bold text-base">
                     <span>الإجمالي</span>

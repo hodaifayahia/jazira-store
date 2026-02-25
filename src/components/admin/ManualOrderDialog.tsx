@@ -105,10 +105,10 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
 
   const discountAmount = useMemo(() => {
     if (!appliedCoupon) return 0;
-    if (appliedCoupon.discount_type === 'percentage') {
-      return Math.round(subtotal * appliedCoupon.discount_value / 100);
-    }
-    return appliedCoupon.discount_value;
+    const raw = appliedCoupon.discount_type === 'percentage'
+      ? Math.round(subtotal * appliedCoupon.discount_value / 100)
+      : appliedCoupon.discount_value;
+    return Math.min(raw, subtotal);
   }, [appliedCoupon, subtotal]);
 
   const total = subtotal + shippingCost - discountAmount;

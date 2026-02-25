@@ -9,7 +9,7 @@ import { Upload, Download, AlertCircle } from 'lucide-react';
 
 const APP_FIELDS = [
   'product_name', 'reference_sku', 'unit', 'quantity_received',
-  'quantity_returned', 'unit_price', 'date', 'notes', 'category',
+  'unit_price', 'date', 'notes', 'category',
 ] as const;
 
 interface Props {
@@ -94,7 +94,7 @@ export default function ProductCSVImportWizard({ open, onOpenChange, supplierId,
   };
 
   const downloadTemplate = () => {
-    const csv = 'product_name,reference_sku,unit,quantity_received,quantity_returned,unit_price,date,notes,category\nExample Product,SKU-001,pcs,100,0,500,2026-01-01,Sample note,General';
+    const csv = 'product_name,reference_sku,unit,quantity_received,unit_price,date,notes,category\nExample Product,SKU-001,pcs,100,500,2026-01-01,Sample note,General';
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -149,7 +149,7 @@ export default function ProductCSVImportWizard({ open, onOpenChange, supplierId,
                     <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__skip">{t('supplierProducts.skip')}</SelectItem>
-                      {APP_FIELDS.map(f => <SelectItem key={f} value={f}>{t(`supplierProducts.${f === 'product_name' ? 'productName' : f === 'reference_sku' ? 'referenceSku' : f === 'quantity_received' ? 'qtyReceived' : f === 'quantity_returned' ? 'qtyReturned' : f === 'unit_price' ? 'unitPrice' : f}`)}</SelectItem>)}
+                      {APP_FIELDS.map(f => <SelectItem key={f} value={f}>{t(`supplierProducts.${f === 'product_name' ? 'productName' : f === 'reference_sku' ? 'referenceSku' : f === 'quantity_received' ? 'qtyReceived' : f === 'unit_price' ? 'unitPrice' : f}`)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
