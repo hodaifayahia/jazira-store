@@ -13,7 +13,6 @@ interface ProductRow {
   reference_sku: string;
   unit: string;
   quantity_received: number;
-  quantity_returned: number;
   unit_price: number;
   date: string;
   notes: string;
@@ -26,7 +25,6 @@ const emptyRow = (): ProductRow => ({
   reference_sku: '',
   unit: 'pcs',
   quantity_received: 0,
-  quantity_returned: 0,
   unit_price: 0,
   date: new Date().toISOString().split('T')[0],
   notes: '',
@@ -103,7 +101,7 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
                   <Input value={row.reference_sku} onChange={e => updateRow(i, 'reference_sku', e.target.value)} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.unit')}</label>
                   <Select value={row.unit} onValueChange={v => updateRow(i, 'unit', v)}>
@@ -117,10 +115,6 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
                   <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.qtyReceived')}</label>
                   <Input type="number" min={0} value={row.quantity_received || ''} onChange={e => updateRow(i, 'quantity_received', Number(e.target.value))} className="font-roboto" />
                 </div>
-                <div>
-                  <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.qtyReturned')}</label>
-                  <Input type="number" min={0} value={row.quantity_returned || ''} onChange={e => updateRow(i, 'quantity_returned', Number(e.target.value))} className="font-roboto" />
-                </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -129,7 +123,7 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
                 </div>
                 <div>
                   <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.remainingStock')}</label>
-                  <Input readOnly value={row.quantity_received - row.quantity_returned} className="font-roboto bg-muted/50" />
+                  <Input readOnly value={row.quantity_received} className="font-roboto bg-muted/50" />
                 </div>
                 <div>
                   <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.totalPrice')}</label>

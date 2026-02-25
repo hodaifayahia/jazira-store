@@ -247,9 +247,10 @@ export default function CheckoutPage() {
         .reduce((sum, item) => sum + item.price * item.quantity, 0);
     }
 
-    const discountVal = data.discount_type === 'percentage'
-      ? eligibleSubtotal * Number(data.discount_value) / 100
-      : Math.min(Number(data.discount_value), eligibleSubtotal);
+    const rawDiscount = data.discount_type === 'percentage'
+      ? Math.round(eligibleSubtotal * Number(data.discount_value) / 100)
+      : Number(data.discount_value);
+    const discountVal = Math.min(rawDiscount, eligibleSubtotal);
     setDiscount(discountVal);
     setCouponApplied(true);
     toast({ title: 'تم تطبيق الخصم', description: `خصم ${formatPrice(discountVal)}` });

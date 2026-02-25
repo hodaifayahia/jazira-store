@@ -57,6 +57,19 @@ export function useCreateSupplierProducts() {
     }>) => {
       const { data, error } = await supabase.from('supplier_products').insert(products).select();
       if (error) throw error;
+
+      // Auto-create inactive products in the main products table
+      const productInserts = products.map(p => ({
+        name: p.product_name,
+        price: p.unit_price || 0,
+        sku: p.reference_sku || null,
+        stock: (p.quantity_received || 0) - (p.quantity_returned || 0),
+        is_active: false,
+        category: ['general'],
+        product_type: 'physical',
+      }));
+      await supabase.from('products').insert(productInserts);
+
       return data;
     },
     onSuccess: (_, vars) => {

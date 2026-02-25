@@ -122,7 +122,7 @@ export default function SupplierProductsTab({ supplierId }: Props) {
 
   const startEdit = (p: SupplierProduct) => {
     setEditingId(p.id);
-    setEditValues({ quantity_received: p.quantity_received, quantity_returned: p.quantity_returned, unit_price: p.unit_price, low_stock_threshold: p.low_stock_threshold });
+    setEditValues({ quantity_received: p.quantity_received, unit_price: p.unit_price, low_stock_threshold: p.low_stock_threshold });
   };
 
   const saveEdit = async () => {
@@ -241,7 +241,6 @@ export default function SupplierProductsTab({ supplierId }: Props) {
                   <TableHead className="font-cairo">{t('supplierProducts.referenceSku')}</TableHead>
                   <TableHead className="font-cairo">{t('supplierProducts.unit')}</TableHead>
                   <TableHead className="font-cairo text-center">{t('supplierProducts.qtyReceived')}</TableHead>
-                  <TableHead className="font-cairo text-center">{t('supplierProducts.qtyReturned')}</TableHead>
                   <TableHead className="font-cairo text-center">{t('supplierProducts.remainingStock')}</TableHead>
                   <TableHead className="font-cairo text-center">{t('supplierProducts.unitPrice')}</TableHead>
                   <TableHead className="font-cairo text-center">{t('supplierProducts.totalPrice')}</TableHead>
@@ -264,11 +263,6 @@ export default function SupplierProductsTab({ supplierId }: Props) {
                       {editingId === p.id ? (
                         <Input type="number" value={editValues.quantity_received ?? ''} onChange={e => setEditValues(v => ({ ...v, quantity_received: Number(e.target.value) }))} className="w-20 h-8 text-center font-roboto" />
                       ) : Number(p.quantity_received)}
-                    </TableCell>
-                    <TableCell className="font-roboto text-center">
-                      {editingId === p.id ? (
-                        <Input type="number" value={editValues.quantity_returned ?? ''} onChange={e => setEditValues(v => ({ ...v, quantity_returned: Number(e.target.value) }))} className="w-20 h-8 text-center font-roboto" />
-                      ) : Number(p.quantity_returned)}
                     </TableCell>
                     <TableCell className={`font-roboto text-center font-bold ${Number(p.remaining_stock) <= 0 ? 'text-destructive' : Number(p.remaining_stock) <= p.low_stock_threshold ? 'text-yellow-600' : 'text-green-600'}`}>
                       {Number(p.remaining_stock)}
