@@ -946,4 +946,12 @@ export const ar: Record<string, string> = {
 
   // ═══ Client Stock ═══
   'clients.insufficientStock': 'المخزون غير كافي. المتوفر:',
+
+  // ═══ Confirmer ═══
+  'confirmer.panel': 'لوحة المؤكد',
+  'confirmer.totalOrders': 'إجمالي الطلبات',
+  'confirmer.newToday': 'جديد اليوم',
+  'confirmer.confirmedToday': 'مؤكد اليوم',
+  'confirmer.cancelledToday': 'ملغي اليوم',
+  'confirmer.searchPlaceholder': 'بحث برقم الطلب أو الاسم أو الهاتف...',
 };

@@ -19,13 +19,40 @@ export default function AdminLoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setLoading(false);
       toast({ title: t('login.error'), description: t('login.invalidCredentials'), variant: 'destructive' });
-    } else {
-      navigate('/admin');
+      return;
     }
+
+    const userId = data.user?.id;
+    if (!userId) {
+      setLoading(false);
+      toast({ title: t('login.error'), description: t('login.invalidCredentials'), variant: 'destructive' });
+      return;
+    }
+
+    // Check admin role first
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (isAdmin) {
+      setLoading(false);
+      navigate('/admin');
+      return;
+    }
+
+    // Check confirmer role
+    const { data: isConfirmer } = await supabase.rpc('has_role', { _user_id: userId, _role: 'confirmer' });
+    if (isConfirmer) {
+      setLoading(false);
+      navigate('/confirmer');
+      return;
+    }
+
+    // No role - sign out and show error
+    await supabase.auth.signOut();
+    setLoading(false);
+    toast({ title: t('login.error'), description: t('sidebar.noAccess'), variant: 'destructive' });
   };
 
   return (
