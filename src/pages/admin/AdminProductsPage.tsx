@@ -1391,8 +1391,8 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             <p className="font-cairo text-muted-foreground text-sm">لا توجد عروض حزم — أضف عرضاً لتقديم خصومات على الكميات</p>
           </div>
         ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="border rounded-lg overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
               <thead className="bg-muted/50">
                 <tr>
                   <th className="p-2.5 text-right font-cairo font-medium text-muted-foreground">وصف العرض</th>
@@ -1707,7 +1707,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                 {images.length > 0 && (
                   <div>
                     <Label className="font-cairo text-sm">اختر من صور المنتج الحالية</Label>
-                    <div className="grid grid-cols-4 gap-2 mt-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
                       {images.map((url, imgIdx) => (
                         <button
                           key={imgIdx}

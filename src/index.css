@@ -261,3 +261,38 @@
     animation: none !important;
   }
 }
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth page transitions */
+.page-transition {
+  animation: pageIn 0.3s ease-out;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Touch-friendly tap target */
+@media (hover: none) {
+  .group:hover .group-hover\:opacity-100 {
+    opacity: 1 !important;
+  }
+  .group:hover .group-hover\:translate-y-0 {
+    transform: translateY(0) !important;
+  }
+}

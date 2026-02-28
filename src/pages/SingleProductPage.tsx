@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import RecentlyViewedSection from '@/components/RecentlyViewedSection';
 
 function StarRating({ value, onChange, readonly = false }: { value: number; onChange?: (v: number) => void; readonly?: boolean }) {
   return (
@@ -89,6 +91,7 @@ export default function SingleProductPage() {
   const { addItem } = useCart();
   const { toast } = useToast();
   const { trackEvent } = useFacebookPixel();
+  const { addItem: addRecentlyViewed } = useRecentlyViewed();
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -329,8 +332,15 @@ export default function SingleProductPage() {
         value: Number(product.price),
         currency: 'DZD',
       });
+      // Track recently viewed
+      addRecentlyViewed({
+        id: product.id,
+        name: product.name,
+        price: Number(product.price),
+        image: product.images?.[product.main_image_index ?? 0] || product.images?.[0] || '',
+      });
     }
-  }, [product, trackEvent]);
+  }, [product, trackEvent, addRecentlyViewed]);
 
   if (isLoading) {
     return (
@@ -1177,6 +1187,9 @@ export default function SingleProductPage() {
           </div>
         )}
       </section>
+
+      {/* Recently Viewed */}
+      <RecentlyViewedSection />
 
       {/* Sticky Bottom Buy Bar */}
       {!outOfStock && showStickyBar && (

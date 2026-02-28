@@ -303,16 +303,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Main */}
       <div className={`flex-1 ${isRtl ? 'lg:mr-64' : 'lg:ml-64'}`}>
-        <header className="sticky top-0 z-40 bg-card border-b h-14 flex items-center px-4 gap-2">
+        <header className="sticky top-0 z-40 bg-card border-b h-14 flex items-center px-3 sm:px-4 gap-1.5 sm:gap-2 overflow-x-auto">
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
-          <h1 className="font-cairo font-bold text-lg shrink-0 hidden lg:block">
+          <h1 className="font-cairo font-bold text-base sm:text-lg shrink-0 hidden lg:block truncate">
             {currentPageLabel ? t(currentPageLabel) : t('sidebar.controlPanel')}
           </h1>
 
           {/* Global Order Search */}
-          <form onSubmit={handleHeaderSearch} className={`flex-1 max-w-xs hidden lg:flex items-center gap-1 ${isRtl ? 'mr-auto' : 'ml-auto'}`}>
+          <form onSubmit={handleHeaderSearch} className={`flex-1 max-w-xs hidden sm:flex items-center gap-1 ${isRtl ? 'mr-auto' : 'ml-auto'}`}>
             <div className="relative w-full">
               <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none ${isRtl ? 'right-2.5' : 'left-2.5'}`} />
               <Input
@@ -458,7 +458,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </PopoverContent>
           </Popover>
         </header>
-        <main className="p-4 md:p-6 overflow-x-hidden min-w-0">{children}</main>
+        <main className="p-3 sm:p-4 md:p-6 overflow-x-hidden min-w-0">{children}</main>
       </div>
 
       {/* Overlay */}

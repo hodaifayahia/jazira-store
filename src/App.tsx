@@ -4,9 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import ScrollToTop from "@/components/ScrollToTop";
 import AdminLayout from "@/components/AdminLayout";
 import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
@@ -49,6 +51,7 @@ import AdminDeliveryPage from "./pages/admin/settings/AdminDeliveryPage";
 import AdminPixelsPage from "./pages/admin/settings/AdminPixelsPage";
 import AboutPage from "./pages/AboutPage";
 import LandingPage from "./pages/LandingPage";
+import WishlistPage from "./pages/WishlistPage";
 import NotFound from "./pages/NotFound";
 import ConfirmerLayout from "./components/ConfirmerLayout";
 import ConfirmerDashboardPage from "./pages/confirmer/ConfirmerDashboardPage";
@@ -75,6 +78,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <ScrollToTop />
     </div>
   );
 }
@@ -82,6 +86,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <CartProvider>
+      <WishlistProvider>
       <StoreThemeProvider>
       <TooltipProvider>
         <Toaster />
@@ -100,6 +105,7 @@ const App = () => (
             <Route path="/auth" element={<PublicLayout><AuthPage /></PublicLayout>} />
             <Route path="/dashboard" element={<PublicLayout><CustomerDashboardPage /></PublicLayout>} />
             <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
+            <Route path="/wishlist" element={<PublicLayout><WishlistPage /></PublicLayout>} />
             <Route path="/lp/:id" element={<LandingPage />} />
 
             {/* Admin */}
@@ -143,6 +149,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
       </StoreThemeProvider>
+      </WishlistProvider>
     </CartProvider>
   </QueryClientProvider>
 );

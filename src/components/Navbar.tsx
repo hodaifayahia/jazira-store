@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Home, Package, MapPin, User, LogIn, Info, Search, Shirt, Watch, Footprints, Smartphone, Home as HomeIcon, Grid3X3, ChevronDown, type LucideIcon } from 'lucide-react';
+import { ShoppingCart, Menu, X, Home, Package, MapPin, User, LogIn, Info, Search, Shirt, Watch, Footprints, Smartphone, Home as HomeIcon, Grid3X3, ChevronDown, Heart, type LucideIcon } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useStoreLogo } from '@/hooks/useStoreLogo';
@@ -30,6 +31,7 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const { totalItems } = useCart();
+  const { totalItems: wishlistCount } = useWishlist();
   const [menuOpen, setMenuOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const { data: logoUrl } = useStoreLogo();
@@ -179,6 +181,18 @@ export default function Navbar() {
             )}
 
             <Link
+              to="/wishlist"
+              className="relative p-2.5 rounded-xl hover:bg-muted transition-colors"
+              aria-label="المفضلة"
+            >
+              <Heart className={`w-5 h-5 ${wishlistCount > 0 ? 'text-destructive fill-destructive' : 'text-muted-foreground'}`} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -left-0.5 w-4 h-4 bg-destructive text-white text-[10px] font-roboto rounded-full flex items-center justify-center font-bold shadow-sm">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
+            <Link
               to="/cart"
               className="relative p-2.5 rounded-xl hover:bg-muted transition-colors"
             >
@@ -246,6 +260,14 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+              <Link
+                to="/wishlist"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-cairo font-medium text-sm text-muted-foreground hover:bg-muted"
+              >
+                <Heart className={`w-4 h-4 ${wishlistCount > 0 ? 'text-destructive fill-destructive' : ''}`} />
+                المفضلة {wishlistCount > 0 && `(${wishlistCount})`}
+              </Link>
               <Link
                 to={user ? '/dashboard' : '/auth'}
                 onClick={() => setMenuOpen(false)}

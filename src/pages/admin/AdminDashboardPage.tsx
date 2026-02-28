@@ -11,15 +11,15 @@ import { useTranslation } from '@/i18n';
 
 function StatCard({ icon: Icon, label, value, color, subtext }: { icon: any; label: string; value: string; color: string; subtext?: string }) {
   return (
-    <div className="bg-card border rounded-xl p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="font-cairo text-sm text-muted-foreground">{label}</p>
-          <p className="font-roboto font-bold text-2xl mt-1">{value}</p>
-          {subtext && <p className="font-cairo text-xs text-muted-foreground mt-1">{subtext}</p>}
+    <div className="bg-card border rounded-xl p-4 sm:p-5 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-cairo text-xs sm:text-sm text-muted-foreground truncate">{label}</p>
+          <p className="font-roboto font-bold text-xl sm:text-2xl mt-1 truncate">{value}</p>
+          {subtext && <p className="font-cairo text-[11px] sm:text-xs text-muted-foreground mt-1 truncate">{subtext}</p>}
         </div>
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
-          <Icon className="w-5 h-5" />
+        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
       </div>
     </div>
@@ -245,7 +245,7 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard icon={ShoppingCart} label={t('dashboard.todayOrders')} value={String(today.length)} color="bg-primary/10 text-primary" subtext={`${thisMonth.length} ${t('dashboard.thisMonth')}`} />
         <StatCard icon={DollarSign} label={t('dashboard.monthRevenue')} value={formatPrice(revenue)} color="bg-secondary/10 text-secondary" subtext={lastMonthRevenue > 0 ? `${t('dashboard.lastMonth')}: ${formatPrice(lastMonthRevenue)}` : undefined} />
         <StatCard icon={TrendingUp} label={t('dashboard.avgOrderValue')} value={formatPrice(avgOrderValue)} color="bg-accent text-accent-foreground" subtext={`${orders?.length || 0} ${t('dashboard.totalOrders')}`} />
