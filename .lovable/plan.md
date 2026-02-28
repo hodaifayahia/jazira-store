@@ -1,55 +1,27 @@
 
-# Plan: Abandoned Cart on Landing Pages, Delivery in Sidebar, and Responsive Fixes
 
-## 1. Abandoned Cart Capture on Landing Page
+# Fix Responsive Tables on Costs, Returns, and Supplier Pages
 
-**Problem**: The CheckoutPage already saves abandoned orders when users fill in their info but don't complete the order. However, the Landing Page (single-product order form) does NOT capture abandoned carts at all.
+## Problem
+The tables on the Costs and Returns pages use `w-full` on the `<table>` element, which causes columns to compress and overlap on mobile instead of triggering horizontal scroll. The `overflow-x-auto` wrapper is present but the table shrinks to fit rather than maintaining a usable minimum width.
 
-**Solution**: Add the same debounced abandoned cart capture logic from `CheckoutPage.tsx` to `LandingPage.tsx`. When a user fills in their name and phone on the landing page form but doesn't submit, save/update an `abandoned_orders` record after 5 seconds of inactivity.
+## Solution
+Add `min-w-[800px]` (or similar) to the `<table>` elements so they maintain their column widths on mobile, and the `overflow-x-auto` parent container enables horizontal scrolling.
 
-### File to Modify
-- `src/pages/LandingPage.tsx` -- Add a `useEffect` that watches `orderName`, `orderPhone`, and the product data. After a 5-second debounce (once name >= 2 chars and phone >= 10 digits), upsert an abandoned order with the product info as cart items and `landing_page_id` context.
+## Changes
 
----
+### 1. `src/pages/admin/AdminCostsPage.tsx` (line 145)
+- Change `<table className="w-full text-sm">` to `<table className="w-full text-sm min-w-[800px]">`
+- This ensures the 8-column table scrolls horizontally on narrow screens
 
-## 2. Delivery Companies Already in Sidebar
+### 2. `src/pages/admin/AdminReturnsPage.tsx` (line 192)
+- Change `<table className="w-full text-sm">` to `<table className="w-full text-sm min-w-[700px]">`
+- The returns table already hides some columns on mobile (`hidden md:table-cell`), but still needs a min-width for the visible columns
 
-The delivery companies management page is already accessible at `/admin/settings/delivery` and is listed in the settings sub-navigation (`SETTINGS_SUB_KEYS` in `AdminLayout.tsx`). No further changes needed here.
+### 3. `src/pages/admin/AdminSuppliersPage.tsx`
+- Check if supplier list uses a table or cards -- if table, apply same `min-w` fix
 
----
+### 4. `src/components/admin/suppliers/SupplierProductsTab.tsx`
+- Apply `min-w-[700px]` to the products table inside the supplier detail page
 
-## 3. Fix Responsive Tables (Overflow-Y Instead of Full Page Scroll)
-
-**Problem**: Tables on the Returns, Costs, Suppliers, and Supplier Detail pages expand the entire page width on mobile. The tables should scroll horizontally within a constrained container rather than stretching the whole page.
-
-**Solution**: Wrap all table containers in a `max-h` scroll area or ensure the existing `overflow-x-auto` wrapper is inside a properly constrained parent. The main issue is that the parent `div` in `AdminLayout` content area doesn't constrain overflow. We need to add `overflow-hidden` or `overflow-x-hidden` to the main content wrapper and ensure table wrappers have `overflow-x-auto` with `min-w-0`.
-
-### Files to Modify
-
-1. **`src/pages/admin/AdminCostsPage.tsx`** -- The table wrapper at line 144 has `overflow-x-auto` but the parent space doesn't constrain. Add `min-w-0` to the root div.
-
-2. **`src/pages/admin/AdminReturnsPage.tsx`** -- Similar fix: ensure the root container has `min-w-0` and table wrapper constrains overflow.
-
-3. **`src/pages/admin/AdminSuppliersPage.tsx`** -- Add `min-w-0` to root and ensure table wrapper constrains properly.
-
-4. **`src/pages/admin/AdminSupplierDetailPage.tsx`** -- Add `min-w-0` to root div and ensure both the transactions table and products tab tables scroll horizontally within their container.
-
-5. **`src/components/admin/suppliers/SupplierProductsTab.tsx`** -- Already has `overflow-x-auto` on the table wrapper (line 233). Add `min-w-0` to the root div to prevent it from expanding beyond its parent.
-
-6. **`src/components/AdminLayout.tsx`** -- Add `overflow-x-hidden min-w-0` to the main content area `<main>` tag so child tables cannot expand the layout.
-
----
-
-## Technical Summary
-
-| File | Change |
-|------|--------|
-| `src/pages/LandingPage.tsx` | Add abandoned cart capture `useEffect` with 5s debounce |
-| `src/components/AdminLayout.tsx` | Add `overflow-x-hidden min-w-0` to main content wrapper |
-| `src/pages/admin/AdminCostsPage.tsx` | Add `min-w-0` to root container |
-| `src/pages/admin/AdminReturnsPage.tsx` | Add `min-w-0` to root container |
-| `src/pages/admin/AdminSuppliersPage.tsx` | Add `min-w-0` to root container |
-| `src/pages/admin/AdminSupplierDetailPage.tsx` | Add `min-w-0` to root container |
-| `src/components/admin/suppliers/SupplierProductsTab.tsx` | Add `min-w-0` to root container |
-
-No database changes needed -- the `abandoned_orders` table already supports all required fields.
+These are minimal CSS-only changes (adding one class per table) that fix the horizontal scroll behavior without restructuring any components.
