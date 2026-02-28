@@ -1,48 +1,39 @@
 
 
-# Plan: Sticky Columns in Costs Table, Delivery in Sidebar, and Push Orders Button
+# Fix: Send Orders to Delivery Company via API (Not CSV Download)
 
-## 1. Sticky First Columns in Costs Table (Product Name + Selling Price)
+## Problem
+Currently, clicking "Push to Delivery" always downloads a CSV file. The user wants it to **send orders directly to the delivery company's API**. CSV should only be a fallback when no API is configured.
 
-**File**: `src/pages/admin/AdminCostsPage.tsx`
+## Changes
 
-Make the first two columns (Product Name and Selling Price) sticky during horizontal scrolling on mobile:
-- Add `sticky left-0 z-10 bg-white` (or `bg-muted/30` for header) to the first two `<th>` and `<td>` elements
-- The product name column gets `sticky left-0` and the selling price column gets `sticky left-[calculated-width]`
-- This ensures these key columns stay visible while scrolling through cost/margin data
+### 1. `src/pages/admin/AdminOrdersPage.tsx` -- Fix `handleExportToDelivery`
 
-## 2. Add Delivery Companies as a Direct Sidebar Item
+Update the handler logic (lines 98-130):
+- If the delivery company has an API configured and the API call succeeds, show a success toast -- NO CSV download
+- If the API call fails, show an error toast with the failure message
+- Only download CSV as fallback when the company has NO API key/URL configured
+- Change the button icon from `Download` to `Truck` (send icon) to reflect the action
+- Update button text to indicate "send" not "export"
 
-**File**: `src/components/AdminLayout.tsx`
+### 2. `supabase/functions/delivery-export/index.ts` -- Improve API response
 
-Currently, the delivery page is buried under Settings > Delivery. The user wants it as a top-level sidebar item:
-- Add `{ href: '/admin/delivery', key: 'delivery.title', icon: Truck }` to `NAV_KEYS` array (after suppliers or orders)
+The edge function already handles API calls correctly. Minor improvement:
+- When API is configured, include the API response body in `apiResult` for better error reporting
+- Still return CSV in the response for fallback use, but the frontend will decide whether to download it
 
-**File**: `src/App.tsx`
-- Add route: `/admin/delivery` pointing to `AdminDeliveryPage`
+### 3. Dialog UX improvements in `AdminOrdersPage.tsx`
 
-## 3. Add "Push All Orders to Delivery" Button on Orders Page
-
-**File**: `src/pages/admin/AdminOrdersPage.tsx`
-
-Add a prominent button at the top of the orders page (not just in bulk selection bar) that:
-- Shows a "Push to Delivery" button next to the "Create Order" button
-- Opens the delivery company selection dialog
-- Exports ALL filtered orders (not just selected) to the chosen delivery company via the existing `delivery-export` edge function
-- Uses the same `handleExportToDelivery` logic already in the page
-
-This will add a top-level button so users don't need to manually select orders first.
-
----
+- Show which companies have API configured (green dot already exists)
+- Add a note in the dialog: "Orders will be sent directly to the company" when API is configured, or "CSV will be downloaded" when not
+- Show a success summary after push (e.g., "15 orders sent to Yalidine successfully")
 
 ## Technical Summary
 
 | File | Change |
 |------|--------|
-| `src/pages/admin/AdminCostsPage.tsx` | Add `sticky left-0` to product name and selling price columns in both `thead` and `tbody` |
-| `src/components/AdminLayout.tsx` | Add delivery to `NAV_KEYS` sidebar array |
-| `src/App.tsx` | Add `/admin/delivery` route |
-| `src/pages/admin/AdminOrdersPage.tsx` | Add top-level "Push to Delivery" button that exports all filtered orders |
+| `src/pages/admin/AdminOrdersPage.tsx` | Prioritize API push over CSV download in `handleExportToDelivery`; update icons and labels |
+| `supabase/functions/delivery-export/index.ts` | Include API response body for better error messages |
 
 No database changes needed.
 
