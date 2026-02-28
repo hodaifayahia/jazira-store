@@ -1,4 +1,4 @@
-declare const puter: any;
+import { ensurePuterLoaded, getPuter } from './puterClient';
 
 interface LandingContentResult {
   headline: string;
@@ -30,9 +30,8 @@ export async function generateTextWithPuter(params: {
   category?: string;
   language: string;
 }): Promise<LandingContentResult> {
-  if (typeof puter === 'undefined') {
-    throw new Error('Puter.js is not loaded. Please refresh the page.');
-  }
+  await ensurePuterLoaded();
+  const puter = getPuter();
 
   const langName = langMap[params.language] || 'English';
   const discount = params.oldPrice ? `${Math.round((1 - params.price / params.oldPrice) * 100)}% OFF` : '';

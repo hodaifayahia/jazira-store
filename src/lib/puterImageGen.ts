@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-
-declare const puter: any;
+import { ensurePuterLoaded, getPuter } from './puterClient';
 
 /**
  * Generate an image using Gemini Free Tier (primary) or Puter.js (fallback).
@@ -21,9 +20,8 @@ export async function generateImageWithPuter(prompt: string): Promise<string> {
   }
 
   // Fallback to Puter.js
-  if (typeof puter === 'undefined') {
-    throw new Error('Both Gemini and Puter.js failed. Please try again.');
-  }
+  await ensurePuterLoaded();
+  const puter = getPuter();
 
   const models = ['dall-e-3', 'flux-schnell'];
   let lastError: Error | null = null;

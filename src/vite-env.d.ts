@@ -9,4 +9,6 @@ interface Puter {
   ai: PuterAI;
 }
 
-declare const puter: Puter;
+interface Window {
+  puter?: Puter;
+}
