@@ -214,6 +214,47 @@ export default function LandingPage() {
     }
   }, [content?.headline]);
 
+  // Abandoned cart capture: save when user fills name+phone but doesn't submit
+  const [abandonedId, setAbandonedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (orderSuccess) return;
+    const phone = orderPhone.replace(/\s/g, '');
+    if (orderName.trim().length < 2 || phone.length < 10 || !product || !id) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const cartItems = [{
+          product_id: product.id,
+          name: product.name,
+          price: displayPrice,
+          quantity: 1,
+          image: product.images?.[0] || '',
+        }];
+        const payload = {
+          customer_name: orderName.trim(),
+          customer_phone: phone,
+          customer_wilaya: selectedWilaya?.name || null,
+          cart_items: cartItems,
+          cart_total: displayPrice,
+          item_count: 1,
+          notes: `landing_page_id:${id}`,
+          status: 'abandoned' as const,
+        };
+
+        if (abandonedId) {
+          await supabase.from('abandoned_orders').update(payload).eq('id', abandonedId);
+        } else {
+          const { data } = await supabase.from('abandoned_orders').insert(payload).select('id').single();
+          if (data) setAbandonedId(data.id);
+        }
+      } catch (e) {
+        console.error('Abandoned cart capture error:', e);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [orderName, orderPhone, orderWilayaId, product?.id, displayPrice, orderSuccess]);
+
   const handleOrderSubmit = async () => {
     if (!product || !id) return;
     const errors: Record<string, string> = {};

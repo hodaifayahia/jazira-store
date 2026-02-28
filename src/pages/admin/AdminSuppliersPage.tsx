@@ -80,7 +80,7 @@ export default function AdminSuppliersPage() {
   const statuses = ['all', 'active', 'pending', 'inactive'];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in min-w-0">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="font-cairo font-bold text-2xl">{t('suppliers.title')}</h1>
         <Button onClick={() => { setEditSupplier(null); setDrawerOpen(true); }} className="font-cairo gap-2 hover-lift">

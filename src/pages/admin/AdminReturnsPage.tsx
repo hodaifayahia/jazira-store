@@ -148,7 +148,7 @@ export default function AdminReturnsPage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard label={t('returns.totalReturns')} value={stats.total} icon={RotateCcw} color="text-foreground" />

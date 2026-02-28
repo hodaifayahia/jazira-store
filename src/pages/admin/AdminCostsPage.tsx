@@ -105,7 +105,7 @@ export default function AdminCostsPage() {
   const isLoading = loadingProducts || loadingCosts;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 min-w-0">
       <div>
         <h2 className="font-cairo font-bold text-2xl text-foreground">{t('costs.title')}</h2>
         <p className="font-cairo text-sm text-muted-foreground mt-1">{t('costs.subtitle')}</p>
