@@ -1,106 +1,62 @@
 
+# Plan: Confirmer Dashboard & Comprehensive Testing Fixes
 
-# Plan: Delivery Company Integration, Stock Limits & Payment Alerts
+## Problem
+When a confirmer logs in, they are redirected to the admin dashboard which requires the "admin" role -- so they see nothing or get kicked out. Confirmers need their own restricted view showing only orders.
 
-## 1. Delivery Companies Integration
+## Solution
 
-### 1a. Database: `delivery_companies` table
-Create a new table to store delivery company configurations:
-- `id` (uuid, PK)
-- `name` (text) -- company name
-- `api_key` (text, nullable) -- API key for integration
-- `api_url` (text, nullable) -- base URL for the company API
-- `is_active` (boolean, default true)
-- `is_builtin` (boolean, default false) -- for pre-seeded companies
-- `logo_url` (text, nullable)
-- `created_at` (timestamp)
+### 1. Create Confirmer Layout (`src/components/ConfirmerLayout.tsx`)
+- Similar to AdminLayout but checks for `confirmer` role instead of `admin`
+- Simplified sidebar with only: Dashboard (orders list) and Logout
+- Same header style but without admin-only features (settings, products, etc.)
+- Reuses existing notification system for new orders
 
-Pre-seed famous Algerian delivery companies:
-- **Yalidine** (yalidine.com)
-- **ZR Express** (zrexpress.com)
-- **Maystro Delivery** (maystro-delivery.com)
-- **EcoTrack** (ecotrack.dz)
-- **Procolis** (procolis.com)
-- **GLS Algeria**
-- **E-Com Delivery**
+### 2. Create Confirmer Dashboard Page (`src/pages/confirmer/ConfirmerDashboardPage.tsx`)
+- Shows only orders in a table/list format
+- Confirmer can view order details, update order status (confirm/cancel)
+- Filters: new orders, confirmed, cancelled
+- KPI cards: total orders assigned, confirmed today, cancelled today
+- No access to products, settings, suppliers, clients, etc.
 
-RLS: Admin-only management, no public access needed.
+### 3. Update Login Flow (`src/pages/admin/AdminLoginPage.tsx`)
+- After successful login, check user role:
+  - If `admin` role: redirect to `/admin`
+  - If `confirmer` role: redirect to `/confirmer`
+  - If neither: show "no access" error
 
-### 1b. Admin Settings Page: `/admin/settings/delivery`
-Create `src/pages/admin/settings/AdminDeliveryPage.tsx`:
-- List all delivery companies (built-in + custom)
-- Toggle active/inactive for each
-- Add custom delivery company (name, API key, API URL)
-- Edit/delete custom companies
-- Show connection status indicator
+### 4. Add Confirmer Routes (`src/App.tsx`)
+- `/confirmer` -- ConfirmerLayout wrapping ConfirmerDashboardPage
+- Login page remains at `/admin/login` (shared between admin and confirmer)
 
-### 1c. Export Orders to Delivery Company
-In `AdminOrdersPage.tsx`, add an "Export to Delivery" button:
-- Appears in the bulk actions bar when orders are selected
-- Opens a dialog to choose which active delivery company to export to
-- Generates a CSV/Excel file with order data (name, phone, wilaya, address, total, COD amount) formatted for the selected company
-- For companies with API integration (Yalidine, ZR Express, etc.), attempt to push orders via their API through an edge function
-- Show success/failure feedback per order
-
-### 1d. Edge Function: `delivery-export`
-Create `supabase/functions/delivery-export/index.ts`:
-- Accepts order IDs and delivery company ID
-- Fetches order details from database
-- Formats data according to the delivery company's API spec
-- Pushes orders to the API (if API key is configured)
-- Returns results (success/failed per order)
-
-### 1e. Route & Navigation
-- Add route `/admin/settings/delivery` in `App.tsx`
-- Add "Delivery" entry in `SETTINGS_SUB_KEYS` in `AdminLayout.tsx`
-
----
-
-## 2. Client Stock Limit (Cannot Give More Than Available)
-
-In `AdminClientDetailPage.tsx`, modify `handleGiveProduct`:
-- Before creating the transaction, check if `giveForm.quantity > (product.stock ?? 0)`
-- If so, show an error toast: "Insufficient stock. Available: X" and block the action
-- Also set `max` attribute on the quantity input to `selectedProduct?.stock ?? 0`
-- Show available stock next to the quantity field
-
----
-
-## 3. Payment Alerts on Dashboard
-
-### 3a. Supplier Payment Alerts
-In `AdminDashboardPage.tsx`, add an alert card:
-- Query `supplier_transactions` to calculate supplier balances (received - given)
-- Show suppliers with negative balance (you owe them money)
-- Display as a warning card: "Suppliers you need to pay"
-
-### 3b. Client Payment Alerts
-In the same dashboard, add another alert card:
-- Query `client_transactions` to calculate client balances
-- Show clients with positive balance (they owe you money)
-- Display as an info card: "Clients who need to pay you"
-
-Both cards will link to the respective detail pages for quick action.
+### 5. Update RLS / Database
+- No new tables needed -- confirmers already have `confirmer` role in `user_roles`
+- The `has_role` function already supports checking for any `app_role`
+- Need to verify `app_role` enum includes `confirmer` -- if not, add it via migration
+- Orders table already has public SELECT policy, so confirmers can read orders
 
 ---
 
 ## Technical Details
 
 ### Files to Create
-1. `src/pages/admin/settings/AdminDeliveryPage.tsx` -- Delivery companies management
-2. `supabase/functions/delivery-export/index.ts` -- API export edge function
+1. `src/components/ConfirmerLayout.tsx` -- Layout with confirmer role check and minimal sidebar
+2. `src/pages/confirmer/ConfirmerDashboardPage.tsx` -- Orders-only dashboard for confirmers
 
 ### Files to Modify
-1. `src/pages/admin/AdminOrdersPage.tsx` -- Add "Export to Delivery" bulk action button
-2. `src/pages/admin/AdminClientDetailPage.tsx` -- Add stock quantity validation
-3. `src/pages/admin/AdminDashboardPage.tsx` -- Add supplier/client payment alert cards
-4. `src/App.tsx` -- Add delivery settings route
-5. `src/components/AdminLayout.tsx` -- Add delivery to settings nav
-6. `src/i18n/locales/ar.ts` -- New translations
-7. `src/i18n/locales/en.ts` -- New translations
-8. `src/i18n/locales/fr.ts` -- New translations
+1. `src/pages/admin/AdminLoginPage.tsx` -- Role-based redirect after login
+2. `src/App.tsx` -- Add confirmer routes
+3. `src/i18n/locales/ar.ts` -- Add confirmer translations
+4. `src/i18n/locales/en.ts` -- Add confirmer translations
+5. `src/i18n/locales/fr.ts` -- Add confirmer translations
 
 ### Database Migration
-- Create `delivery_companies` table with RLS
-- Insert built-in Algerian delivery companies as seed data
+- Check if `app_role` enum includes `confirmer`; if not, run `ALTER TYPE app_role ADD VALUE 'confirmer'`
+- The `manage-confirmer` edge function already inserts `role: 'confirmer'` into `user_roles`, so the enum value must exist or the insert would fail -- this confirms it likely already exists
 
+### Confirmer Dashboard Features
+- Order list with search by order number, customer name, phone
+- Status filters (New, Confirmed, Cancelled, All)
+- Quick action buttons to change order status
+- Today's stats cards (new, confirmed, cancelled counts)
+- No access to any other admin pages
