@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap, Plus } from 'lucide-react';
+import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap, Plus, Download } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
 import { useTranslation } from '@/i18n';
 
@@ -57,6 +57,9 @@ export default function AdminOrdersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatusDialog, setBulkStatusDialog] = useState(false);
   const [bulkStatus, setBulkStatus] = useState('');
+  const [deliveryDialog, setDeliveryDialog] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [exportingDelivery, setExportingDelivery] = useState(false);
 
   const { data: orders } = useQuery({
     queryKey: ['admin-orders'],
@@ -83,6 +86,48 @@ export default function AdminOrdersPage() {
       return data?.map(w => w.name) || [];
     },
   });
+
+  const { data: deliveryCompanies } = useQuery({
+    queryKey: ['delivery-companies-active'],
+    queryFn: async () => {
+      const { data } = await (supabase.from('delivery_companies' as any) as any).select('id, name, api_key, api_url').eq('is_active', true).order('name');
+      return (data || []) as { id: string; name: string; api_key: string | null; api_url: string | null }[];
+    },
+  });
+
+  const handleExportToDelivery = async () => {
+    if (!selectedCompanyId || selectedIds.size === 0) return;
+    setExportingDelivery(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delivery-export', {
+        body: { order_ids: Array.from(selectedIds), company_id: selectedCompanyId },
+      });
+      if (error) throw error;
+      
+      // Download CSV
+      const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${data.company_name}-orders-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      if (data.api_result?.success) {
+        toast({ title: t('delivery.apiSuccess') });
+      } else if (data.api_result) {
+        toast({ title: t('delivery.csvExported'), description: data.api_result.message });
+      } else {
+        toast({ title: t('delivery.csvExported') });
+      }
+      setDeliveryDialog(false);
+      setSelectedCompanyId('');
+    } catch (err: any) {
+      toast({ title: t('common.errorOccurred'), description: err.message });
+    } finally {
+      setExportingDelivery(false);
+    }
+  };
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -313,6 +358,14 @@ export default function AdminOrdersPage() {
                 );
               })}
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="font-cairo gap-1.5 text-xs"
+              onClick={() => setDeliveryDialog(true)}
+            >
+              <Download className="w-3.5 h-3.5" /> {t('delivery.exportToDelivery')}
+            </Button>
             <Button size="sm" variant="ghost" className="font-cairo text-xs" onClick={() => setSelectedIds(new Set())}>
               {t('common.deselectAll')}
             </Button>
@@ -523,6 +576,39 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delivery Export Dialog */}
+        <Dialog open={deliveryDialog} onOpenChange={setDeliveryDialog}>
+          <DialogContent>
+            <DialogHeader><DialogTitle className="font-cairo flex items-center gap-2"><Truck className="w-5 h-5" /> {t('delivery.exportToDelivery')}</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <p className="font-cairo text-sm text-muted-foreground">
+                {t('delivery.exportDesc').replace('{n}', String(selectedIds.size))}
+              </p>
+              <div>
+                <Label className="font-cairo">{t('delivery.selectCompany')}</Label>
+                <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                  <SelectTrigger className="font-cairo mt-1"><SelectValue placeholder={t('delivery.selectCompany')} /></SelectTrigger>
+                  <SelectContent>
+                    {deliveryCompanies?.map(c => (
+                      <SelectItem key={c.id} value={c.id} className="font-cairo">
+                        {c.name} {c.api_key ? '🟢' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleExportToDelivery}
+                disabled={!selectedCompanyId || exportingDelivery}
+                className="w-full font-cairo gap-2"
+              >
+                {exportingDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {t('delivery.exportNow')}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
         

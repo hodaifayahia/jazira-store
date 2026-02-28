@@ -923,4 +923,27 @@ export const ar: Record<string, string> = {
   'pixels.noPixels': 'لم يتم إضافة أي بكسل بعد',
   'pixels.added': 'تم إضافة البكسل ✅',
   'pixels.idRequired': 'معرف البكسل مطلوب',
+
+  // ═══ Delivery Companies ═══
+  'delivery.title': 'شركات التوصيل',
+  'delivery.description': 'إدارة شركات التوصيل والربط مع واجهات API الخاصة بها',
+  'delivery.addCompany': 'إضافة شركة توصيل',
+  'delivery.companyAdded': 'تمت إضافة شركة التوصيل ✅',
+  'delivery.deleteConfirm': 'هل أنت متأكد من حذف هذه الشركة؟',
+  'delivery.builtin': 'مدمج',
+  'delivery.connected': 'متصل',
+  'delivery.notConnected': 'غير متصل',
+  'delivery.exportToDelivery': 'تصدير للتوصيل',
+  'delivery.exportDesc': 'سيتم تصدير {n} طلب إلى شركة التوصيل المختارة',
+  'delivery.selectCompany': 'اختر شركة التوصيل',
+  'delivery.exportNow': 'تصدير الآن',
+  'delivery.csvExported': 'تم تصدير الطلبات بنجاح ✅',
+  'delivery.apiSuccess': 'تم إرسال الطلبات عبر API بنجاح ✅',
+
+  // ═══ Dashboard Payment Alerts ═══
+  'dashboard.suppliersToPayTitle': '⚠ موردون بحاجة للدفع',
+  'dashboard.clientsToCollectTitle': '💰 عملاء مدينون لك',
+
+  // ═══ Client Stock ═══
+  'clients.insufficientStock': 'المخزون غير كافي. المتوفر:',
 };

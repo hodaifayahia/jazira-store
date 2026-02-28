@@ -46,6 +46,7 @@ import AdminClientsPage from "./pages/admin/AdminClientsPage";
 import AdminClientDetailPage from "./pages/admin/AdminClientDetailPage";
 import AdminCreateOrderPage from "./pages/admin/AdminCreateOrderPage";
 import AdminPixelsPage from "./pages/admin/settings/AdminPixelsPage";
+import AdminDeliveryPage from "./pages/admin/settings/AdminDeliveryPage";
 import AboutPage from "./pages/AboutPage";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
@@ -129,6 +130,7 @@ const App = () => (
             <Route path="/admin/settings/appearance" element={<LanguageProvider><AdminLayout><AdminAppearancePage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/security" element={<LanguageProvider><AdminLayout><AdminSecurityPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/pixels" element={<LanguageProvider><AdminLayout><AdminPixelsPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/delivery" element={<LanguageProvider><AdminLayout><AdminDeliveryPage /></AdminLayout></LanguageProvider>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

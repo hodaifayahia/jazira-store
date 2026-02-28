@@ -50,6 +50,13 @@ export default function AdminClientDetailPage() {
     const product = products?.find(p => p.id === giveForm.product_id);
     if (!product) return;
     
+    // Stock validation
+    const availableStock = product.stock ?? 0;
+    if (giveForm.quantity > availableStock) {
+      toast.error(`${t('clients.insufficientStock')} ${availableStock}`);
+      return;
+    }
+    
     const amount = giveForm.quantity * giveForm.unit_price;
     try {
       await createTx.mutateAsync({
@@ -188,8 +195,8 @@ export default function AdminClientDetailPage() {
                 </Select>
               </div>
               <div>
-                <Label className="font-cairo">{t('common.quantity')} *</Label>
-                <Input type="number" min={1} value={giveForm.quantity} onChange={e => setGiveForm(f => ({ ...f, quantity: Number(e.target.value) }))} className="font-cairo" />
+                <Label className="font-cairo">{t('common.quantity')} * {selectedProduct && <span className="text-xs text-muted-foreground">({t('products.stock')}: {selectedProduct.stock ?? 0})</span>}</Label>
+                <Input type="number" min={1} max={selectedProduct?.stock ?? 9999} value={giveForm.quantity} onChange={e => setGiveForm(f => ({ ...f, quantity: Number(e.target.value) }))} className="font-cairo" />
               </div>
               <div>
                 <Label className="font-cairo">{t('clients.unitPrice')}</Label>
