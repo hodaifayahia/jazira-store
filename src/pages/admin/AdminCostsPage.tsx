@@ -145,8 +145,8 @@ export default function AdminCostsPage() {
           <table className="text-sm min-w-[900px] whitespace-nowrap">
             <thead>
               <tr className="border-b bg-muted/30">
-                <th className="text-right font-cairo font-semibold px-4 py-3">{t('common.product')}</th>
-                <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.sellingPrice')}</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3 sticky right-0 z-10 bg-muted/30 min-w-[180px]">{t('common.product')}</th>
+                <th className="text-right font-cairo font-semibold px-4 py-3 sticky right-[180px] z-10 bg-muted/30 min-w-[100px] border-l border-border/30">{t('costs.sellingPrice')}</th>
                 <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.purchaseCost')}</th>
                 <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.packagingCost')}</th>
                 <th className="text-right font-cairo font-semibold px-4 py-3">{t('costs.totalCost')}</th>
@@ -164,7 +164,7 @@ export default function AdminCostsPage() {
 
                 return (
                   <tr key={p.id} className="border-b hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 sticky right-0 z-10 bg-card min-w-[180px]">
                       <div className="flex items-center gap-3">
                         {p.images?.[0] ? (
                           <img src={p.images[0]} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
@@ -174,7 +174,7 @@ export default function AdminCostsPage() {
                         <span className="font-cairo font-medium text-foreground truncate max-w-[200px]">{p.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-roboto text-foreground">{formatPrice(p.price)}</td>
+                    <td className="px-4 py-3 font-roboto text-foreground sticky right-[180px] z-10 bg-card min-w-[100px] border-l border-border/30">{formatPrice(p.price)}</td>
                     <td className="px-4 py-3 font-roboto text-foreground">
                       {hasCost ? formatPrice(p.cost!.purchase_cost) : <span className="text-destructive font-cairo text-xs">{t('costs.notSet')}</span>}
                     </td>

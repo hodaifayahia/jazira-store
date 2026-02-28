@@ -276,6 +276,17 @@ export default function AdminOrdersPage() {
           <Button className="font-cairo gap-1.5" onClick={() => navigate('/admin/orders/create')}>
             <Plus className="w-4 h-4" /> إنشاء طلب
           </Button>
+          <Button
+            variant="outline"
+            className="font-cairo gap-1.5"
+            onClick={() => {
+              if (filtered.length === 0) return;
+              setSelectedIds(new Set(filtered.map(o => o.id)));
+              setDeliveryDialog(true);
+            }}
+          >
+            <Truck className="w-4 h-4" /> {t('delivery.exportToDelivery')}
+          </Button>
         </div>
 
         {/* Advanced Filters */}

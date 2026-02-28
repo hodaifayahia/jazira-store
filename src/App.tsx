@@ -45,8 +45,8 @@ import AdminSupplierDetailPage from "./pages/admin/AdminSupplierDetailPage";
 import AdminClientsPage from "./pages/admin/AdminClientsPage";
 import AdminClientDetailPage from "./pages/admin/AdminClientDetailPage";
 import AdminCreateOrderPage from "./pages/admin/AdminCreateOrderPage";
-import AdminPixelsPage from "./pages/admin/settings/AdminPixelsPage";
 import AdminDeliveryPage from "./pages/admin/settings/AdminDeliveryPage";
+import AdminPixelsPage from "./pages/admin/settings/AdminPixelsPage";
 import AboutPage from "./pages/AboutPage";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
@@ -123,6 +123,7 @@ const App = () => (
             <Route path="/admin/suppliers/:id" element={<LanguageProvider><AdminLayout><AdminSupplierDetailPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/clients" element={<LanguageProvider><AdminLayout><AdminClientsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/clients/:id" element={<LanguageProvider><AdminLayout><AdminClientDetailPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/delivery" element={<LanguageProvider><AdminLayout><AdminDeliveryPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings" element={<LanguageProvider><AdminLayout><AdminSettingsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/identity" element={<LanguageProvider><AdminLayout><AdminIdentityPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/payment" element={<LanguageProvider><AdminLayout><AdminPaymentPage /></AdminLayout></LanguageProvider>} />
