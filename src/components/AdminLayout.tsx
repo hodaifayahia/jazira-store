@@ -87,9 +87,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { data: logoUrl } = useStoreLogo();
   const sidebarNavRef = useRef<HTMLElement>(null);
 
-  // Scroll sidebar to top on route change
+  // Scroll sidebar + main window to top on route change
   useEffect(() => {
     sidebarNavRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo(0, 0);
   }, [location.pathname]);
 
   function timeAgo(date: Date) {
