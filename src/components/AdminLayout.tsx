@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
+import { useEffect, useState, useCallback, useRef, ReactNode, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe, Store, CreditCard, Bot, FormInput, Paintbrush, Shield, Rocket, Truck } from 'lucide-react';
@@ -52,6 +52,7 @@ const NAV_KEYS = [
   { href: '/admin/coupons', key: 'sidebar.coupons', icon: Tag },
   { href: '/admin/landing', key: 'sidebar.landing', icon: Rocket },
   { href: '/admin/suppliers', key: 'sidebar.suppliers', icon: Truck },
+  { href: '/admin/clients', key: 'sidebar.clients', icon: Users },
 ];
 
 const SETTINGS_SUB_KEYS = [
@@ -83,6 +84,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: logoUrl } = useStoreLogo();
+  const sidebarNavRef = useRef<HTMLElement>(null);
+
+  // Scroll sidebar to top on route change
+  useEffect(() => {
+    sidebarNavRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+  }, [location.pathname]);
 
   function timeAgo(date: Date) {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -255,7 +262,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <X className="w-5 h-5" />
           </Button>
         </div>
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+        <nav ref={sidebarNavRef} className="flex-1 overflow-y-auto p-3 space-y-1">
           {NAV_KEYS.map(item => (
             <Link
               key={item.href}

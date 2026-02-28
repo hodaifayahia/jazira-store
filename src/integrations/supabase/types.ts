@@ -99,6 +99,99 @@ export type Database = {
           },
         ]
       }
+      client_transactions: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          product_id: string | null
+          product_name: string | null
+          quantity: number
+          transaction_type: string
+          unit_price: number
+        }
+        Insert: {
+          amount?: number
+          client_id: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity?: number
+          transaction_type?: string
+          unit_price?: number
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity?: number
+          transaction_type?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          status: string
+          updated_at: string
+          wilaya: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+          wilaya?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+          wilaya?: string | null
+        }
+        Relationships: []
+      }
       confirmation_settings: {
         Row: {
           assignment_mode: string
