@@ -230,8 +230,8 @@ export default function SupplierProductsTab({ supplierId }: Props) {
         </div>
       ) : (
         <div className="bg-card rounded-xl border overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table className="min-w-[900px]">
+          <div className="overflow-x-auto max-w-full">
+            <Table className="min-w-[900px] whitespace-nowrap">
               <TableHeader>
                 <TableRow className="bg-muted/30">
                   <TableHead className="w-10">

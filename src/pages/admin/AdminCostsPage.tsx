@@ -141,8 +141,8 @@ export default function AdminCostsPage() {
       {isLoading ? (
         <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
       ) : (
-        <div className="border rounded-lg overflow-x-auto">
-          <table className="w-full text-sm min-w-[800px]">
+        <div className="border rounded-lg overflow-x-auto max-w-full">
+          <table className="text-sm min-w-[900px] whitespace-nowrap">
             <thead>
               <tr className="border-b bg-muted/30">
                 <th className="text-right font-cairo font-semibold px-4 py-3">{t('common.product')}</th>
