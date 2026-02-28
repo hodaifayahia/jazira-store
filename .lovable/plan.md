@@ -1,98 +1,122 @@
 
 
-# Plan: Fix Orders, Multiple Pixels, Stock Management & UI Enhancements
+# Plan: Fix Scroll, Fix Order Creation, Add Offline Support
 
-This is a large set of changes across multiple areas. Here's the breakdown:
+## 1. Fix Scroll Position on Navigation
 
----
+**Problem**: When scrolling down on any admin page and clicking a sidebar link or navigating, the page stays scrolled down.
 
-## 1. Fix Manual Order Creation (Broken Stock Deduction)
+**Root Cause**: The sidebar scroll-to-top fix exists (line 91-93 in AdminLayout), but the **main content area** scrolls via the browser window, not the sidebar. Need to also call `window.scrollTo(0, 0)` on route change.
 
-**Problem**: The order creation dialog has broken stock deduction code -- it uses `supabase.rpc('has_role', ...)` in a `.then()` chain that never properly awaits, meaning stock is never actually deducted.
-
-**Fix**: Rewrite the stock deduction in `ManualOrderDialog.tsx` to properly `await` each stock update using a simple loop with `await supabase.from('products').update(...)`.
+**Fix**: Add `window.scrollTo(0, 0)` to the existing `useEffect` in `AdminLayout.tsx` that watches `location.pathname`.
 
 ---
 
-## 2. Move Order Creation to Full Page
+## 2. Fix Order Creation Foreign Key Error
 
-**What changes**:
-- Create `src/pages/admin/AdminCreateOrderPage.tsx` -- a full-page order creation form with a modern step-based layout (Customer Info -> Products -> Summary)
-- Better UI with clear sections, larger product cards, live order summary sidebar
-- Add route `/admin/orders/create` in `App.tsx`
-- Update `AdminOrdersPage.tsx` button to navigate to the new page instead of opening the dialog
-- Keep `ManualOrderDialog.tsx` as-is for backward compatibility but it won't be used from the orders page
+**Problem**: Screenshot shows error: `insert or update on table "order_items" violates foreign key constraint "order_items_variant_id_fkey"`
 
----
+**Root Cause**: The `order_items.variant_id` column has a foreign key to the `product_variants` table, but the order creation page queries `product_variations` (a different table) and sends those IDs. The IDs from `product_variations` don't exist in `product_variants`, causing the FK violation.
 
-## 3. Multiple Facebook Pixels Support
+**Fix**: In `AdminCreateOrderPage.tsx`, change the `variant_id` in the order items insert to `null` since the product_variations system uses price adjustments directly (not variant tracking). The variation info is already captured in the product name and price. This ensures no FK violation occurs.
 
-**What changes**:
-- Create a new database table `facebook_pixels` with columns: `id`, `pixel_id` (text), `name` (text), `is_active` (boolean), `created_at`
-- Update `useFacebookPixel.ts` to query from the new `facebook_pixels` table, initialize ALL active pixels, and fire events on all of them
-- Add a "Facebook Pixels" settings card in `AdminSettingsPage.tsx` or a new settings sub-page where admins can add/remove/toggle multiple pixel IDs
-- Create `src/pages/admin/settings/AdminPixelsPage.tsx` for managing pixels
-- Add route and sidebar entry
+### Files Modified
+- `src/components/AdminLayout.tsx` -- add window.scrollTo
+- `src/pages/admin/AdminCreateOrderPage.tsx` -- set variant_id to null always (variations are from a different table)
 
 ---
 
-## 4. Stock Management on Order Status Change
+## 3. Full Offline Support
 
-**Problem**: When an order is confirmed ("تم التسليم") stock should be deducted. When cancelled ("ملغي"), stock should be restored.
+### Architecture Overview
 
-**What changes**:
-- Modify the `updateStatus` mutation in `AdminOrdersPage.tsx` to:
-  - When status changes TO "تم التسليم": deduct stock from products based on order items
-  - When status changes TO "ملغي": restore stock to products based on order items
-  - When status changes FROM "تم التسليم" to something else: restore stock
-  - When status changes FROM "ملغي" back: deduct stock again
-- Also apply the same logic to `bulkUpdateStatus`
-- Fetch order items when updating status to perform stock adjustments
+The app already uses `vite-plugin-pwa` with Workbox for basic service worker caching. This plan extends it with:
 
----
+```text
++------------------+     +-------------------+     +------------------+
+|   User Action    | --> | Offline Detector  | --> | Online? Send to  |
+|   (form submit)  |     | (navigator.online)|     | Supabase directly|
++------------------+     +-------------------+     +------------------+
+                                |                          
+                           Offline?                        
+                                |                          
+                    +-----------v-----------+              
+                    | Save to IndexedDB     |              
+                    | (pending_operations)  |              
+                    +-----------+-----------+              
+                                |                          
+                    On 'online' event                      
+                                |                          
+                    +-----------v-----------+              
+                    | SyncManager: replay   |              
+                    | pending ops to        |              
+                    | Supabase in order     |              
+                    +---+-------------------+              
+                        |                                  
+                    Success? Clear from IndexedDB          
+                    Show success toast                     
+```
 
-## 5. UI/UX Enhancements
+### 3a. Enhanced Service Worker Config (`vite.config.ts`)
 
-### Dashboard (`AdminDashboardPage.tsx`):
-- Add gradient backgrounds to stat cards with subtle animations
-- Improve chart styling with better colors and tooltips
-- Add a "conversion rate" stat (delivered / total orders)
-- Add a profit calculation card
-- Better mobile responsiveness
+Update the VitePWA config to:
+- Cache all static assets aggressively (CacheFirst for images/fonts)
+- Use NetworkFirst for API calls with longer cache duration
+- Add offline fallback page
 
-### Store Landing Page (`Index.tsx`):
-- Enhance hero section with better typography and spacing
-- Improve product card hover effects
-- Add smooth scroll animations
-- Better category navigation styling
+### 3b. Offline Queue System
 
-### Product Page (`SingleProductPage.tsx`):
-- Improve image gallery with better zoom/lightbox
-- Better offer countdown styling
-- Enhance the inline order form with clearer step indicators
-- Better review section design
+**New file: `src/lib/offlineQueue.ts`**
 
----
+- Uses IndexedDB (via a lightweight wrapper) to store pending operations
+- Each record has: `id`, `table`, `operation` (insert/update/delete), `data`, `created_at`, `synced_at`
+- Provides functions: `addToQueue()`, `getPendingOps()`, `markSynced()`, `clearSynced()`
 
-## Technical Details
+### 3c. Online/Offline Detection
 
-### Files to Create:
-1. `src/pages/admin/AdminCreateOrderPage.tsx` -- Full-page order creation
-2. `src/pages/admin/settings/AdminPixelsPage.tsx` -- Facebook Pixels management
+**New file: `src/components/OfflineBanner.tsx`**
 
-### Files to Modify:
-1. `src/pages/admin/AdminOrdersPage.tsx` -- Navigate to create page, add stock logic on status change
-2. `src/hooks/useFacebookPixel.ts` -- Support multiple pixels
-3. `src/App.tsx` -- Add new routes
-4. `src/components/AdminLayout.tsx` -- Add Pixels settings nav
-5. `src/pages/admin/AdminSettingsPage.tsx` -- Add Pixels card
-6. `src/pages/admin/AdminDashboardPage.tsx` -- UI enhancements
-7. `src/pages/Index.tsx` -- UI polish
-8. `src/pages/SingleProductPage.tsx` -- UI polish
-9. `src/i18n/locales/ar.ts` -- New translations
-10. `src/i18n/locales/fr.ts` -- New translations
-11. `src/i18n/locales/en.ts` -- New translations
+- Listens to `window.addEventListener('online'/'offline')`
+- Shows a fixed banner at the top: "You're offline -- your changes will be saved locally"
+- Animate in/out smoothly
+- Shows pending operation count
 
-### Database Migration:
-- Create `facebook_pixels` table with RLS (admin-only management, public read for active pixels)
+### 3d. Supabase Wrapper for Offline-Aware Operations
+
+**New file: `src/lib/offlineSupabase.ts`**
+
+- Wraps common Supabase operations (insert, update, delete)
+- When online: execute normally
+- When offline: save to IndexedDB queue, show offline toast
+- Used in critical forms: order creation, checkout, etc.
+
+### 3e. Auto-Sync on Reconnect
+
+**New file: `src/hooks/useOfflineSync.ts`**
+
+- Hook that listens for `online` event
+- When back online: reads all pending ops from IndexedDB
+- Replays them sequentially to Supabase
+- Shows progress ("Syncing 3 pending operations...")
+- On success: shows "All data synced successfully!" toast
+- On failure: keeps failed ops in queue, shows error
+
+### 3f. Integration Points
+
+- Mount `<OfflineBanner />` in `App.tsx` (visible on all pages)
+- Add `useOfflineSync()` hook in `App.tsx`
+- Wrap order creation (`AdminCreateOrderPage.tsx`) and checkout (`CheckoutPage.tsx`) forms to use the offline-aware Supabase wrapper
+
+### Files to Create
+1. `src/lib/offlineQueue.ts` -- IndexedDB queue manager
+2. `src/lib/offlineSupabase.ts` -- offline-aware Supabase wrapper
+3. `src/hooks/useOfflineSync.ts` -- auto-sync hook
+4. `src/components/OfflineBanner.tsx` -- offline indicator UI
+
+### Files to Modify
+1. `src/components/AdminLayout.tsx` -- window.scrollTo fix
+2. `src/pages/admin/AdminCreateOrderPage.tsx` -- fix variant_id FK, integrate offline support
+3. `src/App.tsx` -- mount OfflineBanner and useOfflineSync
+4. `src/pages/CheckoutPage.tsx` -- integrate offline support for customer orders
+5. `vite.config.ts` -- enhance PWA caching strategy
 
