@@ -1,72 +1,91 @@
 
+# Plan: Fix Sidebar Scroll & Add Client/Reseller Management
 
-# Plan: Fix Coupon, Add Coupon to Product Page, Supplier-Product Sync, and Transaction Improvements
+## 1. Fix Sidebar Scroll Position on Navigation
 
-## 1. Fix 100% Coupon Code Issue
+**Problem**: When you scroll down in the sidebar and click a link (e.g., "View Products" or a product), the sidebar stays scrolled down instead of scrolling back to the top.
 
-**Problem**: When a percentage coupon is set to 100%, the discount equals the full subtotal, which can cause the total to become 0 or negative when shipping is factored in incorrectly, or the discount isn't properly capped.
+**Fix**: In `src/components/AdminLayout.tsx`, add a `useEffect` that watches `location.pathname` and scrolls the sidebar `<nav>` element to the top whenever the route changes. This requires adding a `ref` to the `<nav>` element.
 
-**Fix**:
-- In `src/pages/CheckoutPage.tsx` (line ~250-253): Cap the percentage discount so it never exceeds `eligibleSubtotal`. Add `Math.round()` for clean values.
-- In `src/components/admin/ManualOrderDialog.tsx` (line ~106-111): Same cap logic.
-- In `src/pages/SingleProductPage.tsx`: Will be addressed in item #2.
+## 2. Add Client/Reseller Management Module
 
-## 2. Add Coupon Code Input to SingleProductPage
+**Concept**: Clients are resellers who receive products from you to sell on your behalf. They owe you money for the products they sell. This is a consignment model:
+- You give a client X units of a product
+- They sell some, keep some, return some
+- They pay you back for what they sold
 
-**Problem**: The inline order form on the product page has no coupon code field.
+### Database Tables
 
-**Changes in `src/pages/SingleProductPage.tsx`**:
-- Add state variables: `couponCode`, `couponApplied`, `discount`, `couponLoading`
-- Add an `applyCoupon` function (similar to CheckoutPage) that validates the coupon, checks product eligibility, and calculates the discount
-- Add a coupon input UI section between the payment step and order summary (a text input + apply button with Tag icon)
-- Update `orderTotal` calculation to subtract the discount
-- Include `coupon_code` and `discount_amount` in the order insert payload
+**Table: `clients`**
+- `id` (uuid, PK)
+- `name` (text, required)
+- `phone` (text)
+- `address` (text)
+- `wilaya` (text)
+- `notes` (text)
+- `status` (text, default 'active') -- active / inactive
+- `created_at`, `updated_at`
 
-## 3. Auto-Create Product in Products Table When Adding Supplier Product
+**Table: `client_transactions`**
+- `id` (uuid, PK)
+- `client_id` (uuid, FK to clients)
+- `transaction_type` (text) -- 'product_given' | 'product_returned' | 'payment_received'
+- `product_id` (uuid, nullable) -- for product_given / product_returned
+- `product_name` (text, nullable) -- stored for reference
+- `quantity` (integer, default 0) -- for product transactions
+- `unit_price` (numeric, default 0) -- price per unit
+- `amount` (numeric, default 0) -- total amount (qty x price, or payment amount)
+- `date` (date, default CURRENT_DATE)
+- `notes` (text)
+- `created_at` (timestamp)
 
-**Problem**: When a product is added via the supplier products tab, it should also be created in the main `products` table as inactive (`is_active: false`) so the admin can later complete the listing.
+Both tables with RLS: admin-only management.
 
-**Changes in `src/hooks/useSupplierProducts.ts`**:
-- In `useCreateSupplierProducts` mutation, after inserting into `supplier_products`, also insert into the `products` table with:
-  - `name`: from `product_name`
-  - `price`: from `unit_price`
-  - `sku`: from `reference_sku`
-  - `stock`: from `quantity_received - quantity_returned`
-  - `is_active`: `false`
-  - `category`: `['general']` (default)
-  - `product_type`: `'physical'`
+### Admin Pages & Components
 
-## 4. Remove "Quantity Returned" Field from Supplier Product Entry
+1. **`src/pages/admin/AdminClientsPage.tsx`** -- Main listing page with:
+   - KPI cards: total clients, total owed, collected this month
+   - Client cards/table with search and status filter
+   - Add/edit client dialog
 
-**Problem**: The user does not need the "مرتجع" (quantity returned) field in the supplier product bulk entry form.
+2. **`src/pages/admin/AdminClientDetailPage.tsx`** -- Detail page for a single client:
+   - Client info header with balance summary
+   - Two tabs: "Product Handoffs" and "Payments"
+   - Forms to: give products, record returned products, record payments
+   - Transaction history table
+   - Running balance display
 
-**Changes**:
-- `src/components/admin/suppliers/ProductBulkEntryForm.tsx`: Remove the `quantity_returned` input field. Set it to 0 by default. Update remaining stock calculation to just use `quantity_received`.
-- `src/components/admin/suppliers/ProductCSVImportWizard.tsx`: Remove `quantity_returned` from `APP_FIELDS`.
-- `src/components/admin/suppliers/SupplierProductsTab.tsx`: Remove the "Qty Returned" column from the table header and rows. Remove it from the inline edit fields.
+3. **`src/hooks/useClients.ts`** -- CRUD hooks for clients
+4. **`src/hooks/useClientTransactions.ts`** -- CRUD hooks for client_transactions
 
-## 5. Improve Transaction Form (Best Practices)
+### Sidebar & Routes
 
-**Changes in `src/components/admin/suppliers/TransactionForm.tsx`**:
-- Add proper form validation with error messages (required fields highlighted)
-- Add a description field that auto-suggests based on transaction type
-- Separate "items_received" and "items_given" into explicit labeled fields instead of a single "amount" that flips based on type
-- Add a running balance preview showing current balance and projected balance after the transaction
-- Reset form properly after successful save
-- Add confirmation for large amounts
-- Improve the transaction type labels and add icons for clarity
+- Add "العملاء" (Clients) entry in the sidebar nav in `AdminLayout.tsx` with `Users` icon
+- Add routes in `App.tsx`: `/admin/clients` and `/admin/clients/:id`
 
-### Technical Details
+### i18n
 
-**Files to modify**:
-1. `src/pages/CheckoutPage.tsx` - Cap discount at subtotal for 100% coupons
-2. `src/pages/SingleProductPage.tsx` - Add coupon code section to inline order form
-3. `src/components/admin/ManualOrderDialog.tsx` - Cap discount at subtotal
-4. `src/hooks/useSupplierProducts.ts` - Auto-create inactive product in products table
-5. `src/components/admin/suppliers/ProductBulkEntryForm.tsx` - Remove quantity_returned field
-6. `src/components/admin/suppliers/ProductCSVImportWizard.tsx` - Remove quantity_returned from fields
-7. `src/components/admin/suppliers/SupplierProductsTab.tsx` - Remove quantity_returned column
-8. `src/components/admin/suppliers/TransactionForm.tsx` - Improve with best practices
+- Add Arabic translations for all client-related strings in `ar.ts`, `fr.ts`, `en.ts`
 
-**No database changes needed** - all existing tables support the required functionality.
+### Business Logic
 
+- **Balance calculation**: Sum of (product_given amounts) minus sum of (payment_received + product_returned amounts) = amount owed by client
+- **Give products**: Select product from products table, enter quantity and unit price. Deducts from main product stock.
+- **Record payment**: Enter amount received from client
+- **Record return**: Select product, enter quantity returned. Adds back to main product stock.
+
+## Files to Create
+- `src/pages/admin/AdminClientsPage.tsx`
+- `src/pages/admin/AdminClientDetailPage.tsx`
+- `src/hooks/useClients.ts`
+- `src/hooks/useClientTransactions.ts`
+
+## Files to Modify
+- `src/components/AdminLayout.tsx` -- scroll fix + add clients nav item
+- `src/App.tsx` -- add client routes
+- `src/i18n/locales/ar.ts` -- add client translations
+- `src/i18n/locales/fr.ts` -- add client translations
+- `src/i18n/locales/en.ts` -- add client translations
+
+## Database Migration
+- Create `clients` and `client_transactions` tables with RLS policies (admin-only)
