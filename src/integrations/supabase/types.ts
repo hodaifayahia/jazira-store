@@ -339,6 +339,39 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_companies: {
+        Row: {
+          api_key: string | null
+          api_url: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_builtin: boolean
+          logo_url: string | null
+          name: string
+        }
+        Insert: {
+          api_key?: string | null
+          api_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_builtin?: boolean
+          logo_url?: string | null
+          name: string
+        }
+        Update: {
+          api_key?: string | null
+          api_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_builtin?: boolean
+          logo_url?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
       facebook_pixels: {
         Row: {
           created_at: string

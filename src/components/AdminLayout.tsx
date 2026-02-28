@@ -58,6 +58,7 @@ const NAV_KEYS = [
 const SETTINGS_SUB_KEYS = [
   { href: '/admin/settings/identity', key: 'settings.storeIdentity', icon: Store },
   { href: '/admin/settings/payment', key: 'settings.paymentDelivery', icon: CreditCard },
+  { href: '/admin/settings/delivery', key: 'delivery.title', icon: Truck },
   { href: '/admin/settings/telegram', key: 'settings.telegram', icon: Bot },
   { href: '/admin/settings/returns', key: 'settings.returnsTab', icon: RotateCcw },
   { href: '/admin/settings/form', key: 'sidebar.form', icon: FormInput },

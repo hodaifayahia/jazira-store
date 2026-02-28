@@ -923,4 +923,27 @@ export const fr: Record<string, string> = {
   'pixels.noPixels': "Aucun pixel ajouté",
   'pixels.added': 'Pixel ajouté ✅',
   'pixels.idRequired': "L'ID du pixel est requis",
+
+  // ═══ Delivery Companies ═══
+  'delivery.title': 'Sociétés de livraison',
+  'delivery.description': 'Gérer les sociétés de livraison et se connecter à leurs API',
+  'delivery.addCompany': 'Ajouter une société',
+  'delivery.companyAdded': 'Société ajoutée ✅',
+  'delivery.deleteConfirm': 'Êtes-vous sûr de vouloir supprimer cette société ?',
+  'delivery.builtin': 'Intégré',
+  'delivery.connected': 'Connecté',
+  'delivery.notConnected': 'Non connecté',
+  'delivery.exportToDelivery': 'Exporter vers livraison',
+  'delivery.exportDesc': '{n} commandes seront exportées vers la société sélectionnée',
+  'delivery.selectCompany': 'Sélectionner la société',
+  'delivery.exportNow': 'Exporter maintenant',
+  'delivery.csvExported': 'Commandes exportées avec succès ✅',
+  'delivery.apiSuccess': 'Commandes envoyées via API avec succès ✅',
+
+  // ═══ Dashboard Payment Alerts ═══
+  'dashboard.suppliersToPayTitle': '⚠ Fournisseurs à payer',
+  'dashboard.clientsToCollectTitle': '💰 Clients qui vous doivent',
+
+  // ═══ Client Stock ═══
+  'clients.insufficientStock': 'Stock insuffisant. Disponible :',
 };

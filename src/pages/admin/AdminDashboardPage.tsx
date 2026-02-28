@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, AlertTriangle, Wallet, CreditCard } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { formatPrice, formatDate } from '@/lib/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useTranslation } from '@/i18n';
@@ -36,6 +38,7 @@ const PIE_COLORS = ['hsl(var(--secondary))', 'hsl(var(--primary))', 'hsl(30, 80%
 
 export default function AdminDashboardPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: orders } = useQuery({
     queryKey: ['admin-orders-all'],
     queryFn: async () => {
@@ -139,6 +142,53 @@ export default function AdminDashboardPage() {
       .sort((a, b) => b.rate - a.rate);
   }, [orders]);
 
+  // Supplier payment alerts - suppliers you owe money to
+  const { data: supplierAlerts } = useQuery({
+    queryKey: ['supplier-payment-alerts'],
+    queryFn: async () => {
+      const { data: suppliers } = await supabase.from('suppliers').select('id, name').eq('status', 'active');
+      if (!suppliers?.length) return [];
+      const { data: transactions } = await supabase.from('supplier_transactions').select('supplier_id, items_received, items_given');
+      if (!transactions) return [];
+      
+      const balances: Record<string, { name: string; balance: number }> = {};
+      suppliers.forEach(s => { balances[s.id] = { name: s.name, balance: 0 }; });
+      transactions.forEach(tx => {
+        if (balances[tx.supplier_id]) {
+          balances[tx.supplier_id].balance += Number(tx.items_received) - Number(tx.items_given);
+        }
+      });
+      return Object.entries(balances)
+        .filter(([, v]) => v.balance > 0)
+        .map(([id, v]) => ({ id, name: v.name, amount: v.balance }))
+        .sort((a, b) => b.amount - a.amount);
+    },
+  });
+
+  // Client payment alerts - clients who owe you money
+  const { data: clientAlerts } = useQuery({
+    queryKey: ['client-payment-alerts'],
+    queryFn: async () => {
+      const { data: clients } = await supabase.from('clients').select('id, name').eq('status', 'active');
+      if (!clients?.length) return [];
+      const { data: transactions } = await supabase.from('client_transactions').select('client_id, transaction_type, amount');
+      if (!transactions) return [];
+      
+      const balances: Record<string, { name: string; balance: number }> = {};
+      clients.forEach(c => { balances[c.id] = { name: c.name, balance: 0 }; });
+      transactions.forEach(tx => {
+        if (!balances[tx.client_id]) return;
+        if (tx.transaction_type === 'product_given') balances[tx.client_id].balance += Number(tx.amount);
+        else if (tx.transaction_type === 'payment_received') balances[tx.client_id].balance -= Number(tx.amount);
+        else if (tx.transaction_type === 'product_returned') balances[tx.client_id].balance -= Number(tx.amount);
+      });
+      return Object.entries(balances)
+        .filter(([, v]) => v.balance > 0)
+        .map(([id, v]) => ({ id, name: v.name, amount: v.balance }))
+        .sort((a, b) => b.amount - a.amount);
+    },
+  });
+
   return (
     <div className="space-y-6">
       {/* Low Stock Alert Banner */}
@@ -150,6 +200,48 @@ export default function AdminDashboardPage() {
             {lowStockProducts.map(p => `${p.name} (${p.stock} ${t('common.remaining')})`).join(' • ')}
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Payment Alerts */}
+      {((supplierAlerts?.length ?? 0) > 0 || (clientAlerts?.length ?? 0) > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {(supplierAlerts?.length ?? 0) > 0 && (
+            <div className="bg-card border border-orange-500/30 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Wallet className="w-5 h-5 text-orange-500" />
+                <h3 className="font-cairo font-bold text-sm text-orange-600">{t('dashboard.suppliersToPayTitle')}</h3>
+              </div>
+              <div className="space-y-2">
+                {supplierAlerts!.slice(0, 5).map(s => (
+                  <div key={s.id} className="flex items-center justify-between">
+                    <Button variant="link" className="font-cairo text-sm p-0 h-auto" onClick={() => navigate(`/admin/suppliers/${s.id}`)}>
+                      {s.name}
+                    </Button>
+                    <span className="font-roboto text-sm font-bold text-orange-600">{formatPrice(s.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {(clientAlerts?.length ?? 0) > 0 && (
+            <div className="bg-card border border-primary/30 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <CreditCard className="w-5 h-5 text-primary" />
+                <h3 className="font-cairo font-bold text-sm text-primary">{t('dashboard.clientsToCollectTitle')}</h3>
+              </div>
+              <div className="space-y-2">
+                {clientAlerts!.slice(0, 5).map(c => (
+                  <div key={c.id} className="flex items-center justify-between">
+                    <Button variant="link" className="font-cairo text-sm p-0 h-auto" onClick={() => navigate(`/admin/clients/${c.id}`)}>
+                      {c.name}
+                    </Button>
+                    <span className="font-roboto text-sm font-bold text-primary">{formatPrice(c.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Stats Grid */}
