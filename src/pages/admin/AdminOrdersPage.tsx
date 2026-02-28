@@ -103,21 +103,23 @@ export default function AdminOrdersPage() {
         body: { order_ids: Array.from(selectedIds), company_id: selectedCompanyId },
       });
       if (error) throw error;
-      
-      // Download CSV
-      const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${data.company_name}-orders-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
 
-      if (data.api_result?.success) {
-        toast({ title: t('delivery.apiSuccess') });
-      } else if (data.api_result) {
-        toast({ title: t('delivery.csvExported'), description: data.api_result.message });
+      if (data.api_result) {
+        // API was called (company has API configured)
+        if (data.api_result.success) {
+          toast({ title: `✅ ${data.order_count} ${t('delivery.ordersSentSuccess')} ${data.company_name}` });
+        } else {
+          toast({ title: t('common.errorOccurred'), description: data.api_result.message });
+        }
       } else {
+        // No API configured — fallback to CSV download
+        const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${data.company_name}-orders-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
         toast({ title: t('delivery.csvExported') });
       }
       setDeliveryDialog(false);
@@ -605,19 +607,30 @@ export default function AdminOrdersPage() {
                   <SelectContent>
                     {deliveryCompanies?.map(c => (
                       <SelectItem key={c.id} value={c.id} className="font-cairo">
-                        {c.name} {c.api_key ? '🟢' : ''}
+                        <span className="flex items-center gap-2">
+                          {c.name}
+                          {c.api_key ? <span className="inline-block w-2 h-2 rounded-full bg-green-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/40" />}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+              {selectedCompanyId && (() => {
+                const comp = deliveryCompanies?.find(c => c.id === selectedCompanyId);
+                return comp ? (
+                  <p className="text-xs font-cairo text-muted-foreground bg-muted/50 p-2 rounded">
+                    {comp.api_key ? `📡 ${t('delivery.willSendApi')}` : `📄 ${t('delivery.willDownloadCsv')}`}
+                  </p>
+                ) : null;
+              })()}
               <Button
                 onClick={handleExportToDelivery}
                 disabled={!selectedCompanyId || exportingDelivery}
                 className="w-full font-cairo gap-2"
               >
-                {exportingDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                {t('delivery.exportNow')}
+                {exportingDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
+                {t('delivery.sendToDelivery')}
               </Button>
             </div>
           </DialogContent>

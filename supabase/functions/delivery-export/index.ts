@@ -88,10 +88,11 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ parcels }),
         });
 
+        const apiBody = await apiRes.text();
         apiResult = {
           status: apiRes.status,
           success: apiRes.ok,
-          message: apiRes.ok ? 'Orders pushed to API' : 'API returned error',
+          message: apiRes.ok ? 'Orders pushed to API' : `API error ${apiRes.status}: ${apiBody.slice(0, 200)}`,
         };
       } catch (e: any) {
         apiResult = { status: 0, success: false, message: `API call failed: ${e.message}` };
