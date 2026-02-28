@@ -50,6 +50,8 @@ import AdminDeliveryPage from "./pages/admin/settings/AdminDeliveryPage";
 import AboutPage from "./pages/AboutPage";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import ConfirmerLayout from "./components/ConfirmerLayout";
+import ConfirmerDashboardPage from "./pages/confirmer/ConfirmerDashboardPage";
 import { useStoreTheme } from "@/hooks/useStoreTheme";
 import { useFavicon } from "@/hooks/useFavicon";
 import { useFacebookPixel } from "@/hooks/useFacebookPixel";
@@ -131,6 +133,9 @@ const App = () => (
             <Route path="/admin/settings/security" element={<LanguageProvider><AdminLayout><AdminSecurityPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/pixels" element={<LanguageProvider><AdminLayout><AdminPixelsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/delivery" element={<LanguageProvider><AdminLayout><AdminDeliveryPage /></AdminLayout></LanguageProvider>} />
+
+            {/* Confirmer */}
+            <Route path="/confirmer" element={<LanguageProvider><ConfirmerLayout><ConfirmerDashboardPage /></ConfirmerLayout></LanguageProvider>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

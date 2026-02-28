@@ -946,4 +946,12 @@ export const en: Record<string, string> = {
 
   // ═══ Client Stock ═══
   'clients.insufficientStock': 'Insufficient stock. Available:',
+
+  // ═══ Confirmer ═══
+  'confirmer.panel': 'Confirmer Panel',
+  'confirmer.totalOrders': 'Total Orders',
+  'confirmer.newToday': 'New Today',
+  'confirmer.confirmedToday': 'Confirmed Today',
+  'confirmer.cancelledToday': 'Cancelled Today',
+  'confirmer.searchPlaceholder': 'Search by order #, name or phone...',
 };
