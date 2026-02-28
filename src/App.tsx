@@ -44,6 +44,8 @@ import AdminSuppliersPage from "./pages/admin/AdminSuppliersPage";
 import AdminSupplierDetailPage from "./pages/admin/AdminSupplierDetailPage";
 import AdminClientsPage from "./pages/admin/AdminClientsPage";
 import AdminClientDetailPage from "./pages/admin/AdminClientDetailPage";
+import AdminCreateOrderPage from "./pages/admin/AdminCreateOrderPage";
+import AdminPixelsPage from "./pages/admin/settings/AdminPixelsPage";
 import AboutPage from "./pages/AboutPage";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
@@ -99,6 +101,7 @@ const App = () => (
             <Route path="/admin" element={<LanguageProvider><AdminLayout><AdminDashboardPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/products" element={<LanguageProvider><AdminLayout><AdminProductsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/orders" element={<LanguageProvider><AdminLayout><AdminOrdersPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/orders/create" element={<LanguageProvider><AdminLayout><AdminCreateOrderPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/returns" element={<LanguageProvider><AdminLayout><AdminReturnsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/wilayas" element={<LanguageProvider><AdminLayout><AdminWilayasPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/coupons" element={<LanguageProvider><AdminLayout><AdminCouponsPage /></AdminLayout></LanguageProvider>} />
@@ -122,6 +125,7 @@ const App = () => (
             <Route path="/admin/settings/form" element={<LanguageProvider><AdminLayout><AdminFormSettingsPage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/appearance" element={<LanguageProvider><AdminLayout><AdminAppearancePage /></AdminLayout></LanguageProvider>} />
             <Route path="/admin/settings/security" element={<LanguageProvider><AdminLayout><AdminSecurityPage /></AdminLayout></LanguageProvider>} />
+            <Route path="/admin/settings/pixels" element={<LanguageProvider><AdminLayout><AdminPixelsPage /></AdminLayout></LanguageProvider>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

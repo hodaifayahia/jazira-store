@@ -911,4 +911,16 @@ export const en: Record<string, string> = {
   'clients.typePayment': 'Payment',
   'clients.typeReturn': 'Return',
   'clients.deleteTxConfirm': 'Do you want to delete this transaction?',
+
+  // ═══ Facebook Pixels ═══
+  'pixels.title': 'Facebook Pixels',
+  'pixels.description': 'Manage multiple Facebook Pixels for event tracking and conversions',
+  'pixels.addPixel': 'Add Pixel',
+  'pixels.pixelId': 'Pixel ID',
+  'pixels.pixelName': 'Pixel Name',
+  'pixels.namePlaceholder': 'e.g., Main Website Pixel',
+  'pixels.activePixels': 'Active Pixels',
+  'pixels.noPixels': 'No pixels added yet',
+  'pixels.added': 'Pixel added ✅',
+  'pixels.idRequired': 'Pixel ID is required',
 };

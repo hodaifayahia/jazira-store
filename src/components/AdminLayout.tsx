@@ -63,6 +63,7 @@ const SETTINGS_SUB_KEYS = [
   { href: '/admin/settings/form', key: 'sidebar.form', icon: FormInput },
   { href: '/admin/settings/appearance', key: 'sidebar.appearance', icon: Paintbrush },
   { href: '/admin/settings/security', key: 'settings.security', icon: Shield },
+  { href: '/admin/settings/pixels', key: 'pixels.title', icon: Globe },
 ];
 
 const LANG_OPTIONS: { value: Language; label: string; flag: string }[] = [

@@ -911,4 +911,16 @@ export const ar: Record<string, string> = {
   'clients.typePayment': 'دفعة',
   'clients.typeReturn': 'مرتجع',
   'clients.deleteTxConfirm': 'هل تريد حذف هذه المعاملة؟',
+
+  // ═══ Facebook Pixels ═══
+  'pixels.title': 'Facebook Pixels',
+  'pixels.description': 'إدارة بكسلات فيسبوك المتعددة لتتبع الأحداث والتحويلات',
+  'pixels.addPixel': 'إضافة بكسل',
+  'pixels.pixelId': 'معرف البكسل',
+  'pixels.pixelName': 'اسم البكسل',
+  'pixels.namePlaceholder': 'مثال: بكسل الموقع الرئيسي',
+  'pixels.activePixels': 'البكسلات النشطة',
+  'pixels.noPixels': 'لم يتم إضافة أي بكسل بعد',
+  'pixels.added': 'تم إضافة البكسل ✅',
+  'pixels.idRequired': 'معرف البكسل مطلوب',
 };

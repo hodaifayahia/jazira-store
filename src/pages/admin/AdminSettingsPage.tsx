@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, CreditCard, Bot, RotateCcw, FormInput, Paintbrush, Shield } from 'lucide-react';
+import { Store, CreditCard, Bot, RotateCcw, FormInput, Paintbrush, Shield, Facebook } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useTranslation } from '@/i18n';
 
@@ -11,6 +11,7 @@ const SETTINGS_CARDS = [
   { href: '/admin/settings/form', key: 'sidebar.form', descKey: 'settings.formDesc', icon: FormInput },
   { href: '/admin/settings/appearance', key: 'sidebar.appearance', descKey: 'settings.appearanceDesc', icon: Paintbrush },
   { href: '/admin/settings/security', key: 'settings.security', descKey: 'settings.securityDesc', icon: Shield },
+  { href: '/admin/settings/pixels', key: 'pixels.title', descKey: 'pixels.description', icon: Facebook },
 ];
 
 export default function AdminSettingsPage() {
