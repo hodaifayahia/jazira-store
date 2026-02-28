@@ -199,7 +199,7 @@ export default function IndexPage() {
                   </Button>
                 </Link>
                 <Link to="/products">
-                  <Button size="lg" variant="outline" className="font-cairo font-semibold text-base px-8 h-12 rounded-2xl border-amber-300/30 text-amber-100 hover:bg-amber-100/10 hover:text-amber-50 backdrop-blur-sm">
+                  <Button size="lg" variant="outline" className="font-cairo font-semibold text-base px-8 h-12 rounded-2xl border-amber-300/30 text-amber-100 hover:bg-amber-100/10 hover:text-amber-50 backdrop-blur-sm bg-transparent">
                     اكتشف المنتجات
                   </Button>
                 </Link>
