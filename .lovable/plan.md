@@ -1,27 +1,48 @@
 
 
-# Fix Responsive Tables on Costs, Returns, and Supplier Pages
+# Plan: Sticky Columns in Costs Table, Delivery in Sidebar, and Push Orders Button
 
-## Problem
-The tables on the Costs and Returns pages use `w-full` on the `<table>` element, which causes columns to compress and overlap on mobile instead of triggering horizontal scroll. The `overflow-x-auto` wrapper is present but the table shrinks to fit rather than maintaining a usable minimum width.
+## 1. Sticky First Columns in Costs Table (Product Name + Selling Price)
 
-## Solution
-Add `min-w-[800px]` (or similar) to the `<table>` elements so they maintain their column widths on mobile, and the `overflow-x-auto` parent container enables horizontal scrolling.
+**File**: `src/pages/admin/AdminCostsPage.tsx`
 
-## Changes
+Make the first two columns (Product Name and Selling Price) sticky during horizontal scrolling on mobile:
+- Add `sticky left-0 z-10 bg-white` (or `bg-muted/30` for header) to the first two `<th>` and `<td>` elements
+- The product name column gets `sticky left-0` and the selling price column gets `sticky left-[calculated-width]`
+- This ensures these key columns stay visible while scrolling through cost/margin data
 
-### 1. `src/pages/admin/AdminCostsPage.tsx` (line 145)
-- Change `<table className="w-full text-sm">` to `<table className="w-full text-sm min-w-[800px]">`
-- This ensures the 8-column table scrolls horizontally on narrow screens
+## 2. Add Delivery Companies as a Direct Sidebar Item
 
-### 2. `src/pages/admin/AdminReturnsPage.tsx` (line 192)
-- Change `<table className="w-full text-sm">` to `<table className="w-full text-sm min-w-[700px]">`
-- The returns table already hides some columns on mobile (`hidden md:table-cell`), but still needs a min-width for the visible columns
+**File**: `src/components/AdminLayout.tsx`
 
-### 3. `src/pages/admin/AdminSuppliersPage.tsx`
-- Check if supplier list uses a table or cards -- if table, apply same `min-w` fix
+Currently, the delivery page is buried under Settings > Delivery. The user wants it as a top-level sidebar item:
+- Add `{ href: '/admin/delivery', key: 'delivery.title', icon: Truck }` to `NAV_KEYS` array (after suppliers or orders)
 
-### 4. `src/components/admin/suppliers/SupplierProductsTab.tsx`
-- Apply `min-w-[700px]` to the products table inside the supplier detail page
+**File**: `src/App.tsx`
+- Add route: `/admin/delivery` pointing to `AdminDeliveryPage`
 
-These are minimal CSS-only changes (adding one class per table) that fix the horizontal scroll behavior without restructuring any components.
+## 3. Add "Push All Orders to Delivery" Button on Orders Page
+
+**File**: `src/pages/admin/AdminOrdersPage.tsx`
+
+Add a prominent button at the top of the orders page (not just in bulk selection bar) that:
+- Shows a "Push to Delivery" button next to the "Create Order" button
+- Opens the delivery company selection dialog
+- Exports ALL filtered orders (not just selected) to the chosen delivery company via the existing `delivery-export` edge function
+- Uses the same `handleExportToDelivery` logic already in the page
+
+This will add a top-level button so users don't need to manually select orders first.
+
+---
+
+## Technical Summary
+
+| File | Change |
+|------|--------|
+| `src/pages/admin/AdminCostsPage.tsx` | Add `sticky left-0` to product name and selling price columns in both `thead` and `tbody` |
+| `src/components/AdminLayout.tsx` | Add delivery to `NAV_KEYS` sidebar array |
+| `src/App.tsx` | Add `/admin/delivery` route |
+| `src/pages/admin/AdminOrdersPage.tsx` | Add top-level "Push to Delivery" button that exports all filtered orders |
+
+No database changes needed.
+
