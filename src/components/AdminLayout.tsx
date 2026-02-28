@@ -53,6 +53,7 @@ const NAV_KEYS = [
   { href: '/admin/landing', key: 'sidebar.landing', icon: Rocket },
   { href: '/admin/suppliers', key: 'sidebar.suppliers', icon: Truck },
   { href: '/admin/clients', key: 'sidebar.clients', icon: Users },
+  { href: '/admin/delivery', key: 'delivery.title', icon: Truck },
 ];
 
 const SETTINGS_SUB_KEYS = [
