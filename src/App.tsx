@@ -53,13 +53,15 @@ import { useStoreTheme } from "@/hooks/useStoreTheme";
 import { useFavicon } from "@/hooks/useFavicon";
 import { useFacebookPixel } from "@/hooks/useFacebookPixel";
 import { LanguageProvider } from "@/i18n";
-
+import OfflineBanner from "@/components/OfflineBanner";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 const queryClient = new QueryClient();
 
 function StoreThemeProvider({ children }: { children: React.ReactNode }) {
   useStoreTheme();
   useFavicon();
   useFacebookPixel();
+  useOfflineSync();
   return <>{children}</>;
 }
 
@@ -81,6 +83,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <OfflineBanner />
         <BrowserRouter>
           <Routes>
             {/* Public */}

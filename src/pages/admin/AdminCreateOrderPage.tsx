@@ -225,7 +225,7 @@ export default function AdminCreateOrderPage() {
         product_id: item.productId,
         quantity: item.quantity,
         unit_price: item.price,
-        variant_id: item.variationId || null,
+        variant_id: null,
       }));
 
       const { error: itemsError } = await supabase.from('order_items').insert(items);
