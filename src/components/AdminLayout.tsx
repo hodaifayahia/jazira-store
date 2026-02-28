@@ -457,7 +457,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </PopoverContent>
           </Popover>
         </header>
-        <main className="p-4 md:p-6">{children}</main>
+        <main className="p-4 md:p-6 overflow-x-hidden min-w-0">{children}</main>
       </div>
 
       {/* Overlay */}
