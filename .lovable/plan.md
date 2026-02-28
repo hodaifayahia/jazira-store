@@ -1,62 +1,55 @@
 
-# Plan: Confirmer Dashboard & Comprehensive Testing Fixes
+# Plan: Abandoned Cart on Landing Pages, Delivery in Sidebar, and Responsive Fixes
 
-## Problem
-When a confirmer logs in, they are redirected to the admin dashboard which requires the "admin" role -- so they see nothing or get kicked out. Confirmers need their own restricted view showing only orders.
+## 1. Abandoned Cart Capture on Landing Page
 
-## Solution
+**Problem**: The CheckoutPage already saves abandoned orders when users fill in their info but don't complete the order. However, the Landing Page (single-product order form) does NOT capture abandoned carts at all.
 
-### 1. Create Confirmer Layout (`src/components/ConfirmerLayout.tsx`)
-- Similar to AdminLayout but checks for `confirmer` role instead of `admin`
-- Simplified sidebar with only: Dashboard (orders list) and Logout
-- Same header style but without admin-only features (settings, products, etc.)
-- Reuses existing notification system for new orders
+**Solution**: Add the same debounced abandoned cart capture logic from `CheckoutPage.tsx` to `LandingPage.tsx`. When a user fills in their name and phone on the landing page form but doesn't submit, save/update an `abandoned_orders` record after 5 seconds of inactivity.
 
-### 2. Create Confirmer Dashboard Page (`src/pages/confirmer/ConfirmerDashboardPage.tsx`)
-- Shows only orders in a table/list format
-- Confirmer can view order details, update order status (confirm/cancel)
-- Filters: new orders, confirmed, cancelled
-- KPI cards: total orders assigned, confirmed today, cancelled today
-- No access to products, settings, suppliers, clients, etc.
-
-### 3. Update Login Flow (`src/pages/admin/AdminLoginPage.tsx`)
-- After successful login, check user role:
-  - If `admin` role: redirect to `/admin`
-  - If `confirmer` role: redirect to `/confirmer`
-  - If neither: show "no access" error
-
-### 4. Add Confirmer Routes (`src/App.tsx`)
-- `/confirmer` -- ConfirmerLayout wrapping ConfirmerDashboardPage
-- Login page remains at `/admin/login` (shared between admin and confirmer)
-
-### 5. Update RLS / Database
-- No new tables needed -- confirmers already have `confirmer` role in `user_roles`
-- The `has_role` function already supports checking for any `app_role`
-- Need to verify `app_role` enum includes `confirmer` -- if not, add it via migration
-- Orders table already has public SELECT policy, so confirmers can read orders
+### File to Modify
+- `src/pages/LandingPage.tsx` -- Add a `useEffect` that watches `orderName`, `orderPhone`, and the product data. After a 5-second debounce (once name >= 2 chars and phone >= 10 digits), upsert an abandoned order with the product info as cart items and `landing_page_id` context.
 
 ---
 
-## Technical Details
+## 2. Delivery Companies Already in Sidebar
 
-### Files to Create
-1. `src/components/ConfirmerLayout.tsx` -- Layout with confirmer role check and minimal sidebar
-2. `src/pages/confirmer/ConfirmerDashboardPage.tsx` -- Orders-only dashboard for confirmers
+The delivery companies management page is already accessible at `/admin/settings/delivery` and is listed in the settings sub-navigation (`SETTINGS_SUB_KEYS` in `AdminLayout.tsx`). No further changes needed here.
+
+---
+
+## 3. Fix Responsive Tables (Overflow-Y Instead of Full Page Scroll)
+
+**Problem**: Tables on the Returns, Costs, Suppliers, and Supplier Detail pages expand the entire page width on mobile. The tables should scroll horizontally within a constrained container rather than stretching the whole page.
+
+**Solution**: Wrap all table containers in a `max-h` scroll area or ensure the existing `overflow-x-auto` wrapper is inside a properly constrained parent. The main issue is that the parent `div` in `AdminLayout` content area doesn't constrain overflow. We need to add `overflow-hidden` or `overflow-x-hidden` to the main content wrapper and ensure table wrappers have `overflow-x-auto` with `min-w-0`.
 
 ### Files to Modify
-1. `src/pages/admin/AdminLoginPage.tsx` -- Role-based redirect after login
-2. `src/App.tsx` -- Add confirmer routes
-3. `src/i18n/locales/ar.ts` -- Add confirmer translations
-4. `src/i18n/locales/en.ts` -- Add confirmer translations
-5. `src/i18n/locales/fr.ts` -- Add confirmer translations
 
-### Database Migration
-- Check if `app_role` enum includes `confirmer`; if not, run `ALTER TYPE app_role ADD VALUE 'confirmer'`
-- The `manage-confirmer` edge function already inserts `role: 'confirmer'` into `user_roles`, so the enum value must exist or the insert would fail -- this confirms it likely already exists
+1. **`src/pages/admin/AdminCostsPage.tsx`** -- The table wrapper at line 144 has `overflow-x-auto` but the parent space doesn't constrain. Add `min-w-0` to the root div.
 
-### Confirmer Dashboard Features
-- Order list with search by order number, customer name, phone
-- Status filters (New, Confirmed, Cancelled, All)
-- Quick action buttons to change order status
-- Today's stats cards (new, confirmed, cancelled counts)
-- No access to any other admin pages
+2. **`src/pages/admin/AdminReturnsPage.tsx`** -- Similar fix: ensure the root container has `min-w-0` and table wrapper constrains overflow.
+
+3. **`src/pages/admin/AdminSuppliersPage.tsx`** -- Add `min-w-0` to root and ensure table wrapper constrains properly.
+
+4. **`src/pages/admin/AdminSupplierDetailPage.tsx`** -- Add `min-w-0` to root div and ensure both the transactions table and products tab tables scroll horizontally within their container.
+
+5. **`src/components/admin/suppliers/SupplierProductsTab.tsx`** -- Already has `overflow-x-auto` on the table wrapper (line 233). Add `min-w-0` to the root div to prevent it from expanding beyond its parent.
+
+6. **`src/components/AdminLayout.tsx`** -- Add `overflow-x-hidden min-w-0` to the main content area `<main>` tag so child tables cannot expand the layout.
+
+---
+
+## Technical Summary
+
+| File | Change |
+|------|--------|
+| `src/pages/LandingPage.tsx` | Add abandoned cart capture `useEffect` with 5s debounce |
+| `src/components/AdminLayout.tsx` | Add `overflow-x-hidden min-w-0` to main content wrapper |
+| `src/pages/admin/AdminCostsPage.tsx` | Add `min-w-0` to root container |
+| `src/pages/admin/AdminReturnsPage.tsx` | Add `min-w-0` to root container |
+| `src/pages/admin/AdminSuppliersPage.tsx` | Add `min-w-0` to root container |
+| `src/pages/admin/AdminSupplierDetailPage.tsx` | Add `min-w-0` to root container |
+| `src/components/admin/suppliers/SupplierProductsTab.tsx` | Add `min-w-0` to root container |
+
+No database changes needed -- the `abandoned_orders` table already supports all required fields.
