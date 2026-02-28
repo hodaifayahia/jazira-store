@@ -189,7 +189,7 @@ export default function AdminReturnsPage() {
 
       {/* Table */}
       <div className="bg-card border rounded-lg overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[700px]">
           <thead className="bg-muted">
             <tr>
               <th className="p-3 text-right font-cairo">{t('returns.returnNumber')}</th>
