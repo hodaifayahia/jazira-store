@@ -339,6 +339,30 @@ export type Database = {
         }
         Relationships: []
       }
+      facebook_pixels: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          pixel_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          pixel_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          pixel_id?: string
+        }
+        Relationships: []
+      }
       landing_pages: {
         Row: {
           content: Json

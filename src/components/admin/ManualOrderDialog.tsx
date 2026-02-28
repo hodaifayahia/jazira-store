@@ -237,24 +237,19 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
       const { error: itemsError } = await supabase.from('order_items').insert(items);
       if (itemsError) throw itemsError;
 
-      // Deduct stock
+      // Deduct stock properly
       for (const item of orderItems) {
-        await supabase.rpc('has_role', { _user_id: '00000000-0000-0000-0000-000000000000', _role: 'admin' }).then(() => {
-          // Just deduct from main product stock
-          supabase
+        const { data: prod } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', item.productId)
+          .single();
+        if (prod) {
+          await supabase
             .from('products')
-            .select('stock')
-            .eq('id', item.productId)
-            .single()
-            .then(({ data: prod }) => {
-              if (prod) {
-                supabase
-                  .from('products')
-                  .update({ stock: Math.max(0, (prod.stock || 0) - item.quantity) })
-                  .eq('id', item.productId);
-              }
-            });
-        });
+            .update({ stock: Math.max(0, (prod.stock || 0) - item.quantity) })
+            .eq('id', item.productId);
+        }
       }
 
       return order;

@@ -10,7 +10,20 @@ declare global {
 }
 
 export function useFacebookPixel() {
-  const { data: pixelId } = useQuery({
+  const { data: pixels } = useQuery({
+    queryKey: ['facebook-pixels-active'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('facebook_pixels')
+        .select('pixel_id')
+        .eq('is_active', true);
+      return data?.map(p => p.pixel_id).filter(Boolean) || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
+  // Fallback: also check legacy single pixel from settings
+  const { data: legacyPixelId } = useQuery({
     queryKey: ['facebook-pixel-id'],
     queryFn: async () => {
       const { data } = await supabase
@@ -23,8 +36,13 @@ export function useFacebookPixel() {
     staleTime: 1000 * 60 * 10,
   });
 
+  const allPixelIds = [...new Set([
+    ...(pixels || []),
+    ...(legacyPixelId ? [legacyPixelId] : []),
+  ])];
+
   useEffect(() => {
-    if (!pixelId) return;
+    if (allPixelIds.length === 0) return;
     if (document.getElementById('fb-pixel-script')) return;
 
     // Inject Facebook Pixel base code
@@ -43,9 +61,12 @@ export function useFacebookPixel() {
     script.src = 'https://connect.facebook.net/en_US/fbevents.js';
     document.head.appendChild(script);
 
-    window.fbq('init', pixelId);
+    // Initialize ALL pixels
+    allPixelIds.forEach(pixelId => {
+      window.fbq('init', pixelId);
+    });
     window.fbq('track', 'PageView');
-  }, [pixelId]);
+  }, [allPixelIds.join(',')]);
 
   const trackEvent = useCallback(
     (eventName: string, params?: Record<string, any>) => {
@@ -56,5 +77,5 @@ export function useFacebookPixel() {
     []
   );
 
-  return { trackEvent, pixelId };
+  return { trackEvent, pixelId: allPixelIds[0] || '' };
 }
