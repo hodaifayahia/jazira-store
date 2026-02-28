@@ -1,122 +1,106 @@
 
 
-# Plan: Fix Scroll, Fix Order Creation, Add Offline Support
+# Plan: Delivery Company Integration, Stock Limits & Payment Alerts
 
-## 1. Fix Scroll Position on Navigation
+## 1. Delivery Companies Integration
 
-**Problem**: When scrolling down on any admin page and clicking a sidebar link or navigating, the page stays scrolled down.
+### 1a. Database: `delivery_companies` table
+Create a new table to store delivery company configurations:
+- `id` (uuid, PK)
+- `name` (text) -- company name
+- `api_key` (text, nullable) -- API key for integration
+- `api_url` (text, nullable) -- base URL for the company API
+- `is_active` (boolean, default true)
+- `is_builtin` (boolean, default false) -- for pre-seeded companies
+- `logo_url` (text, nullable)
+- `created_at` (timestamp)
 
-**Root Cause**: The sidebar scroll-to-top fix exists (line 91-93 in AdminLayout), but the **main content area** scrolls via the browser window, not the sidebar. Need to also call `window.scrollTo(0, 0)` on route change.
+Pre-seed famous Algerian delivery companies:
+- **Yalidine** (yalidine.com)
+- **ZR Express** (zrexpress.com)
+- **Maystro Delivery** (maystro-delivery.com)
+- **EcoTrack** (ecotrack.dz)
+- **Procolis** (procolis.com)
+- **GLS Algeria**
+- **E-Com Delivery**
 
-**Fix**: Add `window.scrollTo(0, 0)` to the existing `useEffect` in `AdminLayout.tsx` that watches `location.pathname`.
+RLS: Admin-only management, no public access needed.
+
+### 1b. Admin Settings Page: `/admin/settings/delivery`
+Create `src/pages/admin/settings/AdminDeliveryPage.tsx`:
+- List all delivery companies (built-in + custom)
+- Toggle active/inactive for each
+- Add custom delivery company (name, API key, API URL)
+- Edit/delete custom companies
+- Show connection status indicator
+
+### 1c. Export Orders to Delivery Company
+In `AdminOrdersPage.tsx`, add an "Export to Delivery" button:
+- Appears in the bulk actions bar when orders are selected
+- Opens a dialog to choose which active delivery company to export to
+- Generates a CSV/Excel file with order data (name, phone, wilaya, address, total, COD amount) formatted for the selected company
+- For companies with API integration (Yalidine, ZR Express, etc.), attempt to push orders via their API through an edge function
+- Show success/failure feedback per order
+
+### 1d. Edge Function: `delivery-export`
+Create `supabase/functions/delivery-export/index.ts`:
+- Accepts order IDs and delivery company ID
+- Fetches order details from database
+- Formats data according to the delivery company's API spec
+- Pushes orders to the API (if API key is configured)
+- Returns results (success/failed per order)
+
+### 1e. Route & Navigation
+- Add route `/admin/settings/delivery` in `App.tsx`
+- Add "Delivery" entry in `SETTINGS_SUB_KEYS` in `AdminLayout.tsx`
 
 ---
 
-## 2. Fix Order Creation Foreign Key Error
+## 2. Client Stock Limit (Cannot Give More Than Available)
 
-**Problem**: Screenshot shows error: `insert or update on table "order_items" violates foreign key constraint "order_items_variant_id_fkey"`
-
-**Root Cause**: The `order_items.variant_id` column has a foreign key to the `product_variants` table, but the order creation page queries `product_variations` (a different table) and sends those IDs. The IDs from `product_variations` don't exist in `product_variants`, causing the FK violation.
-
-**Fix**: In `AdminCreateOrderPage.tsx`, change the `variant_id` in the order items insert to `null` since the product_variations system uses price adjustments directly (not variant tracking). The variation info is already captured in the product name and price. This ensures no FK violation occurs.
-
-### Files Modified
-- `src/components/AdminLayout.tsx` -- add window.scrollTo
-- `src/pages/admin/AdminCreateOrderPage.tsx` -- set variant_id to null always (variations are from a different table)
+In `AdminClientDetailPage.tsx`, modify `handleGiveProduct`:
+- Before creating the transaction, check if `giveForm.quantity > (product.stock ?? 0)`
+- If so, show an error toast: "Insufficient stock. Available: X" and block the action
+- Also set `max` attribute on the quantity input to `selectedProduct?.stock ?? 0`
+- Show available stock next to the quantity field
 
 ---
 
-## 3. Full Offline Support
+## 3. Payment Alerts on Dashboard
 
-### Architecture Overview
+### 3a. Supplier Payment Alerts
+In `AdminDashboardPage.tsx`, add an alert card:
+- Query `supplier_transactions` to calculate supplier balances (received - given)
+- Show suppliers with negative balance (you owe them money)
+- Display as a warning card: "Suppliers you need to pay"
 
-The app already uses `vite-plugin-pwa` with Workbox for basic service worker caching. This plan extends it with:
+### 3b. Client Payment Alerts
+In the same dashboard, add another alert card:
+- Query `client_transactions` to calculate client balances
+- Show clients with positive balance (they owe you money)
+- Display as an info card: "Clients who need to pay you"
 
-```text
-+------------------+     +-------------------+     +------------------+
-|   User Action    | --> | Offline Detector  | --> | Online? Send to  |
-|   (form submit)  |     | (navigator.online)|     | Supabase directly|
-+------------------+     +-------------------+     +------------------+
-                                |                          
-                           Offline?                        
-                                |                          
-                    +-----------v-----------+              
-                    | Save to IndexedDB     |              
-                    | (pending_operations)  |              
-                    +-----------+-----------+              
-                                |                          
-                    On 'online' event                      
-                                |                          
-                    +-----------v-----------+              
-                    | SyncManager: replay   |              
-                    | pending ops to        |              
-                    | Supabase in order     |              
-                    +---+-------------------+              
-                        |                                  
-                    Success? Clear from IndexedDB          
-                    Show success toast                     
-```
+Both cards will link to the respective detail pages for quick action.
 
-### 3a. Enhanced Service Worker Config (`vite.config.ts`)
+---
 
-Update the VitePWA config to:
-- Cache all static assets aggressively (CacheFirst for images/fonts)
-- Use NetworkFirst for API calls with longer cache duration
-- Add offline fallback page
-
-### 3b. Offline Queue System
-
-**New file: `src/lib/offlineQueue.ts`**
-
-- Uses IndexedDB (via a lightweight wrapper) to store pending operations
-- Each record has: `id`, `table`, `operation` (insert/update/delete), `data`, `created_at`, `synced_at`
-- Provides functions: `addToQueue()`, `getPendingOps()`, `markSynced()`, `clearSynced()`
-
-### 3c. Online/Offline Detection
-
-**New file: `src/components/OfflineBanner.tsx`**
-
-- Listens to `window.addEventListener('online'/'offline')`
-- Shows a fixed banner at the top: "You're offline -- your changes will be saved locally"
-- Animate in/out smoothly
-- Shows pending operation count
-
-### 3d. Supabase Wrapper for Offline-Aware Operations
-
-**New file: `src/lib/offlineSupabase.ts`**
-
-- Wraps common Supabase operations (insert, update, delete)
-- When online: execute normally
-- When offline: save to IndexedDB queue, show offline toast
-- Used in critical forms: order creation, checkout, etc.
-
-### 3e. Auto-Sync on Reconnect
-
-**New file: `src/hooks/useOfflineSync.ts`**
-
-- Hook that listens for `online` event
-- When back online: reads all pending ops from IndexedDB
-- Replays them sequentially to Supabase
-- Shows progress ("Syncing 3 pending operations...")
-- On success: shows "All data synced successfully!" toast
-- On failure: keeps failed ops in queue, shows error
-
-### 3f. Integration Points
-
-- Mount `<OfflineBanner />` in `App.tsx` (visible on all pages)
-- Add `useOfflineSync()` hook in `App.tsx`
-- Wrap order creation (`AdminCreateOrderPage.tsx`) and checkout (`CheckoutPage.tsx`) forms to use the offline-aware Supabase wrapper
+## Technical Details
 
 ### Files to Create
-1. `src/lib/offlineQueue.ts` -- IndexedDB queue manager
-2. `src/lib/offlineSupabase.ts` -- offline-aware Supabase wrapper
-3. `src/hooks/useOfflineSync.ts` -- auto-sync hook
-4. `src/components/OfflineBanner.tsx` -- offline indicator UI
+1. `src/pages/admin/settings/AdminDeliveryPage.tsx` -- Delivery companies management
+2. `supabase/functions/delivery-export/index.ts` -- API export edge function
 
 ### Files to Modify
-1. `src/components/AdminLayout.tsx` -- window.scrollTo fix
-2. `src/pages/admin/AdminCreateOrderPage.tsx` -- fix variant_id FK, integrate offline support
-3. `src/App.tsx` -- mount OfflineBanner and useOfflineSync
-4. `src/pages/CheckoutPage.tsx` -- integrate offline support for customer orders
-5. `vite.config.ts` -- enhance PWA caching strategy
+1. `src/pages/admin/AdminOrdersPage.tsx` -- Add "Export to Delivery" bulk action button
+2. `src/pages/admin/AdminClientDetailPage.tsx` -- Add stock quantity validation
+3. `src/pages/admin/AdminDashboardPage.tsx` -- Add supplier/client payment alert cards
+4. `src/App.tsx` -- Add delivery settings route
+5. `src/components/AdminLayout.tsx` -- Add delivery to settings nav
+6. `src/i18n/locales/ar.ts` -- New translations
+7. `src/i18n/locales/en.ts` -- New translations
+8. `src/i18n/locales/fr.ts` -- New translations
+
+### Database Migration
+- Create `delivery_companies` table with RLS
+- Insert built-in Algerian delivery companies as seed data
 
