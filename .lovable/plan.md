@@ -1,91 +1,98 @@
 
-# Plan: Fix Sidebar Scroll & Add Client/Reseller Management
 
-## 1. Fix Sidebar Scroll Position on Navigation
+# Plan: Fix Orders, Multiple Pixels, Stock Management & UI Enhancements
 
-**Problem**: When you scroll down in the sidebar and click a link (e.g., "View Products" or a product), the sidebar stays scrolled down instead of scrolling back to the top.
+This is a large set of changes across multiple areas. Here's the breakdown:
 
-**Fix**: In `src/components/AdminLayout.tsx`, add a `useEffect` that watches `location.pathname` and scrolls the sidebar `<nav>` element to the top whenever the route changes. This requires adding a `ref` to the `<nav>` element.
+---
 
-## 2. Add Client/Reseller Management Module
+## 1. Fix Manual Order Creation (Broken Stock Deduction)
 
-**Concept**: Clients are resellers who receive products from you to sell on your behalf. They owe you money for the products they sell. This is a consignment model:
-- You give a client X units of a product
-- They sell some, keep some, return some
-- They pay you back for what they sold
+**Problem**: The order creation dialog has broken stock deduction code -- it uses `supabase.rpc('has_role', ...)` in a `.then()` chain that never properly awaits, meaning stock is never actually deducted.
 
-### Database Tables
+**Fix**: Rewrite the stock deduction in `ManualOrderDialog.tsx` to properly `await` each stock update using a simple loop with `await supabase.from('products').update(...)`.
 
-**Table: `clients`**
-- `id` (uuid, PK)
-- `name` (text, required)
-- `phone` (text)
-- `address` (text)
-- `wilaya` (text)
-- `notes` (text)
-- `status` (text, default 'active') -- active / inactive
-- `created_at`, `updated_at`
+---
 
-**Table: `client_transactions`**
-- `id` (uuid, PK)
-- `client_id` (uuid, FK to clients)
-- `transaction_type` (text) -- 'product_given' | 'product_returned' | 'payment_received'
-- `product_id` (uuid, nullable) -- for product_given / product_returned
-- `product_name` (text, nullable) -- stored for reference
-- `quantity` (integer, default 0) -- for product transactions
-- `unit_price` (numeric, default 0) -- price per unit
-- `amount` (numeric, default 0) -- total amount (qty x price, or payment amount)
-- `date` (date, default CURRENT_DATE)
-- `notes` (text)
-- `created_at` (timestamp)
+## 2. Move Order Creation to Full Page
 
-Both tables with RLS: admin-only management.
+**What changes**:
+- Create `src/pages/admin/AdminCreateOrderPage.tsx` -- a full-page order creation form with a modern step-based layout (Customer Info -> Products -> Summary)
+- Better UI with clear sections, larger product cards, live order summary sidebar
+- Add route `/admin/orders/create` in `App.tsx`
+- Update `AdminOrdersPage.tsx` button to navigate to the new page instead of opening the dialog
+- Keep `ManualOrderDialog.tsx` as-is for backward compatibility but it won't be used from the orders page
 
-### Admin Pages & Components
+---
 
-1. **`src/pages/admin/AdminClientsPage.tsx`** -- Main listing page with:
-   - KPI cards: total clients, total owed, collected this month
-   - Client cards/table with search and status filter
-   - Add/edit client dialog
+## 3. Multiple Facebook Pixels Support
 
-2. **`src/pages/admin/AdminClientDetailPage.tsx`** -- Detail page for a single client:
-   - Client info header with balance summary
-   - Two tabs: "Product Handoffs" and "Payments"
-   - Forms to: give products, record returned products, record payments
-   - Transaction history table
-   - Running balance display
+**What changes**:
+- Create a new database table `facebook_pixels` with columns: `id`, `pixel_id` (text), `name` (text), `is_active` (boolean), `created_at`
+- Update `useFacebookPixel.ts` to query from the new `facebook_pixels` table, initialize ALL active pixels, and fire events on all of them
+- Add a "Facebook Pixels" settings card in `AdminSettingsPage.tsx` or a new settings sub-page where admins can add/remove/toggle multiple pixel IDs
+- Create `src/pages/admin/settings/AdminPixelsPage.tsx` for managing pixels
+- Add route and sidebar entry
 
-3. **`src/hooks/useClients.ts`** -- CRUD hooks for clients
-4. **`src/hooks/useClientTransactions.ts`** -- CRUD hooks for client_transactions
+---
 
-### Sidebar & Routes
+## 4. Stock Management on Order Status Change
 
-- Add "العملاء" (Clients) entry in the sidebar nav in `AdminLayout.tsx` with `Users` icon
-- Add routes in `App.tsx`: `/admin/clients` and `/admin/clients/:id`
+**Problem**: When an order is confirmed ("تم التسليم") stock should be deducted. When cancelled ("ملغي"), stock should be restored.
 
-### i18n
+**What changes**:
+- Modify the `updateStatus` mutation in `AdminOrdersPage.tsx` to:
+  - When status changes TO "تم التسليم": deduct stock from products based on order items
+  - When status changes TO "ملغي": restore stock to products based on order items
+  - When status changes FROM "تم التسليم" to something else: restore stock
+  - When status changes FROM "ملغي" back: deduct stock again
+- Also apply the same logic to `bulkUpdateStatus`
+- Fetch order items when updating status to perform stock adjustments
 
-- Add Arabic translations for all client-related strings in `ar.ts`, `fr.ts`, `en.ts`
+---
 
-### Business Logic
+## 5. UI/UX Enhancements
 
-- **Balance calculation**: Sum of (product_given amounts) minus sum of (payment_received + product_returned amounts) = amount owed by client
-- **Give products**: Select product from products table, enter quantity and unit price. Deducts from main product stock.
-- **Record payment**: Enter amount received from client
-- **Record return**: Select product, enter quantity returned. Adds back to main product stock.
+### Dashboard (`AdminDashboardPage.tsx`):
+- Add gradient backgrounds to stat cards with subtle animations
+- Improve chart styling with better colors and tooltips
+- Add a "conversion rate" stat (delivered / total orders)
+- Add a profit calculation card
+- Better mobile responsiveness
 
-## Files to Create
-- `src/pages/admin/AdminClientsPage.tsx`
-- `src/pages/admin/AdminClientDetailPage.tsx`
-- `src/hooks/useClients.ts`
-- `src/hooks/useClientTransactions.ts`
+### Store Landing Page (`Index.tsx`):
+- Enhance hero section with better typography and spacing
+- Improve product card hover effects
+- Add smooth scroll animations
+- Better category navigation styling
 
-## Files to Modify
-- `src/components/AdminLayout.tsx` -- scroll fix + add clients nav item
-- `src/App.tsx` -- add client routes
-- `src/i18n/locales/ar.ts` -- add client translations
-- `src/i18n/locales/fr.ts` -- add client translations
-- `src/i18n/locales/en.ts` -- add client translations
+### Product Page (`SingleProductPage.tsx`):
+- Improve image gallery with better zoom/lightbox
+- Better offer countdown styling
+- Enhance the inline order form with clearer step indicators
+- Better review section design
 
-## Database Migration
-- Create `clients` and `client_transactions` tables with RLS policies (admin-only)
+---
+
+## Technical Details
+
+### Files to Create:
+1. `src/pages/admin/AdminCreateOrderPage.tsx` -- Full-page order creation
+2. `src/pages/admin/settings/AdminPixelsPage.tsx` -- Facebook Pixels management
+
+### Files to Modify:
+1. `src/pages/admin/AdminOrdersPage.tsx` -- Navigate to create page, add stock logic on status change
+2. `src/hooks/useFacebookPixel.ts` -- Support multiple pixels
+3. `src/App.tsx` -- Add new routes
+4. `src/components/AdminLayout.tsx` -- Add Pixels settings nav
+5. `src/pages/admin/AdminSettingsPage.tsx` -- Add Pixels card
+6. `src/pages/admin/AdminDashboardPage.tsx` -- UI enhancements
+7. `src/pages/Index.tsx` -- UI polish
+8. `src/pages/SingleProductPage.tsx` -- UI polish
+9. `src/i18n/locales/ar.ts` -- New translations
+10. `src/i18n/locales/fr.ts` -- New translations
+11. `src/i18n/locales/en.ts` -- New translations
+
+### Database Migration:
+- Create `facebook_pixels` table with RLS (admin-only management, public read for active pixels)
+
