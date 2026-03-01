@@ -81,11 +81,19 @@ export default function AdminProductsPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503') {
+          throw new Error('لا يمكن حذف هذا المنتج لأنه مرتبط بطلبيات. يرجى تطبيق آخر تحديث لقاعدة البيانات (migration) أو إخفاء المنتج بدلاً من حذفه.');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-products'] });
-      toast({ title: 'تم حذف المنتج' });
+      toast({ title: 'تم حذف المنتج ✅' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'خطأ في الحذف', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -116,13 +124,21 @@ export default function AdminProductsPage() {
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase.from('products').delete().in('id', ids);
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503') {
+          throw new Error('بعض المنتجات لا يمكن حذفها لأنها مرتبطة بطلبيات. يرجى تطبيق آخر تحديث لقاعدة البيانات.');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-products'] });
       setSelectedIds(new Set());
       setBulkDeleteDialog(false);
       toast({ title: `تم حذف ${selectedIds.size} منتج ✅` });
+    },
+    onError: (error: any) => {
+      toast({ title: 'خطأ في الحذف', description: error.message, variant: 'destructive' });
     },
   });
 

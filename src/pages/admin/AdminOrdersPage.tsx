@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap, Plus, Download } from 'lucide-react';
+import { Search, Eye, ExternalLink, AlertTriangle, MoreHorizontal, PackageCheck, Truck, Clock, Ban, PackageOpen, CheckCircle, Filter, ChevronDown, ChevronUp, Loader2, CheckSquare, Zap, Plus, Download, Trash2 } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
 import { useTranslation } from '@/i18n';
 
@@ -57,6 +58,7 @@ export default function AdminOrdersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatusDialog, setBulkStatusDialog] = useState(false);
   const [bulkStatus, setBulkStatus] = useState('');
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
   const [deliveryDialog, setDeliveryDialog] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [exportingDelivery, setExportingDelivery] = useState(false);
@@ -139,6 +141,24 @@ export default function AdminOrdersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-orders'] });
       toast({ title: t('status.updated') });
+    },
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete order items first, then the order
+      const { error: itemsError } = await supabase.from('order_items').delete().eq('order_id', id);
+      if (itemsError) throw itemsError;
+      const { error } = await supabase.from('orders').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-orders'] });
+      setDeleteOrderId(null);
+      toast({ title: 'تم حذف الطلبية ✅' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'خطأ في حذف الطلبية', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -460,6 +480,10 @@ export default function AdminOrdersPage() {
                                 </DropdownMenuItem>
                               );
                             })}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setDeleteOrderId(o.id)} className="font-cairo gap-2 cursor-pointer text-destructive focus:text-destructive">
+                              <Trash2 className="w-4 h-4" /> حذف الطلبية
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -506,6 +530,10 @@ export default function AdminOrdersPage() {
                         {STATUSES.map(s => { const cfg = STATUS_CONFIG[s]; const Icon = cfg.icon; return (
                           <DropdownMenuItem key={s} onClick={() => handleQuickStatus(o.id, s)} className={`font-cairo gap-2 cursor-pointer ${cfg.color}`}><Icon className="w-4 h-4" /> {t(STATUS_KEYS[s])}</DropdownMenuItem>
                         ); })}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setDeleteOrderId(o.id)} className="font-cairo gap-2 cursor-pointer text-destructive focus:text-destructive">
+                          <Trash2 className="w-4 h-4" /> حذف الطلبية
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -635,6 +663,29 @@ export default function AdminOrdersPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Order Confirmation */}
+        <AlertDialog open={!!deleteOrderId} onOpenChange={open => !open && setDeleteOrderId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-cairo">تأكيد حذف الطلبية</AlertDialogTitle>
+              <AlertDialogDescription className="font-cairo">
+                هل أنت متأكد من حذف هذه الطلبية؟ سيتم حذف جميع عناصرها بشكل نهائي ولا يمكن التراجع.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-cairo">إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteOrderId && deleteOrderMutation.mutate(deleteOrderId)}
+                className="font-cairo bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteOrderMutation.isPending}
+              >
+                {deleteOrderMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <Trash2 className="w-4 h-4 ml-1" />}
+                حذف نهائياً
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         
       </div>
     </TooltipProvider>

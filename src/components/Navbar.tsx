@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Home, Package, MapPin, User, LogIn, Info, Search, Shirt, Watch, Footprints, Smartphone, Home as HomeIcon, Grid3X3, ChevronDown, Heart, type LucideIcon } from 'lucide-react';
+import { ShoppingCart, Menu, X, Home, Package, MapPin, User, LogIn, Info, Search, Shirt, Watch, Footprints, Smartphone, Home as HomeIcon, Grid3X3, ChevronDown, Heart, LayoutDashboard, type LucideIcon } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useState, useRef, useCallback } from 'react';
@@ -50,6 +50,17 @@ export default function Navbar() {
       return data?.value || 'DZ Store';
     },
     staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ['navbar-is-admin', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+      return !!data;
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 
   const displayName = storeName || 'جزيرة الطبيعة';
@@ -182,6 +193,18 @@ export default function Navbar() {
               </Link>
             )}
 
+            {/* Admin Dashboard button - visible only for admin users */}
+            {!loading && user && isAdmin && (
+              <Link
+                to="/admin"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-cairo font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                title="لوحة التحكم"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                لوحة التحكم
+              </Link>
+            )}
+
             <Link
               to="/wishlist"
               className="relative p-2.5 rounded-xl hover:bg-muted transition-colors"
@@ -278,6 +301,16 @@ export default function Navbar() {
                 <User className="w-4 h-4" />
                 {user ? 'حسابي' : 'تسجيل الدخول'}
               </Link>
+              {user && isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-cairo font-semibold text-sm bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  لوحة التحكم
+                </Link>
+              )}
             </nav>
           </div>
         </div>

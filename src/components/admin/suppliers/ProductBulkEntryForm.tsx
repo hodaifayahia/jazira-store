@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from '@/i18n';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Plus, Trash2, Upload, Package } from 'lucide-react';
 import { uploadSupplierDocument } from '@/hooks/useSupplierTransactions';
 import { toast } from 'sonner';
 
@@ -34,6 +36,14 @@ const emptyRow = (): ProductRow => ({
 
 const UNITS = ['pcs', 'kg', 'box', 'liter', 'meter'];
 
+const UNIT_LABELS: Record<string, string> = {
+  pcs: 'قطعة',
+  kg: 'كيلوجرام',
+  box: 'صندوق',
+  liter: 'لتر',
+  meter: 'متر',
+};
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,6 +55,17 @@ interface Props {
 export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, onSave, saving }: Props) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<ProductRow[]>([emptyRow()]);
+  const [productSearch, setProductSearch] = useState<Record<number, string>>({});
+
+  // Fetch existing products for selection
+  const { data: existingProducts } = useQuery({
+    queryKey: ['products-for-supplier-form'],
+    queryFn: async () => {
+      const { data } = await supabase.from('products').select('id, name, sku, price').order('name');
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const updateRow = (index: number, field: keyof ProductRow, value: any) => {
     setRows(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
@@ -53,6 +74,25 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
   const removeRow = (index: number) => {
     if (rows.length <= 1) return;
     setRows(prev => prev.filter((_, i) => i !== index));
+    setProductSearch(prev => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const selectExistingProduct = (index: number, productId: string) => {
+    if (productId === '__manual__') {
+      updateRow(index, 'product_name', '');
+      updateRow(index, 'reference_sku', '');
+      return;
+    }
+    const product = existingProducts?.find(p => p.id === productId);
+    if (product) {
+      updateRow(index, 'product_name', product.name);
+      updateRow(index, 'reference_sku', product.sku || '');
+      if (product.price) updateRow(index, 'unit_price', product.price);
+    }
   };
 
   const handleUpload = async (index: number, file: File) => {
@@ -70,10 +110,14 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
     if (valid.length === 0) return;
     onSave(valid);
     setRows([emptyRow()]);
+    setProductSearch({});
   };
 
   const handleClose = (val: boolean) => {
-    if (!val) setRows([emptyRow()]);
+    if (!val) {
+      setRows([emptyRow()]);
+      setProductSearch({});
+    }
     onOpenChange(val);
   };
 
@@ -91,6 +135,33 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
                   <Trash2 className="w-4 h-4" />
                 </Button>
               )}
+
+              {/* Select from existing products */}
+              <div>
+                <label className="font-cairo text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                  <Package className="w-3 h-3" />
+                  اختر من المنتجات الموجودة (اختياري)
+                </label>
+                <Select onValueChange={v => selectExistingProduct(i, v)}>
+                  <SelectTrigger className="font-cairo text-sm">
+                    <SelectValue placeholder="ابحث في المنتجات أو أدخل يدوياً..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="__manual__" className="font-cairo text-muted-foreground">
+                      ✏️ إدخال يدوي
+                    </SelectItem>
+                    {existingProducts?.map(p => (
+                      <SelectItem key={p.id} value={p.id} className="font-cairo">
+                        <span className="flex flex-col">
+                          <span>{p.name}</span>
+                          {p.sku && <span className="text-xs text-muted-foreground font-roboto">{p.sku}</span>}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.productName')} *</label>
@@ -103,40 +174,44 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.unit')}</label>
+                  <label className="font-cairo text-xs text-muted-foreground">الوحدة</label>
                   <Select value={row.unit} onValueChange={v => updateRow(i, 'unit', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="font-cairo"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {UNITS.map(u => <SelectItem key={u} value={u}>{t(`supplierProducts.unit${u.charAt(0).toUpperCase() + u.slice(1)}`)}</SelectItem>)}
+                      {UNITS.map(u => (
+                        <SelectItem key={u} value={u} className="font-cairo">
+                          {UNIT_LABELS[u] || u}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.qtyReceived')}</label>
+                  <label className="font-cairo text-xs text-muted-foreground">الكمية المستلمة</label>
                   <Input type="number" min={0} value={row.quantity_received || ''} onChange={e => updateRow(i, 'quantity_received', Number(e.target.value))} className="font-roboto" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.unitPrice')}</label>
+                  <label className="font-cairo text-xs text-muted-foreground">سعر الوحدة</label>
                   <Input type="number" min={0} value={row.unit_price || ''} onChange={e => updateRow(i, 'unit_price', Number(e.target.value))} className="font-roboto" />
                 </div>
                 <div>
-                  <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.remainingStock')}</label>
+                  <label className="font-cairo text-xs text-muted-foreground">المخزون المتبقي</label>
                   <Input readOnly value={row.quantity_received} className="font-roboto bg-muted/50" />
                 </div>
                 <div>
-                  <label className="font-cairo text-xs text-muted-foreground">{t('supplierProducts.totalPrice')}</label>
+                  <label className="font-cairo text-xs text-muted-foreground">السعر الإجمالي</label>
                   <Input readOnly value={(row.unit_price * row.quantity_received).toLocaleString()} className="font-roboto bg-muted/50" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-cairo text-xs text-muted-foreground">{t('common.date')}</label>
+                  <label className="font-cairo text-xs text-muted-foreground">التاريخ</label>
                   <Input type="date" value={row.date} onChange={e => updateRow(i, 'date', e.target.value)} className="font-roboto" />
                 </div>
                 <div>
-                  <label className="font-cairo text-xs text-muted-foreground">{t('common.notes')}</label>
+                  <label className="font-cairo text-xs text-muted-foreground">ملاحظات</label>
                   <Input value={row.notes} onChange={e => updateRow(i, 'notes', e.target.value)} />
                 </div>
               </div>
@@ -145,7 +220,7 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
                   <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={e => e.target.files?.[0] && handleUpload(i, e.target.files[0])} />
                   <div className="flex items-center gap-1 text-xs text-primary hover:underline font-cairo">
                     <Upload className="w-3 h-3" />
-                    {row.document_name || t('suppliers.uploadDocument')}
+                    {row.document_name || 'رفع مستند'}
                   </div>
                 </label>
               </div>
