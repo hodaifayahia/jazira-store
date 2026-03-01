@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard, Building2, Home, X, Tag, Shield, Zap, RotateCcw, Clock } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ChevronRight, ChevronLeft, ArrowRight, Star, Send, Loader2, Copy, Truck, CheckCircle, Upload, User, MapPin, CreditCard, Building2, Home, X, Tag, Shield, Zap, RotateCcw, Clock, Share2, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -580,27 +580,23 @@ export default function SingleProductPage() {
   };
 
   return (
-    <div className="container py-8">
-      <Link to="/products" className="inline-flex items-center gap-2 font-cairo text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowRight className="w-4 h-4" />العودة إلى المنتجات
-      </Link>
-
+    <div className="container py-6 md:py-10">
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 font-cairo">
-        <Link to="/" className="hover:text-foreground">الرئيسية</Link>
-        <ChevronRight className="w-3 h-3 rotate-180" />
-        <Link to="/products" className="hover:text-foreground">المنتجات</Link>
-        <ChevronRight className="w-3 h-3 rotate-180" />
-        <span className="text-foreground">{product.name}</span>
+        <Link to="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+        <ChevronRight className="w-3 h-3 rotate-180 text-muted-foreground/40" />
+        <Link to="/products" className="hover:text-primary transition-colors">المنتجات</Link>
+        <ChevronRight className="w-3 h-3 rotate-180 text-muted-foreground/40" />
+        <span className="text-foreground font-medium truncate max-w-[200px]">{product.name}</span>
       </nav>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-2 gap-6 lg:gap-10">
         {/* Images with touch swipe */}
-        <div className="flex flex-col-reverse md:flex-row gap-3">
+        <div className="flex flex-col-reverse md:flex-row gap-3 md:sticky md:top-24 md:self-start">
           {images.length > 1 && (
-            <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[500px] md:w-20 shrink-0">
+            <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[500px] md:w-20 shrink-0 scrollbar-hide">
               {images.map((img, i) => (
                 <button key={i} onClick={() => setSelectedImage(i)}
-                  className={`w-16 h-16 md:w-full md:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${i === selectedImage ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-muted-foreground/30'}`}>
+                  className={`w-16 h-16 md:w-full md:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all duration-300 ${i === selectedImage ? 'border-primary ring-2 ring-primary/20 shadow-md shadow-primary/10' : 'border-border/50 hover:border-primary/40 opacity-70 hover:opacity-100'}`}>
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
@@ -609,18 +605,18 @@ export default function SingleProductPage() {
           <div className="flex-1 relative group"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}>
-            <div className="aspect-square rounded-2xl overflow-hidden bg-muted cursor-zoom-in" onMouseEnter={() => setIsZoomed(true)} onMouseLeave={() => setIsZoomed(false)}>
+            <div className="aspect-square rounded-3xl overflow-hidden bg-muted/50 cursor-zoom-in shadow-lg shadow-foreground/5 border border-border/30" onMouseEnter={() => setIsZoomed(true)} onMouseLeave={() => setIsZoomed(false)}>
               {images[selectedImage] ? (
-                <img src={images[selectedImage]} alt={product.name} className={`w-full h-full object-cover transition-transform duration-500 ${isZoomed ? 'scale-150' : 'scale-100'}`} />
+                <img src={images[selectedImage]} alt={product.name} className={`w-full h-full object-cover transition-transform duration-700 ease-out ${isZoomed ? 'scale-150' : 'scale-100'}`} />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground"><ShoppingCart className="w-16 h-16" /></div>
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground/30"><ShoppingCart className="w-20 h-20" /></div>
               )}
             </div>
             {images.length > 1 && (
               <>
-                <span className="absolute top-3 left-3 bg-foreground/60 backdrop-blur-sm text-background text-xs font-roboto font-bold rounded-full px-2.5 py-1">{selectedImage + 1}/{images.length}</span>
-                <button onClick={goToNextImage} className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-background"><ChevronRight className="w-5 h-5" /></button>
-                <button onClick={goToPrevImage} className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-background"><ChevronLeft className="w-5 h-5" /></button>
+                <span className="absolute top-4 left-4 bg-foreground/70 backdrop-blur-md text-background text-xs font-roboto font-bold rounded-full px-3 py-1.5 shadow-lg">{selectedImage + 1}/{images.length}</span>
+                <button onClick={goToNextImage} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/90 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg hover:bg-background hover:scale-110"><ChevronRight className="w-5 h-5" /></button>
+                <button onClick={goToPrevImage} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/90 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg hover:bg-background hover:scale-110"><ChevronLeft className="w-5 h-5" /></button>
               </>
             )}
           </div>
@@ -633,16 +629,16 @@ export default function SingleProductPage() {
             <CountdownTimer endsAt={offerEndsAt} title={offerTitle} />
           )}
 
-          <div className="bg-card border rounded-2xl p-6 space-y-4">
+          <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-3xl p-6 md:p-8 space-y-5 shadow-sm">
             <div className="flex flex-wrap gap-2">
               {(Array.isArray(product.category) ? product.category : [product.category]).map((c: string) => (
-                <Badge key={c} className="font-cairo bg-secondary text-secondary-foreground">{c}</Badge>
+                <Badge key={c} className="font-cairo bg-primary/10 text-primary border border-primary/20 rounded-full px-3 py-1">{c}</Badge>
               ))}
             </div>
-            <h1 className="font-cairo font-bold text-3xl text-foreground">{product.name}</h1>
+            <h1 className="font-cairo font-extrabold text-2xl md:text-3xl text-foreground leading-tight">{product.name}</h1>
 
             {product.short_description && (
-              <p className="font-cairo text-sm text-muted-foreground">{product.short_description}</p>
+              <p className="font-cairo text-sm text-muted-foreground leading-relaxed">{product.short_description}</p>
             )}
 
             {/* Reviews + Rating prominently near price */}
@@ -654,14 +650,14 @@ export default function SingleProductPage() {
               </div>
             )}
 
-            <div className="flex items-baseline gap-3">
-              <p className="font-roboto font-bold text-4xl text-primary">
+            <div className="flex items-baseline gap-3 bg-gradient-to-l from-primary/5 to-transparent rounded-2xl p-4 -mx-2">
+              <p className="font-roboto font-extrabold text-3xl md:text-4xl text-primary">
                 {formatPrice(effectivePrice)}
               </p>
               {product.old_price && Number(product.old_price) > effectivePrice && (
                 <>
-                  <span className="font-roboto text-lg text-muted-foreground line-through">{formatPrice(Number(product.old_price))}</span>
-                  <Badge className="bg-red-500/10 text-red-500 border-red-500/20 font-cairo text-xs">
+                  <span className="font-roboto text-lg text-muted-foreground/50 line-through decoration-destructive/40">{formatPrice(Number(product.old_price))}</span>
+                  <Badge className="bg-gradient-to-l from-red-500 to-red-600 text-white border-0 font-cairo text-xs rounded-full px-3 shadow-sm shadow-red-500/20">
                     -{Math.round((1 - effectivePrice / Number(product.old_price)) * 100)}%
                   </Badge>
                 </>
@@ -669,16 +665,18 @@ export default function SingleProductPage() {
             </div>
 
             {/* Trust Signals */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 py-3">
               {[
-                { icon: Truck, label: 'توصيل سريع', color: 'text-primary' },
-                { icon: Shield, label: 'دفع آمن', color: 'text-green-600' },
-                { icon: Zap, label: 'شحن سريع', color: 'text-amber-500' },
-                { icon: RotateCcw, label: 'ضمان الاسترجاع', color: 'text-blue-500' },
+                { icon: Truck, label: 'توصيل سريع', color: 'text-primary', bg: 'bg-primary/10' },
+                { icon: Shield, label: 'دفع آمن', color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+                { icon: Zap, label: 'شحن سريع', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                { icon: RotateCcw, label: 'ضمان الاسترجاع', color: 'text-blue-500', bg: 'bg-blue-500/10' },
               ].map((item, i) => (
-                <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-muted/50 border border-border/50">
-                  <item.icon className={`w-4 h-4 ${item.color}`} />
-                  <span className="font-cairo text-[11px] text-muted-foreground text-center leading-tight">{item.label}</span>
+                <div key={i} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-muted/30 border border-border/30 hover:border-border/60 transition-colors group">
+                  <div className={`w-8 h-8 rounded-xl ${item.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <item.icon className={`w-4 h-4 ${item.color}`} />
+                  </div>
+                  <span className="font-cairo text-[11px] text-muted-foreground text-center leading-tight font-medium">{item.label}</span>
                 </div>
               ))}
             </div>
@@ -857,38 +855,63 @@ export default function SingleProductPage() {
             {product.description && (
               <p className="font-cairo text-muted-foreground leading-relaxed">{product.description}</p>
             )}
+
+            {/* Share button */}
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  const url = `${window.location.origin}/product/${product.id}`;
+                  if (navigator.share) {
+                    try { await navigator.share({ title: product.name, text: `تفقد ${product.name}`, url }); } catch {}
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    toast({ title: 'تم نسخ الرابط 📋' });
+                  }
+                }}
+                className="font-cairo text-xs gap-1.5 rounded-xl h-9 text-muted-foreground hover:text-primary"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                مشاركة المنتج
+              </Button>
+            </div>
           </div>
 
           {/* Quantity + Add to Cart + Order Now CTA */}
           {!outOfStock && (
-            <div className="bg-card border rounded-2xl p-6 space-y-3" ref={orderFormRef}>
+            <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-3xl p-6 space-y-4 shadow-sm" ref={orderFormRef}>
               <div className="flex items-center gap-4">
-                <div className="flex items-center border rounded-xl">
-                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))} className="rounded-xl"><Minus className="w-4 h-4" /></Button>
-                  <span className="w-10 text-center font-roboto font-bold">{qty}</span>
-                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(effectiveStock, q + 1))} className="rounded-xl"><Plus className="w-4 h-4" /></Button>
+                <div className="flex items-center border border-border/50 rounded-2xl bg-muted/30">
+                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.max(1, q - 1))} className="rounded-2xl hover:bg-destructive/10 hover:text-destructive transition-colors"><Minus className="w-4 h-4" /></Button>
+                  <span className="w-12 text-center font-roboto font-bold text-lg">{qty}</span>
+                  <Button variant="ghost" size="icon" onClick={() => setQty(q => Math.min(effectiveStock, q + 1))} className="rounded-2xl hover:bg-primary/10 hover:text-primary transition-colors"><Plus className="w-4 h-4" /></Button>
                 </div>
-                <Button onClick={handleAdd} variant="outline" className="font-cairo font-semibold gap-2 flex-1 rounded-xl">
+                <Button onClick={handleAdd} variant="outline" className="font-cairo font-semibold gap-2 flex-1 rounded-2xl h-11 border-primary/30 hover:bg-primary/5 hover:border-primary/50 transition-all">
                   <ShoppingCart className="w-4 h-4" />
                   إضافة إلى السلة
                 </Button>
               </div>
               {/* Total price display */}
-              <div className="flex justify-between items-center font-cairo text-sm bg-muted/50 rounded-xl px-4 py-2.5">
-                <span className="text-muted-foreground">الإجمالي ({qty} قطعة)</span>
-                <span className="font-roboto font-bold text-primary text-lg">{formatPrice(effectivePrice * qty)}</span>
+              <div className="flex justify-between items-center font-cairo text-sm bg-gradient-to-l from-primary/5 to-primary/10 border border-primary/10 rounded-2xl px-5 py-3.5">
+                <span className="text-muted-foreground font-medium">الإجمالي ({qty} قطعة)</span>
+                <span className="font-roboto font-extrabold text-primary text-xl">{formatPrice(effectivePrice * qty)}</span>
               </div>
             </div>
           )}
 
           {/* ─── Inline Order Form ─── */}
           {!outOfStock && (
-            <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 space-y-5">
-              <h2 className="font-cairo font-bold text-xl flex items-center gap-2">
-                <Truck className="w-5 h-5 text-primary" />
-                اطلب الآن مباشرة
-              </h2>
-              <p className="font-cairo text-sm text-muted-foreground">أكمل بياناتك وسنوصلك طلبك بأسرع وقت</p>
+            <div className="bg-card/80 backdrop-blur-sm border-2 border-primary/20 rounded-3xl p-6 md:p-8 space-y-6 shadow-sm shadow-primary/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md shadow-primary/20">
+                  <Truck className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <h2 className="font-cairo font-bold text-xl text-foreground">اطلب الآن مباشرة</h2>
+                  <p className="font-cairo text-xs text-muted-foreground">أكمل بياناتك وسنوصلك طلبك بأسرع وقت</p>
+                </div>
+              </div>
 
               {/* Step 1: User Info */}
               <div className="space-y-3">
@@ -1122,13 +1145,16 @@ export default function SingleProductPage() {
 
       {/* Rich Product Details */}
       {product.description && images.length > 1 && (
-        <section className="mt-16">
-          <h2 className="font-cairo font-bold text-2xl mb-4 text-foreground">تفاصيل المنتج</h2>
-          <p className="font-cairo text-muted-foreground leading-relaxed mb-6 max-w-2xl">{product.description}</p>
+        <section className="mt-20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-8 rounded-full bg-gradient-to-b from-primary to-primary/30" />
+            <h2 className="font-cairo font-extrabold text-2xl text-foreground">تفاصيل المنتج</h2>
+          </div>
+          <p className="font-cairo text-muted-foreground leading-relaxed mb-8 max-w-2xl text-base">{product.description}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {images.map((img, i) => (
-              <div key={i} className={`rounded-2xl overflow-hidden shadow-sm border ${i === 0 ? 'md:col-span-2' : ''}`}>
-                <img src={img} alt={`${product.name} - ${i + 1}`} className="w-full aspect-[4/3] object-cover hover:scale-105 transition-transform duration-500" />
+              <div key={i} className={`rounded-3xl overflow-hidden shadow-md shadow-foreground/5 border border-border/30 group ${i === 0 ? 'md:col-span-2' : ''}`}>
+                <img src={img} alt={`${product.name} - ${i + 1}`} className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
               </div>
             ))}
           </div>
@@ -1136,13 +1162,16 @@ export default function SingleProductPage() {
       )}
 
       {/* Reviews Section */}
-      <section className="mt-16 mb-8">
-        <h2 className="font-cairo font-bold text-2xl mb-6 text-foreground flex items-center gap-2">
-          <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
-          التقييمات ({reviews?.length || 0})
-        </h2>
-        <div className="bg-card border rounded-2xl p-6 mb-8">
-          <h3 className="font-cairo font-bold text-lg mb-4">أضف تقييمك</h3>
+      <section className="mt-20 mb-8">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-1 h-8 rounded-full bg-gradient-to-b from-amber-400 to-amber-400/30" />
+          <h2 className="font-cairo font-extrabold text-2xl text-foreground flex items-center gap-2">
+            <Star className="w-6 h-6 text-amber-400 fill-amber-400" />
+            التقييمات ({reviews?.length || 0})
+          </h2>
+        </div>
+        <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-3xl p-6 md:p-8 mb-8 shadow-sm">
+          <h3 className="font-cairo font-bold text-lg mb-5">أضف تقييمك</h3>
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
@@ -1155,7 +1184,7 @@ export default function SingleProductPage() {
             </div>
             <Textarea value={reviewComment} onChange={e => setReviewComment(e.target.value)} placeholder="اكتب تعليقك هنا... (اختياري)" className="font-cairo" rows={3} />
             <Button onClick={() => { if (!reviewName.trim()) { toast({ title: 'يرجى إدخال اسمك', variant: 'destructive' }); return; } submitReview.mutate(); }}
-              disabled={submitReview.isPending} className="font-cairo font-semibold gap-2 rounded-xl">
+              disabled={submitReview.isPending} className="font-cairo font-semibold gap-2 rounded-2xl h-11 px-6 bg-gradient-to-l from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-md shadow-amber-500/20">
               {submitReview.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               إرسال التقييم
             </Button>
@@ -1164,20 +1193,20 @@ export default function SingleProductPage() {
         {reviews && reviews.length > 0 ? (
           <div className="space-y-4">
             {reviews.map(review => (
-              <div key={review.id} className="bg-muted/30 border rounded-xl p-5">
-                <div className="flex items-center justify-between mb-2">
+              <div key={review.id} className="bg-card/80 border border-border/50 rounded-2xl p-5 hover:shadow-md transition-shadow duration-300">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                       <span className="font-cairo font-bold text-sm text-primary">{review.reviewer_name[0]}</span>
                     </div>
                     <div>
-                      <p className="font-cairo font-semibold text-sm">{review.reviewer_name}</p>
-                      <p className="font-cairo text-xs text-muted-foreground">{formatDate(review.created_at)}</p>
+                      <p className="font-cairo font-bold text-sm">{review.reviewer_name}</p>
+                      <p className="font-cairo text-xs text-muted-foreground/60">{formatDate(review.created_at)}</p>
                     </div>
                   </div>
                   <StarRating value={review.rating} readonly />
                 </div>
-                {review.comment && <p className="font-cairo text-sm text-muted-foreground leading-relaxed mt-2">{review.comment}</p>}
+                {review.comment && <p className="font-cairo text-sm text-muted-foreground leading-relaxed mt-2 border-t border-border/30 pt-3">{review.comment}</p>}
               </div>
             ))}
           </div>
@@ -1193,19 +1222,19 @@ export default function SingleProductPage() {
 
       {/* Sticky Bottom Buy Bar */}
       {!outOfStock && showStickyBar && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t shadow-2xl shadow-foreground/10 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border/50 shadow-2xl shadow-foreground/10 animate-in slide-in-from-bottom-4 duration-300">
           <div className="container flex items-center justify-between gap-4 py-3">
             <div className="flex items-center gap-3 min-w-0">
               {images[0] && (
-                <img src={images[0]} alt={product.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                <img src={images[0]} alt={product.name} className="w-11 h-11 rounded-xl object-cover shrink-0 border border-border/30 shadow-sm" />
               )}
               <div className="min-w-0">
-                <p className="font-cairo font-semibold text-sm truncate">{product.name}</p>
-                <p className="font-roboto font-bold text-primary text-base">{formatPrice(effectivePrice)}</p>
+                <p className="font-cairo font-bold text-sm truncate">{product.name}</p>
+                <p className="font-roboto font-extrabold text-primary text-lg">{formatPrice(effectivePrice)}</p>
               </div>
             </div>
             <Button onClick={scrollToOrderForm}
-              className="font-cairo font-bold gap-2 rounded-xl px-6 h-11 bg-gradient-to-l from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/25 shrink-0">
+              className="font-cairo font-bold gap-2 rounded-2xl px-7 h-12 bg-gradient-to-l from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/25 shrink-0 hover:shadow-xl hover:shadow-primary/30 transition-all">
               <ShoppingCart className="w-4 h-4" />
               اطلب الآن
             </Button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, BarChart3, Upload, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, BarChart3, Upload, Loader2, Search, MapPin, CheckCircle, DollarSign } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { ALGERIA_WILAYAS } from '@/data/algeria-wilayas';
 import { useTranslation } from '@/i18n';
@@ -24,6 +25,7 @@ export default function AdminWilayasPage() {
   // Stats dialog
   const [statsWilaya, setStatsWilaya] = useState<any>(null);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: wilayas } = useQuery({
     queryKey: ['admin-wilayas'],
@@ -114,6 +116,40 @@ export default function AdminWilayasPage() {
           <Button onClick={() => { setEditing(null); setForm({ name: '', shipping_price: '', shipping_price_home: '', is_active: true }); setDialogOpen(true); }} className="font-cairo gap-1" size="sm"><Plus className="w-4 h-4" /> {t('wilayas.addWilaya')}</Button>
         </div>
       </div>
+
+      {/* KPI Cards */}
+      {(() => {
+        const total = wilayas?.length ?? 0;
+        const active = wilayas?.filter(w => w.is_active).length ?? 0;
+        const avgOffice = total > 0 ? (wilayas ?? []).reduce((s, w) => s + Number(w.shipping_price), 0) / total : 0;
+        const avgHome = total > 0 ? (wilayas ?? []).reduce((s, w) => s + Number(w.shipping_price_home), 0) / total : 0;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card><CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><MapPin className="w-5 h-5 text-primary" /></div>
+              <div><p className="font-cairo text-xs text-muted-foreground">{t('wilayas.totalWilayas')}</p><p className="font-roboto font-bold text-xl">{total}</p></div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0"><CheckCircle className="w-5 h-5 text-green-600" /></div>
+              <div><p className="font-cairo text-xs text-muted-foreground">{t('wilayas.activeWilayas')}</p><p className="font-roboto font-bold text-xl">{active}</p></div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5 text-blue-600" /></div>
+              <div><p className="font-cairo text-xs text-muted-foreground">{t('wilayas.avgOfficePrice')}</p><p className="font-roboto font-bold text-xl">{formatPrice(Math.round(avgOffice))}</p></div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5 text-purple-600" /></div>
+              <div><p className="font-cairo text-xs text-muted-foreground">{t('wilayas.avgHomePrice')}</p><p className="font-roboto font-bold text-xl">{formatPrice(Math.round(avgHome))}</p></div>
+            </CardContent></Card>
+          </div>
+        );
+      })()}
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={t('wilayas.searchWilayas')} className="ps-9 font-cairo" />
+      </div>
       {/* Desktop Table */}
       <div className="hidden md:block bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
@@ -127,7 +163,7 @@ export default function AdminWilayasPage() {
             </tr>
           </thead>
           <tbody>
-            {wilayas?.map(w => (
+            {(wilayas ?? []).filter(w => !searchQuery || w.name.toLowerCase().includes(searchQuery.toLowerCase())).map(w => (
               <tr key={w.id} className="border-b hover:bg-muted/50 cursor-pointer" onClick={() => { setStatsWilaya(w); setStatsOpen(true); }}>
                 <td className="p-3 font-cairo">{w.name}</td>
                 <td className="p-3 font-roboto">{formatPrice(Number(w.shipping_price))}</td>
@@ -148,7 +184,7 @@ export default function AdminWilayasPage() {
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-3">
-        {wilayas?.map(w => (
+        {(wilayas ?? []).filter(w => !searchQuery || w.name.toLowerCase().includes(searchQuery.toLowerCase())).map(w => (
           <div key={w.id} className="bg-card border rounded-xl p-4 space-y-2" onClick={() => { setStatsWilaya(w); setStatsOpen(true); }}>
             <div className="flex items-center justify-between">
               <span className="font-cairo font-medium text-sm">{w.name}</span>

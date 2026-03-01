@@ -2,23 +2,33 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ShoppingCart, DollarSign, TrendingUp, Package, Users, Eye, BarChart3, AlertTriangle, Wallet, CreditCard } from 'lucide-react';
+import { ShoppingCart, DollarSign, TrendingUp, TrendingDown, Package, Users, Eye, BarChart3, AlertTriangle, Wallet, CreditCard, Plus, Settings, ArrowUpRight, ArrowDownRight, Clock, CheckCircle, XCircle, Percent } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { formatPrice, formatDate } from '@/lib/format';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
 import { useTranslation } from '@/i18n';
 
-function StatCard({ icon: Icon, label, value, color, subtext }: { icon: any; label: string; value: string; color: string; subtext?: string }) {
+function StatCard({ icon: Icon, label, value, color, subtext, trend, trendValue }: { icon: any; label: string; value: string; color: string; subtext?: string; trend?: 'up' | 'down' | 'neutral'; trendValue?: string }) {
   return (
-    <div className="bg-card border rounded-xl p-4 sm:p-5 hover:shadow-md transition-shadow">
+    <div className="bg-card border rounded-xl p-4 sm:p-5 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 group">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-cairo text-xs sm:text-sm text-muted-foreground truncate">{label}</p>
           <p className="font-roboto font-bold text-xl sm:text-2xl mt-1 truncate">{value}</p>
-          {subtext && <p className="font-cairo text-[11px] sm:text-xs text-muted-foreground mt-1 truncate">{subtext}</p>}
+          <div className="flex items-center gap-1.5 mt-1">
+            {trend && trendValue && (
+              <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
+                trend === 'up' ? 'bg-green-100 text-green-700' : trend === 'down' ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'
+              }`}>
+                {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : trend === 'down' ? <ArrowDownRight className="w-3 h-3" /> : null}
+                {trendValue}
+              </span>
+            )}
+            {subtext && <p className="font-cairo text-[11px] sm:text-xs text-muted-foreground truncate">{subtext}</p>}
+          </div>
         </div>
-        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${color}`}>
           <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
       </div>
@@ -81,6 +91,36 @@ export default function AdminDashboardPage() {
   const activeProducts = products?.filter(p => p.is_active) || [];
   const lowStockProducts = products?.filter(p => (p.stock ?? 0) <= 5 && p.is_active) || [];
   const newLeads = leads?.filter(l => l.status === 'جديد') || [];
+
+  // Enhanced metrics
+  const deliveredOrders = (orders || []).filter(o => o.status === 'تم التسليم');
+  const cancelledOrders = (orders || []).filter(o => o.status === 'ملغي');
+  const conversionRate = (orders?.length || 0) > 0 ? Math.round((deliveredOrders.length / orders!.length) * 100) : 0;
+  const revenueGrowth = lastMonthRevenue > 0 ? Math.round(((revenue - lastMonthRevenue) / lastMonthRevenue) * 100) : 0;
+  const pendingOrders = (orders || []).filter(o => o.status === 'جديد');
+
+  // Orders by hour (today)
+  const hourlyData = useMemo(() => {
+    return Array.from({ length: 24 }, (_, h) => {
+      const count = today.filter(o => new Date(o.created_at!).getHours() === h).length;
+      return { hour: `${h}${t('dashboard.hour')}`, orders: count };
+    });
+  }, [today, t]);
+
+  // Revenue trend (7 days) line chart data
+  const revenueTrend = useMemo(() => {
+    const dayNames = t('dashboard.dayNames').split(',');
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - (6 - i));
+      const dayStr = d.toDateString();
+      const dayOrders = (orders || []).filter(o => new Date(o.created_at!).toDateString() === dayStr);
+      return {
+        name: dayNames[d.getDay()],
+        revenue: dayOrders.reduce((s, o) => s + Number(o.total_amount || 0), 0),
+      };
+    });
+  }, [orders, now, t]);
 
   const statusCounts = (orders || []).reduce((acc, o) => {
     acc[o.status || 'جديد'] = (acc[o.status || 'جديد'] || 0) + 1;
@@ -196,11 +236,27 @@ export default function AdminDashboardPage() {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>{t('dashboard.lowStockBanner').replace('{n}', String(lowStockProducts.length))}</AlertTitle>
-          <AlertDescription>
+          <AlertDescription className="line-clamp-2">
             {lowStockProducts.map(p => `${p.name} (${p.stock} ${t('common.remaining')})`).join(' • ')}
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Quick Actions Bar */}
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" className="font-cairo gap-1.5 shadow-sm" onClick={() => navigate('/admin/products')}>
+          <Plus className="w-3.5 h-3.5" /> {t('dashboard.addProduct')}
+        </Button>
+        <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => navigate('/admin/orders/create')}>
+          <ShoppingCart className="w-3.5 h-3.5" /> {t('dashboard.createOrder')}
+        </Button>
+        <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => navigate('/admin/costs')}>
+          <BarChart3 className="w-3.5 h-3.5" /> {t('dashboard.viewReports')}
+        </Button>
+        <Button size="sm" variant="ghost" className="font-cairo gap-1.5" onClick={() => navigate('/admin/settings')}>
+          <Settings className="w-3.5 h-3.5" /> {t('dashboard.manageSettings')}
+        </Button>
+      </div>
 
       {/* Payment Alerts */}
       {((supplierAlerts?.length ?? 0) > 0 || (clientAlerts?.length ?? 0) > 0) && (
@@ -244,12 +300,33 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Stats Grid - Enhanced with trends */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         <StatCard icon={ShoppingCart} label={t('dashboard.todayOrders')} value={String(today.length)} color="bg-primary/10 text-primary" subtext={`${thisMonth.length} ${t('dashboard.thisMonth')}`} />
-        <StatCard icon={DollarSign} label={t('dashboard.monthRevenue')} value={formatPrice(revenue)} color="bg-secondary/10 text-secondary" subtext={lastMonthRevenue > 0 ? `${t('dashboard.lastMonth')}: ${formatPrice(lastMonthRevenue)}` : undefined} />
+        <StatCard icon={DollarSign} label={t('dashboard.monthRevenue')} value={formatPrice(revenue)} color="bg-secondary/10 text-secondary" trend={revenueGrowth >= 0 ? 'up' : 'down'} trendValue={`${Math.abs(revenueGrowth)}%`} subtext={t('dashboard.vsLastMonth')} />
         <StatCard icon={TrendingUp} label={t('dashboard.avgOrderValue')} value={formatPrice(avgOrderValue)} color="bg-accent text-accent-foreground" subtext={`${orders?.length || 0} ${t('dashboard.totalOrders')}`} />
+        <StatCard icon={Percent} label={t('dashboard.conversionRate')} value={`${conversionRate}%`} color="bg-green-500/10 text-green-600" subtext={`${deliveredOrders.length} ${t('dashboard.deliveredOrders')}`} />
         <StatCard icon={Users} label={t('dashboard.newLeads')} value={String(newLeads.length)} color="bg-primary/10 text-primary" subtext={`${leads?.length || 0} ${t('dashboard.totalLeads')}`} />
+        <StatCard icon={XCircle} label={t('dashboard.cancelledCount')} value={String(cancelledOrders.length)} color="bg-destructive/10 text-destructive" subtext={`${pendingOrders.length} ${t('dashboard.pendingOrders')}`} />
+      </div>
+
+      {/* Order Status Summary Cards */}
+      <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/50 rounded-xl p-4 text-center">
+          <Clock className="w-5 h-5 text-blue-600 mx-auto mb-1" />
+          <p className="font-roboto font-bold text-2xl text-blue-700 dark:text-blue-400">{pendingOrders.length}</p>
+          <p className="font-cairo text-xs text-blue-600/70">{t('dashboard.pendingOrders')}</p>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border border-green-200/50 rounded-xl p-4 text-center">
+          <CheckCircle className="w-5 h-5 text-green-600 mx-auto mb-1" />
+          <p className="font-roboto font-bold text-2xl text-green-700 dark:text-green-400">{deliveredOrders.length}</p>
+          <p className="font-cairo text-xs text-green-600/70">{t('dashboard.deliveredCount')}</p>
+        </div>
+        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border border-red-200/50 rounded-xl p-4 text-center">
+          <XCircle className="w-5 h-5 text-red-600 mx-auto mb-1" />
+          <p className="font-roboto font-bold text-2xl text-red-700 dark:text-red-400">{cancelledOrders.length}</p>
+          <p className="font-cairo text-xs text-red-600/70">{t('dashboard.cancelledCount')}</p>
+        </div>
       </div>
 
       {/* Secondary Stats */}
@@ -307,7 +384,46 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Charts Row */}
+      {/* Charts Row - Enhanced */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Revenue Trend Line Chart */}
+        <div className="bg-card border rounded-xl p-5">
+          <h3 className="font-cairo font-semibold text-base mb-4">{t('dashboard.revenueChart')}</h3>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueTrend}>
+                <defs>
+                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" tick={{ fontSize: 12, fontFamily: 'Cairo' }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={{ fontFamily: 'Cairo', fontSize: 12, borderRadius: 8 }} formatter={(value: number) => [formatPrice(value), t('dashboard.revenue')]} />
+                <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fill="url(#revenueGradient)" strokeWidth={2.5} dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Orders by Hour */}
+        <div className="bg-card border rounded-xl p-5">
+          <h3 className="font-cairo font-semibold text-base mb-4">{t('dashboard.ordersByHour')}</h3>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={hourlyData.filter((_, i) => i >= 6 && i <= 23)}>
+                <XAxis dataKey="hour" tick={{ fontSize: 10, fontFamily: 'Cairo' }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip contentStyle={{ fontFamily: 'Cairo', fontSize: 12, borderRadius: 8 }} />
+                <Bar dataKey="orders" fill="hsl(var(--secondary))" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Original Orders + Pie Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-card border rounded-xl p-5">
           <h3 className="font-cairo font-semibold text-base mb-4">{t('dashboard.last7Days')}</h3>

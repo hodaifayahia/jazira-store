@@ -187,8 +187,8 @@ export default function AdminReturnsPage() {
         </Button>
       </div>
 
-      {/* Table */}
-      <div className="bg-card border rounded-lg overflow-x-auto max-w-full">
+      {/* Table - Desktop */}
+      <div className="bg-card border rounded-lg overflow-x-auto max-w-full hidden md:block">
         <table className="text-sm min-w-[860px] whitespace-nowrap">
           <thead className="bg-muted">
             <tr>
@@ -241,6 +241,54 @@ export default function AdminReturnsPage() {
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="p-8 text-center font-cairo text-muted-foreground">{t('common.loading')}</div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-card border rounded-lg p-8 text-center font-cairo text-muted-foreground">{t('returns.noReturns')}</div>
+        ) : filtered.map(r => {
+          const style = STATUS_STYLE[r.status] || STATUS_STYLE.requested;
+          const StatusIcon = style.icon;
+          return (
+            <div key={r.id} className="bg-card border rounded-lg p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-roboto font-bold text-primary text-sm">{r.return_number}</p>
+                  <p className="font-cairo font-medium">{r.customer_name}</p>
+                  <p className="text-xs text-muted-foreground font-roboto">{r.customer_phone}</p>
+                </div>
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-cairo ${style.bg} ${style.color}`}>
+                  <StatusIcon className="w-3 h-3" />
+                  {STATUS_LABELS[r.status]}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="bg-muted/30 rounded-lg p-2">
+                  <p className="font-cairo text-xs text-muted-foreground">{t('returns.order')}</p>
+                  <p className="font-roboto font-medium text-xs">{(r as any).orders?.order_number || '-'}</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2">
+                  <p className="font-cairo text-xs text-muted-foreground">{t('returns.amount')}</p>
+                  <p className="font-roboto font-medium">{formatPrice(Number(r.net_refund_amount))}</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2">
+                  <p className="font-cairo text-xs text-muted-foreground">{t('returns.resolutionType')}</p>
+                  <Badge variant="outline" className="font-cairo text-xs mt-0.5">{RESOLUTION_LABELS[r.resolution_type] || r.resolution_type}</Badge>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2">
+                  <p className="font-cairo text-xs text-muted-foreground">{t('common.date')}</p>
+                  <p className="font-cairo text-xs">{formatDate(r.created_at)}</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="w-full font-cairo gap-1" onClick={() => setSelectedReturn(r)}>
+                <Eye className="w-3.5 h-3.5" /> {t('common.view')}
+              </Button>
+            </div>
+          );
+        })}
       </div>
 
       {/* Detail Dialog */}

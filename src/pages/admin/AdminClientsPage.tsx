@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients';
 import { useClientTransactions } from '@/hooks/useClientTransactions';
@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Users, Plus, Search, Phone, MapPin, Eye, Trash2, Edit, DollarSign, Package, Wallet } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, Plus, Search, Phone, MapPin, Eye, Trash2, Edit, DollarSign, Package, Wallet, Download, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 function useAllClientTransactions() {
@@ -40,6 +41,9 @@ export default function AdminClientsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
   const [form, setForm] = useState({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active' });
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'name' | 'balance'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const openAdd = () => {
     setEditingClient(null);
@@ -85,15 +89,37 @@ export default function AdminClientsPage() {
       }, 0);
   };
 
-  const filtered = (clients ?? []).filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.phone && c.phone.includes(search))
-  );
+  const filtered = useMemo(() => {
+    let result = (clients ?? []).filter(c =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.phone && c.phone.includes(search))
+    );
+    if (statusFilter !== 'all') result = result.filter(c => c.status === statusFilter);
+    result.sort((a, b) => {
+      if (sortBy === 'name') return sortDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+      const balA = getClientBalance(a.id);
+      const balB = getClientBalance(b.id);
+      return sortDir === 'asc' ? balA - balB : balB - balA;
+    });
+    return result;
+  }, [clients, search, statusFilter, sortBy, sortDir, allTx]);
 
   const totalOwed = (clients ?? []).reduce((s, c) => s + Math.max(0, getClientBalance(c.id)), 0);
   const totalCollected = (allTx ?? [])
     .filter(tx => tx.transaction_type === 'payment_received')
     .reduce((s, tx) => s + Number(tx.amount), 0);
+
+  const handleExport = () => {
+    if (!filtered.length) return;
+    const headers = ['Name', 'Phone', 'Wilaya', 'Status', 'Balance'];
+    const rows = filtered.map(c => [c.name, c.phone || '', c.wilaya || '', c.status, String(getClientBalance(c.id))]);
+    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `clients_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6 p-1">
@@ -120,10 +146,32 @@ export default function AdminClientsPage() {
         </CardContent></Card>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-muted-foreground" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('clients.searchPlaceholder')} className="ps-9 font-cairo" />
+      {/* Search, Filter, Sort, Export */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-muted-foreground" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('clients.searchPlaceholder')} className="ps-9 font-cairo" />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[140px] font-cairo"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="font-cairo">{t('common.all')}</SelectItem>
+            <SelectItem value="active" className="font-cairo">{t('common.active')}</SelectItem>
+            <SelectItem value="inactive" className="font-cairo">{t('common.inactive')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" className="gap-1 font-cairo" onClick={() => {
+          if (sortBy === 'name' && sortDir === 'asc') setSortDir('desc');
+          else if (sortBy === 'name' && sortDir === 'desc') { setSortBy('balance'); setSortDir('desc'); }
+          else if (sortBy === 'balance' && sortDir === 'desc') setSortDir('asc');
+          else { setSortBy('name'); setSortDir('asc'); }
+        }}>
+          <ArrowUpDown className="w-4 h-4" />
+          {sortBy === 'name' ? t('clients.sortByName') : t('clients.sortByBalance')} {sortDir === 'asc' ? '↑' : '↓'}
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1 font-cairo" onClick={handleExport}>
+          <Download className="w-4 h-4" /> {t('common.exportCSV')}
+        </Button>
       </div>
 
       {/* Client List */}

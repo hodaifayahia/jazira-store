@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
@@ -11,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Search, Tag, CheckCircle, XCircle, Wand2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { useTranslation } from '@/i18n';
 
@@ -23,6 +24,15 @@ export default function AdminCouponsPage() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ code: '', discount_type: 'percentage', discount_value: '', expiry_date: '', is_active: true });
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Auto-generate coupon code
+  const generateCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    setForm(f => ({ ...f, code }));
+  };
 
   const { data: coupons } = useQuery({
     queryKey: ['admin-coupons'],
@@ -122,12 +132,50 @@ export default function AdminCouponsPage() {
     },
   });
 
+  // KPI calculations
+  const kpis = useMemo(() => {
+    const all = coupons || [];
+    const active = all.filter(c => c.is_active);
+    const expired = all.filter(c => c.expiry_date && new Date(c.expiry_date) < new Date());
+    return { total: all.length, active: active.length, expired: expired.length };
+  }, [coupons]);
+
+  // Filtered coupons by search
+  const filteredCoupons = useMemo(() => {
+    if (!searchQuery) return coupons || [];
+    const q = searchQuery.toLowerCase();
+    return (coupons || []).filter(c => c.code.toLowerCase().includes(q));
+  }, [coupons, searchQuery]);
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-2">
         <h2 className="font-cairo font-bold text-xl">{t('coupons.title')}</h2>
         <Button onClick={openNewDialog} className="font-cairo gap-1"><Plus className="w-4 h-4" /> {t('coupons.addCoupon')}</Button>
       </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Tag className="w-5 h-5 text-primary" /></div>
+          <div><p className="text-xs text-muted-foreground font-cairo">{t('coupons.totalCoupons')}</p><p className="text-xl font-bold font-roboto">{kpis.total}</p></div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0"><CheckCircle className="w-5 h-5 text-green-600" /></div>
+          <div><p className="text-xs text-muted-foreground font-cairo">{t('coupons.activeCoupons')}</p><p className="text-xl font-bold font-roboto">{kpis.active}</p></div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0"><XCircle className="w-5 h-5 text-destructive" /></div>
+          <div><p className="text-xs text-muted-foreground font-cairo">{t('coupons.expiredCoupons')}</p><p className="text-xl font-bold font-roboto">{kpis.expired}</p></div>
+        </CardContent></Card>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-muted-foreground" />
+        <Input placeholder={t('coupons.searchCoupons')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="ps-9 font-cairo h-10" />
+      </div>
+
       {/* Desktop Table */}
       <div className="hidden md:block bg-card border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
@@ -143,7 +191,7 @@ export default function AdminCouponsPage() {
             </tr>
           </thead>
           <tbody>
-            {coupons?.map(c => {
+            {filteredCoupons.map(c => {
               const productCount = getCouponProductCount(c.id);
               return (
                 <tr key={c.id} className="border-b hover:bg-muted/50">
@@ -172,7 +220,7 @@ export default function AdminCouponsPage() {
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-3">
-        {coupons?.map(c => {
+        {filteredCoupons.map(c => {
           const productCount = getCouponProductCount(c.id);
           return (
             <div key={c.id} className="bg-card border rounded-xl p-4 space-y-2">
@@ -199,7 +247,15 @@ export default function AdminCouponsPage() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="font-cairo">{editing ? t('coupons.editCoupon') : t('coupons.addCoupon')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label className="font-cairo">{t('coupons.code')}</Label><Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} className="font-roboto mt-1" dir="ltr" /></div>
+            <div>
+              <Label className="font-cairo">{t('coupons.code')}</Label>
+              <div className="flex gap-2 mt-1">
+                <Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} className="font-roboto flex-1" dir="ltr" placeholder="SUMMER2024" />
+                <Button type="button" variant="outline" size="sm" onClick={generateCode} className="font-cairo gap-1 shrink-0">
+                  <Wand2 className="w-3.5 h-3.5" /> {t('coupons.generateCode')}
+                </Button>
+              </div>
+            </div>
             <div>
               <Label className="font-cairo">{t('coupons.discountType')}</Label>
               <Select value={form.discount_type} onValueChange={v => setForm(f => ({ ...f, discount_type: v }))}>

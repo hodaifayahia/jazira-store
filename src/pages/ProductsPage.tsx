@@ -184,16 +184,20 @@ export default function ProductsPage() {
 
   return (
     <div className="container py-8 pb-24">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-cairo font-bold text-3xl">المنتجات</h1>
+      {/* Page Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="font-cairo font-black text-3xl md:text-4xl bg-gradient-to-l from-foreground to-foreground/80 bg-clip-text">المنتجات</h1>
+          <p className="font-cairo text-sm text-muted-foreground mt-1">اكتشف تشكيلتنا المميزة</p>
+        </div>
         {/* Mobile filter trigger */}
         <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="lg:hidden font-cairo gap-2 rounded-xl">
+            <Button variant="outline" className="lg:hidden font-cairo gap-2 rounded-xl border-primary/20 hover:border-primary/40">
               <SlidersHorizontal className="w-4 h-4" />
               الفلاتر
               {activeFilterCount > 0 && (
-                <Badge className="font-roboto text-[10px] h-5 w-5 p-0 flex items-center justify-center">{activeFilterCount}</Badge>
+                <Badge className="font-roboto text-[10px] h-5 w-5 p-0 flex items-center justify-center bg-primary">{activeFilterCount}</Badge>
               )}
             </Button>
           </SheetTrigger>
@@ -210,27 +214,28 @@ export default function ProductsPage() {
 
       {/* Active filters badges */}
       {activeFilterCount > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6 p-3 bg-muted/50 rounded-2xl border border-border/50">
+          <span className="font-cairo text-xs text-muted-foreground self-center ml-2">تصفية:</span>
           {selectedCategories.map(cat => (
-            <Badge key={cat} variant="secondary" className="font-cairo gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => toggleCategory(cat)}>
+            <Badge key={cat} variant="secondary" className="font-cairo gap-1.5 cursor-pointer hover:bg-destructive/10 rounded-full px-3 transition-colors" onClick={() => toggleCategory(cat)}>
               {cat}
               <X className="w-3 h-3" />
             </Badge>
           ))}
           {inStockOnly && (
-            <Badge variant="secondary" className="font-cairo gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => setInStockOnly(false)}>
+            <Badge variant="secondary" className="font-cairo gap-1.5 cursor-pointer hover:bg-destructive/10 rounded-full px-3 transition-colors" onClick={() => setInStockOnly(false)}>
               متوفر فقط
               <X className="w-3 h-3" />
             </Badge>
           )}
           {(priceRange[0] > 0 || priceRange[1] < maxPrice) && (
-            <Badge variant="secondary" className="font-cairo gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => setPriceRange([0, maxPrice])}>
+            <Badge variant="secondary" className="font-cairo gap-1.5 cursor-pointer hover:bg-destructive/10 rounded-full px-3 transition-colors" onClick={() => setPriceRange([0, maxPrice])}>
               {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
               <X className="w-3 h-3" />
             </Badge>
           )}
           {search && (
-            <Badge variant="secondary" className="font-cairo gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => setSearch('')}>
+            <Badge variant="secondary" className="font-cairo gap-1.5 cursor-pointer hover:bg-destructive/10 rounded-full px-3 transition-colors" onClick={() => setSearch('')}>
               "{search}"
               <X className="w-3 h-3" />
             </Badge>
@@ -240,10 +245,12 @@ export default function ProductsPage() {
 
       <div className="flex gap-8">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-64 shrink-0">
-          <div className="sticky top-20 bg-card border rounded-2xl p-5">
-            <h2 className="font-cairo font-bold text-lg mb-5 flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4" />
+        <aside className="hidden lg:block w-72 shrink-0">
+          <div className="sticky top-20 bg-card/90 backdrop-blur-xl border border-border/50 rounded-3xl p-6 shadow-sm">
+            <h2 className="font-cairo font-bold text-lg mb-6 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                <SlidersHorizontal className="w-4 h-4 text-primary" />
+              </div>
               الفلاتر
             </h2>
             <FilterContent />
@@ -252,56 +259,78 @@ export default function ProductsPage() {
 
         {/* Products Grid */}
         <div className="flex-1 min-w-0">
-          <p className="font-cairo text-sm text-muted-foreground mb-4">
-            {filtered.length} منتج
-          </p>
+          <div className="flex items-center justify-between mb-5 bg-muted/30 rounded-2xl px-4 py-3 border border-border/30">
+            <p className="font-cairo text-sm text-muted-foreground">
+              <span className="font-bold text-foreground">{filtered.length}</span> منتج
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="font-cairo text-xs text-muted-foreground hidden sm:inline">الترتيب:</span>
+              <Select value={sort} onValueChange={setSort}>
+                <SelectTrigger className="font-cairo w-28 h-8 text-xs rounded-xl border-border/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map(o => (
+                    <SelectItem key={o.value} value={o.value} className="font-cairo text-xs">{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           {isLoading ? (
             <ProductGridSkeleton />
           ) : filtered.length > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {filtered.map(p => (
-                <ProductCard
-                  key={p.id}
-                  id={p.id}
-                  name={p.name}
-                  price={Number(p.price)}
-                  image={p.images?.[p.main_image_index ?? 0] || p.images?.[0] || ''}
-                  images={p.images || []}
-                  mainImageIndex={p.main_image_index ?? 0}
-                  category={p.category || []}
-                  stock={p.stock ?? 0}
-                  shippingPrice={Number(p.shipping_price) || 0}
-                />
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              {filtered.map((p, i) => (
+                <div key={p.id} style={{ animationDelay: `${i * 0.05}s` }} className="animate-fade-in opacity-0 [animation-fill-mode:forwards]">
+                  <ProductCard
+                    id={p.id}
+                    name={p.name}
+                    price={Number(p.price)}
+                    image={p.images?.[p.main_image_index ?? 0] || p.images?.[0] || ''}
+                    images={p.images || []}
+                    mainImageIndex={p.main_image_index ?? 0}
+                    category={p.category || []}
+                    stock={p.stock ?? 0}
+                    shippingPrice={Number(p.shipping_price) || 0}
+                  />
+                </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-16">
-              <p className="font-cairo text-muted-foreground text-lg">لا توجد منتجات مطابقة لبحثك</p>
+            <div className="text-center py-24 bg-card rounded-3xl border border-dashed border-border/50">
+              <ShoppingBag className="w-14 h-14 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="font-cairo text-muted-foreground text-lg font-semibold">لا توجد منتجات مطابقة لبحثك</p>
+              <p className="font-cairo text-muted-foreground/60 text-sm mt-1">جرب تعديل الفلاتر أو البحث بكلمات مختلفة</p>
+              <Button variant="outline" onClick={clearFilters} className="font-cairo mt-4 rounded-xl gap-2">
+                <X className="w-4 h-4" />
+                مسح الفلاتر
+              </Button>
             </div>
           )}
         </div>
       </div>
 
-      {/* ─── Floating Cart Bar ─── */}
+      {/* ─── Floating Cart Bar — enhanced ─── */}
       {items.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-          <div className="container flex items-center gap-3 py-3">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <ShoppingBag className="w-4 h-4 text-primary" />
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border/50 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+          <div className="container flex items-center gap-3 py-3.5">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
+                <ShoppingBag className="w-4.5 h-4.5 text-white" />
               </div>
               <div className="min-w-0">
-                <p className="font-cairo font-semibold text-sm">{items.length} منتج في السلة</p>
+                <p className="font-cairo font-bold text-sm">{items.length} منتج في السلة</p>
                 <p className="font-roboto font-bold text-primary text-sm">{formatPrice(subtotal)}</p>
               </div>
             </div>
             <Link to="/cart">
-              <Button variant="outline" className="font-cairo text-sm rounded-xl h-10 shrink-0">
+              <Button variant="outline" className="font-cairo text-sm rounded-xl h-10 shrink-0 border-primary/20 hover:border-primary/40">
                 عرض السلة
               </Button>
             </Link>
             <Link to="/checkout">
-              <Button className="font-cairo font-semibold text-sm gap-1.5 rounded-xl h-10 shrink-0">
+              <Button className="font-cairo font-semibold text-sm gap-1.5 rounded-xl h-10 shrink-0 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all">
                 <Zap className="w-4 h-4" />
                 إتمام الطلب
               </Button>

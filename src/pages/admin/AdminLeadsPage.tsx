@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pencil, Users, Phone, User, StickyNote, Check, X, Search } from 'lucide-react';
+import { Plus, Trash2, Pencil, Users, Phone, User, StickyNote, Check, X, Search, Download, ChevronLeft, ChevronRight, TrendingUp, MessageCircle, PhoneCall } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { useTranslation } from '@/i18n';
 
@@ -65,6 +66,36 @@ export default function AdminLeadsPage() {
     return matchSearch && matchStatus;
   });
 
+  // KPI calculations
+  const kpis = useMemo(() => {
+    const all = leads || [];
+    const newCount = all.filter(l => l.status === 'جديد').length;
+    const contacted = all.filter(l => l.status === 'تم التواصل').length;
+    const interested = all.filter(l => l.status === 'مهتم').length;
+    const converted = all.filter(l => l.status === 'تم التحويل').length;
+    const convRate = all.length > 0 ? Math.round((converted / all.length) * 100) : 0;
+    return { total: all.length, newCount, contacted, interested, converted, convRate };
+  }, [leads]);
+
+  // Pagination
+  const ITEMS_PER_PAGE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
+  const paginatedLeads = filteredLeads.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Export CSV
+  const handleExport = () => {
+    if (!leads?.length) return;
+    const headers = ['Name', 'Phone', 'Source', 'Status', 'Notes', 'Date'];
+    const rows = filteredLeads.map(l => [l.name, l.phone, l.source || '', l.status || '', l.notes || '', l.created_at || '']);
+    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `leads_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Form state
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -117,7 +148,7 @@ export default function AdminLeadsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
             <Users className="w-5 h-5 text-primary" />
@@ -127,9 +158,38 @@ export default function AdminLeadsPage() {
             <p className="font-cairo text-sm text-muted-foreground">{leads?.length || 0} {t('common.product')}</p>
           </div>
         </div>
-        <Button onClick={openCreate} className="font-cairo gap-1.5">
-          <Plus className="w-4 h-4" /> {t('leads.addLead')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport} className="font-cairo gap-1.5" size="sm" disabled={!filteredLeads.length}>
+            <Download className="w-3.5 h-3.5" /> {t('common.exportCSV')}
+          </Button>
+          <Button onClick={openCreate} className="font-cairo gap-1.5">
+            <Plus className="w-4 h-4" /> {t('leads.addLead')}
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="w-5 h-5 text-primary" /></div>
+          <div><p className="text-xs text-muted-foreground font-cairo">{t('leads.totalLeads')}</p><p className="text-xl font-bold font-roboto">{kpis.total}</p></div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0"><Phone className="w-5 h-5 text-secondary" /></div>
+          <div><p className="text-xs text-muted-foreground font-cairo">{t('leads.contacted')}</p><p className="text-xl font-bold font-roboto">{kpis.contacted}</p></div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shrink-0"><User className="w-5 h-5 text-accent-foreground" /></div>
+          <div><p className="text-xs text-muted-foreground font-cairo">{t('leads.interested')}</p><p className="text-xl font-bold font-roboto">{kpis.interested}</p></div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0"><Check className="w-5 h-5 text-green-600" /></div>
+          <div><p className="text-xs text-muted-foreground font-cairo">{t('leads.statusConverted')}</p><p className="text-xl font-bold font-roboto">{kpis.converted}</p></div>
+        </CardContent></Card>
+        <Card className="col-span-2 sm:col-span-1"><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5 text-blue-600" /></div>
+          <div><p className="text-xs text-muted-foreground font-cairo">{t('leads.conversionRate')}</p><p className="text-xl font-bold font-roboto">{kpis.convRate}%</p></div>
+        </CardContent></Card>
       </div>
 
       {/* Search & Filter */}
@@ -165,7 +225,7 @@ export default function AdminLeadsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filteredLeads.map(l => {
+                {paginatedLeads.map(l => {
                   const statusStyle = STATUS_OPTIONS.find(s => s.value === l.status)?.color || 'bg-muted text-muted-foreground';
                   return (
                     <tr key={l.id} className="hover:bg-muted/30 transition-colors group">
@@ -177,6 +237,8 @@ export default function AdminLeadsPage() {
                       <td className="p-3 font-cairo text-xs text-muted-foreground">{formatDate(l.created_at)}</td>
                       <td className="p-3">
                         <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                          <a href={`tel:${l.phone}`} className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-green-50 hover:text-green-600 transition-colors" title={t('leads.callNow')}><PhoneCall className="w-3.5 h-3.5" /></a>
+                          <a href={`https://wa.me/${l.phone.replace(/^0/, '213')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-green-50 hover:text-green-600 transition-colors" title={t('leads.whatsapp')}><MessageCircle className="w-3.5 h-3.5" /></a>
                           <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(l)}><Pencil className="w-3.5 h-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(l.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
@@ -188,7 +250,7 @@ export default function AdminLeadsPage() {
             </table>
           </div>
           <div className="md:hidden space-y-3">
-            {filteredLeads.map(l => {
+            {paginatedLeads.map(l => {
               const statusStyle = STATUS_OPTIONS.find(s => s.value === l.status)?.color || 'bg-muted text-muted-foreground';
               return (
                 <div key={l.id} className="bg-card border rounded-xl p-4 space-y-2">
@@ -204,6 +266,8 @@ export default function AdminLeadsPage() {
                   <div className="flex items-center justify-between pt-2 border-t">
                     <span className="font-cairo text-xs text-muted-foreground">{formatDate(l.created_at)}</span>
                     <div className="flex gap-1">
+                      <a href={`tel:${l.phone}`} className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-green-50 transition-colors"><PhoneCall className="w-3.5 h-3.5" /></a>
+                      <a href={`https://wa.me/${l.phone.replace(/^0/, '213')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-green-50 transition-colors"><MessageCircle className="w-3.5 h-3.5" /></a>
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEdit(l)}><Pencil className="w-3.5 h-3.5" /></Button>
                       <Button variant="outline" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog(l.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                     </div>
@@ -212,6 +276,29 @@ export default function AdminLeadsPage() {
               );
             })}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="font-cairo text-xs text-muted-foreground">
+                {t('common.showing')} {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredLeads.length)} / {filteredLeads.length} {t('common.results')}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const p = totalPages <= 5 ? i + 1 : currentPage <= 3 ? i + 1 : currentPage >= totalPages - 2 ? totalPages - 4 + i : currentPage - 2 + i;
+                  return (
+                    <Button key={p} variant={currentPage === p ? 'default' : 'outline'} size="icon" className="h-8 w-8 text-xs" onClick={() => setCurrentPage(p)}>{p}</Button>
+                  );
+                })}
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center py-16 bg-card border rounded-xl">

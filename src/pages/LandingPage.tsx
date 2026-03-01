@@ -498,47 +498,71 @@ export default function LandingPage() {
       {renderThankYouModal()}
 
       {/* Hero */}
-      <div style={{ position: 'relative', minHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'linear-gradient(135deg,#0f172a,#1e293b)' }}>
+      <div style={{ position: 'relative', minHeight: '95vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'linear-gradient(135deg,#0f172a,#1e293b)' }}>
         {heroImage && (
-          <img src={heroImage} alt={product?.name} loading="eager" fetchPriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
+          <img src={heroImage} alt={product?.name} loading="eager" fetchPriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4, filter: 'blur(1px)' }} />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,rgba(0,0,0,0.2),rgba(0,0,0,0.7))' }} />
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', color: '#fff', padding: '3rem 2rem', maxWidth: '800px' }}>
-          <h1 style={{ fontSize: 'clamp(2rem,6vw,4rem)', fontWeight: 900, marginBottom: '1.5rem', lineHeight: 1.1, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>{content.headline}</h1>
-          <p style={{ fontSize: '1.3rem', opacity: 0.9, marginBottom: '2.5rem', lineHeight: 1.6 }}>{content.subheadline}</p>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(15,23,42,0.3) 0%,rgba(15,23,42,0.5) 40%,rgba(15,23,42,0.85) 100%)' }} />
+        {/* Decorative gradient orbs */}
+        <div style={{ position: 'absolute', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(249,115,22,0.15),transparent 70%)', top: '-100px', right: '-100px', filter: 'blur(60px)' }} />
+        <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(59,130,246,0.1),transparent 70%)', bottom: '-50px', left: '-50px', filter: 'blur(60px)' }} />
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', color: '#fff', padding: '3rem 2rem', maxWidth: '850px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: '9999px', marginBottom: '1.5rem', fontSize: '0.9rem', color: '#fb923c', fontWeight: 600, backdropFilter: 'blur(8px)' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#f97316', animation: 'pulse 2s infinite' }} />
+            {lang === 'ar' ? 'عرض محدود' : lang === 'fr' ? 'Offre limit\u00e9e' : 'Limited Offer'}
+          </div>
+          <h1 style={{ fontSize: 'clamp(2.2rem,7vw,4.5rem)', fontWeight: 900, marginBottom: '1.5rem', lineHeight: 1.05, textShadow: '0 4px 30px rgba(0,0,0,0.4)', letterSpacing: '-0.02em' }}>{content.headline}</h1>
+          <p style={{ fontSize: '1.3rem', opacity: 0.85, marginBottom: '2rem', lineHeight: 1.7, maxWidth: '650px', margin: '0 auto 2.5rem' }}>{content.subheadline}</p>
+          {/* Price badge in hero */}
+          {product && (
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.75rem', padding: '0.75rem 2rem', background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.15)', marginBottom: '2rem' }}>
+              <span style={{ fontSize: '2rem', fontWeight: 900, color: '#f97316' }}>{displayPrice} DA</span>
+              {product.old_price && <span style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>{product.old_price} DA</span>}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="#order-form" style={{ display: 'inline-block', padding: '1rem 2.5rem', borderRadius: '0.75rem', fontWeight: 700, fontSize: '1.1rem', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(249,115,22,0.4)' }}>
+            <a href="#order-form" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '1.1rem 2.75rem', borderRadius: '1rem', fontWeight: 800, fontSize: '1.15rem', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', textDecoration: 'none', boxShadow: '0 8px 30px rgba(249,115,22,0.4), inset 0 1px 0 rgba(255,255,255,0.2)', transition: 'transform 0.2s, box-shadow 0.2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(249,115,22,0.5), inset 0 1px 0 rgba(255,255,255,0.2)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 30px rgba(249,115,22,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'; }}>
               {content.cta_primary}
             </a>
-            <a href="#details" style={{ display: 'inline-block', padding: '1rem 2.5rem', borderRadius: '0.75rem', fontWeight: 700, fontSize: '1.1rem', border: '2px solid rgba(255,255,255,0.6)', color: '#fff', textDecoration: 'none' }}>
+            <a href="#details" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '1.1rem 2.75rem', borderRadius: '1rem', fontWeight: 700, fontSize: '1.15rem', border: '2px solid rgba(255,255,255,0.3)', color: '#fff', textDecoration: 'none', backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.05)', transition: 'all 0.2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.6)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.3)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}>
               {content.cta_secondary}
             </a>
+          </div>
+          {/* Scroll indicator */}
+          <div style={{ marginTop: '3rem', animation: 'bounce 2s infinite' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}><path d="M7 13l5 5 5-5"/><path d="M7 6l5 5 5-5"/></svg>
           </div>
         </div>
       </div>
 
       {/* Trust bar */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '2rem', padding: '1.5rem 2rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1.5rem', padding: '1.25rem 2rem', background: 'linear-gradient(90deg,#f8fafc,#fff,#f8fafc)', borderBottom: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
         {[
           { icon: '🚚', text: fl.fastDelivery },
           { icon: '🛡️', text: fl.securePayment },
           { icon: '↩️', text: fl.freeReturns },
           { icon: '⭐', text: fl.qualityGuaranteed },
         ].map((item, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem', color: '#475569', fontWeight: 600 }}>
-            <span style={{ fontSize: '1.3rem' }}>{item.icon}</span>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem', color: '#475569', fontWeight: 600, padding: '0.5rem 1rem', background: 'rgba(249,115,22,0.04)', borderRadius: '9999px', border: '1px solid rgba(249,115,22,0.08)' }}>
+            <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
             <span>{item.text}</span>
           </div>
         ))}
       </div>
 
       {/* Benefits */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: '1.5rem', padding: '4rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: '1.5rem', padding: '5rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
         {content.benefits.map((b, i) => (
-          <div key={i} style={{ textAlign: 'center', padding: '2rem 1.5rem', borderRadius: '1rem', background: '#fff', border: '1px solid #f1f5f9' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>{b.icon}</div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.5rem', color: '#0f172a' }}>{b.title}</h3>
-            <p style={{ color: '#64748b', lineHeight: 1.6 }}>{b.text}</p>
+          <div key={i} style={{ textAlign: 'center', padding: '2.5rem 1.5rem', borderRadius: '1.5rem', background: '#fff', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'transform 0.3s, box-shadow 0.3s', cursor: 'default' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-6px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 40px rgba(0,0,0,0.1)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }}>
+            <div style={{ width: '4rem', height: '4rem', borderRadius: '1rem', background: 'linear-gradient(135deg,#fff7ed,#fef3c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '2rem' }}>{b.icon}</div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.6rem', color: '#0f172a' }}>{b.title}</h3>
+            <p style={{ color: '#64748b', lineHeight: 1.7, fontSize: '0.95rem' }}>{b.text}</p>
           </div>
         ))}
       </div>
@@ -953,9 +977,15 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* Floating CTA Button */}
+      <a href="#order-form" style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 50, display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.9rem 2rem', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', borderRadius: '9999px', fontWeight: 800, fontSize: '1rem', textDecoration: 'none', boxShadow: '0 8px 30px rgba(249,115,22,0.4), 0 0 0 4px rgba(249,115,22,0.15)', animation: 'subtlePulse 2s ease-in-out infinite' }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+        {fl.orderNow}
+      </a>
       <style>{`
         @keyframes glowBorder { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
-        @keyframes subtlePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+        @keyframes subtlePulse { 0%,100%{transform:translateX(-50%) scale(1)} 50%{transform:translateX(-50%) scale(1.03)} }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes spin { to{transform:rotate(360deg)} }
       `}</style>

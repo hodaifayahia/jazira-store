@@ -137,11 +137,12 @@ export default function AdminCostsPage() {
         <Input placeholder={t('costs.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} className="pr-10 font-cairo h-10" />
       </div>
 
-      {/* Table */}
+      {/* Table - Desktop */}
       {isLoading ? (
         <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
       ) : (
-        <div className="border rounded-lg overflow-x-auto max-w-full">
+        <>
+        <div className="border rounded-lg overflow-x-auto max-w-full hidden md:block">
           <table className="text-sm min-w-[900px] whitespace-nowrap">
             <thead>
               <tr className="border-b bg-muted/30">
@@ -212,6 +213,59 @@ export default function AdminCostsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-3">
+          {filtered.length === 0 ? (
+            <Card><CardContent className="p-8 text-center font-cairo text-muted-foreground">{t('costs.noProducts')}</CardContent></Card>
+          ) : filtered.map(p => {
+            const hasCost = !!p.cost;
+            const totalCost = p.cost?.total_cost_per_unit ?? 0;
+            const grossProfit = p.price - totalCost;
+            const margin = p.price > 0 ? ((grossProfit / p.price) * 100) : 0;
+            return (
+              <Card key={p.id} className="border">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    {p.images?.[0] ? (
+                      <img src={p.images[0]} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0"><Package className="w-4 h-4 text-muted-foreground" /></div>
+                    )}
+                    <span className="font-cairo font-semibold text-foreground truncate flex-1">{p.name}</span>
+                    <Button size="sm" variant="ghost" className="font-cairo gap-1 h-8 shrink-0" onClick={() => setEditProduct(p)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                      {hasCost ? t('common.edit') : t('common.add')}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="bg-muted/30 rounded-lg p-2">
+                      <p className="font-cairo text-xs text-muted-foreground">{t('costs.sellingPrice')}</p>
+                      <p className="font-roboto font-bold">{formatPrice(p.price)}</p>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-2">
+                      <p className="font-cairo text-xs text-muted-foreground">{t('costs.totalCost')}</p>
+                      <p className="font-roboto font-bold">{hasCost ? formatPrice(totalCost) : <span className="text-destructive text-xs font-cairo">{t('costs.notSet')}</span>}</p>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-2">
+                      <p className="font-cairo text-xs text-muted-foreground">{t('costs.profit')}</p>
+                      <p className={`font-roboto font-bold ${hasCost ? (grossProfit >= 0 ? 'text-green-700' : 'text-red-600') : ''}`}>{hasCost ? formatPrice(grossProfit) : '—'}</p>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-2">
+                      <p className="font-cairo text-xs text-muted-foreground">{t('costs.margin')}</p>
+                      {hasCost ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${getMarginColor(margin)}`}>
+                          {getMarginIcon(margin)} {margin.toFixed(1)}%
+                        </span>
+                      ) : <p className="font-roboto">—</p>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        </>
       )}
 
       {/* Edit Cost Dialog */}

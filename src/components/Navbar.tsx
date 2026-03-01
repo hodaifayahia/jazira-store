@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCategories } from '@/hooks/useCategories';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import SmartSearch from '@/components/SmartSearch';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Shirt,
@@ -34,6 +35,7 @@ export default function Navbar() {
   const { totalItems: wishlistCount } = useWishlist();
   const [menuOpen, setMenuOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { data: logoUrl } = useStoreLogo();
   const location = useLocation();
   const navigate = useNavigate();
@@ -158,7 +160,7 @@ export default function Navbar() {
           {/* Actions */}
           <div className="flex items-center gap-1">
             <button
-              onClick={() => navigate('/products')}
+              onClick={() => setSearchOpen(true)}
               className="hidden md:flex p-2.5 rounded-xl hover:bg-muted transition-colors"
               aria-label="بحث"
             >
@@ -280,6 +282,8 @@ export default function Navbar() {
           </div>
         </div>
       )}
+      {/* Smart Search Modal */}
+      {searchOpen && <SmartSearch onClose={() => setSearchOpen(false)} />}
     </header>
   );
 }
