@@ -1088,6 +1088,111 @@ export default function SingleProductPage() {
                       </div>
                     </label>
                   )}
+
+                  {binanceEnabled && (
+                    <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'binance' ? 'border-primary bg-accent' : ''}`}>
+                      <input type="radio" name="inline-payment" value="binance" checked={paymentMethod === 'binance'} onChange={e => { setPaymentMethod(e.target.value); setErrors(prev => ({ ...prev, paymentMethod: '', receiptFile: '' })); }} className="mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-cairo font-semibold">بايننس</span>
+                        {paymentMethod === 'binance' && settings && (
+                          <div className="mt-2 space-y-1.5 text-xs">
+                            <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                              <span className="font-cairo">المحفظة:</span>
+                              <span className="font-roboto font-bold">{settings.binance_wallet}</span>
+                              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.binance_wallet)}><Copy className="w-3 h-3" /></Button>
+                            </div>
+                            <div className="mt-1.5">
+                              <Label className="font-cairo text-[11px]">أرفق إيصال الدفع *</Label>
+                              <Input type="file" accept="image/*,.pdf" onChange={e => { handleReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              {receiptPreview && (
+                                <div className="relative mt-2 inline-block">
+                                  <img src={receiptPreview} alt="إيصال" className="w-24 h-24 object-cover rounded-lg border" />
+                                  <button onClick={removeReceipt} className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                              {receiptFile && !receiptPreview && (
+                                <div className="flex items-center gap-2 mt-1 text-xs font-cairo text-muted-foreground">
+                                  <Upload className="w-3 h-3" /> {receiptFile.name}
+                                  <button onClick={removeReceipt} className="text-destructive"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                              {errors.receiptFile && <p className="text-destructive text-xs font-cairo mt-1">{errors.receiptFile}</p>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  )}
+
+                  {vodafoneEnabled && (
+                    <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'vodafone' ? 'border-primary bg-accent' : ''}`}>
+                      <input type="radio" name="inline-payment" value="vodafone" checked={paymentMethod === 'vodafone'} onChange={e => { setPaymentMethod(e.target.value); setErrors(prev => ({ ...prev, paymentMethod: '', receiptFile: '' })); }} className="mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-cairo font-semibold">فودافون كاش</span>
+                        {paymentMethod === 'vodafone' && settings && (
+                          <div className="mt-2 space-y-1.5 text-xs">
+                            <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                              <span className="font-cairo">رقم المحفظة:</span>
+                              <span className="font-roboto font-bold">{settings.vodafone_number}</span>
+                              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.vodafone_number)}><Copy className="w-3 h-3" /></Button>
+                            </div>
+                            <div className="mt-1.5">
+                              <Label className="font-cairo text-[11px]">أرفق إيصال الدفع *</Label>
+                              <Input type="file" accept="image/*,.pdf" onChange={e => { handleReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              {receiptPreview && (
+                                <div className="relative mt-2 inline-block">
+                                  <img src={receiptPreview} alt="إيصال" className="w-24 h-24 object-cover rounded-lg border" />
+                                  <button onClick={removeReceipt} className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                              {receiptFile && !receiptPreview && (
+                                <div className="flex items-center gap-2 mt-1 text-xs font-cairo text-muted-foreground">
+                                  <Upload className="w-3 h-3" /> {receiptFile.name}
+                                  <button onClick={removeReceipt} className="text-destructive"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                              {errors.receiptFile && <p className="text-destructive text-xs font-cairo mt-1">{errors.receiptFile}</p>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  )}
+
+                  {redotpayEnabled && (
+                    <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'redotpay' ? 'border-primary bg-accent' : ''}`}>
+                      <input type="radio" name="inline-payment" value="redotpay" checked={paymentMethod === 'redotpay'} onChange={e => { setPaymentMethod(e.target.value); setErrors(prev => ({ ...prev, paymentMethod: '', receiptFile: '' })); }} className="mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-cairo font-semibold">ريد أوتو باي</span>
+                        {paymentMethod === 'redotpay' && settings && (
+                          <div className="mt-2 space-y-1.5 text-xs">
+                            <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                              <span className="font-cairo">الحساب:</span>
+                              <span className="font-roboto font-bold">{settings.redotpay_account}</span>
+                              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(settings.redotpay_account)}><Copy className="w-3 h-3" /></Button>
+                            </div>
+                            <div className="mt-1.5">
+                              <Label className="font-cairo text-[11px]">أرفق إيصال الدفع *</Label>
+                              <Input type="file" accept="image/*,.pdf" onChange={e => { handleReceiptFile(e.target.files?.[0] || null); setErrors(prev => ({ ...prev, receiptFile: '' })); }} className={`mt-0.5 h-8 text-xs ${errors.receiptFile ? 'border-destructive' : ''}`} />
+                              {receiptPreview && (
+                                <div className="relative mt-2 inline-block">
+                                  <img src={receiptPreview} alt="إيصال" className="w-24 h-24 object-cover rounded-lg border" />
+                                  <button onClick={removeReceipt} className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                              {receiptFile && !receiptPreview && (
+                                <div className="flex items-center gap-2 mt-1 text-xs font-cairo text-muted-foreground">
+                                  <Upload className="w-3 h-3" /> {receiptFile.name}
+                                  <button onClick={removeReceipt} className="text-destructive"><X className="w-3 h-3" /></button>
+                                </div>
+                              )}
+                              {errors.receiptFile && <p className="text-destructive text-xs font-cairo mt-1">{errors.receiptFile}</p>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  )}
                 </div>
                 {errors.paymentMethod && <p className="text-destructive text-xs font-cairo mt-1">{errors.paymentMethod}</p>}
               </div>
