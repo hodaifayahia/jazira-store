@@ -503,6 +503,7 @@ export default function SingleProductPage() {
 
   const baridimobEnabled = settings?.baridimob_enabled === 'true';
   const flexyEnabled = settings?.flexy_enabled === 'true';
+  const cashOnDeliveryEnabled = settings?.cash_on_delivery_enabled !== 'false'; // default true
   const binanceEnabled = settings?.binance_enabled === 'true';
   const vodafoneEnabled = settings?.vodafone_enabled === 'true';
   const redotpayEnabled = settings?.redotpay_enabled === 'true';
@@ -1007,6 +1008,16 @@ export default function SingleProductPage() {
                   <span className="font-cairo font-semibold text-sm">طريقة الدفع</span>
                 </div>
                 <div className="space-y-2">
+                  {cashOnDeliveryEnabled && (
+                    <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-accent' : ''}`}>
+                      <input type="radio" name="inline-payment" value="cash_on_delivery" checked={paymentMethod === 'cash_on_delivery'} onChange={e => { setPaymentMethod(e.target.value); setErrors(prev => ({ ...prev, paymentMethod: '', receiptFile: '' })); }} className="mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-cairo font-semibold">الدفع عند الاستلام</span>
+                        <p className="text-xs text-muted-foreground font-cairo mt-1">ادفع النقود عند استلام الطرد من المندوب</p>
+                      </div>
+                    </label>
+                  )}
+
                   {baridimobEnabled && (
                     <label className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors text-sm ${paymentMethod === 'baridimob' ? 'border-primary bg-accent' : ''}`}>
                       <input type="radio" name="inline-payment" value="baridimob" checked={paymentMethod === 'baridimob'} onChange={e => { setPaymentMethod(e.target.value); setErrors(prev => ({ ...prev, paymentMethod: '', receiptFile: '' })); }} className="mt-0.5" />
