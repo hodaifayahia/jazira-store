@@ -31,7 +31,19 @@ export default function AdminClientDetailPage() {
   const { data: products } = useQuery({
     queryKey: ['products-list'],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('id, name, price, stock').eq('is_active', true);
+      const { data } = await supabase.from('products').select('id, name, price, stock, has_variants').eq('is_active', true);
+      return data ?? [];
+    },
+  });
+
+  // Fetch product variations for products that have variants
+  const { data: allVariations } = useQuery({
+    queryKey: ['product-variations'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('product_variations')
+        .select('product_id, variation_type, variation_value, price_adjustment, stock, image_url, is_active')
+        .eq('is_active', true);
       return data ?? [];
     },
   });
@@ -51,12 +63,32 @@ export default function AdminClientDetailPage() {
     unit_price: number;
     notes: string;
     original_price: number;
+    variation_type?: string;
+    variation_value?: string;
+    variation_id?: string;
+    price_adjustment?: number;
   }
   const [bulkProducts, setBulkProducts] = useState<BulkProduct[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
   const selectedProduct = products?.find(p => p.id === giveForm.product_id);
   const selectedReturnProduct = products?.find(p => p.id === returnForm.product_id);
+
+  // Get variations for a product
+  const getProductVariations = (productId: string) => {
+    return allVariations?.filter(v => v.product_id === productId) ?? [];
+  };
+
+  // Get unique variation types for a product
+  const getVariationTypes = (productId: string) => {
+    const variations = getProductVariations(productId);
+    return [...new Set(variations.map(v => v.variation_type))];
+  };
+
+  // Get variation values for a specific type and product
+  const getVariationValues = (productId: string, variationType: string) => {
+    return getProductVariations(productId).filter(v => v.variation_type === variationType);
+  };
 
   // Toggle product selection for bulk add
   const toggleProductSelection = (productId: string, product: any) => {
@@ -66,14 +98,29 @@ export default function AdminClientDetailPage() {
       setBulkProducts(bulkProducts.filter(p => p.product_id !== productId));
     } else {
       newSelected.add(productId);
-      setBulkProducts([...bulkProducts, {
+      const bulkProduct: BulkProduct = {
         product_id: productId,
         product_name: product.name,
         quantity: 1,
         unit_price: product.price ?? 0,
         notes: '',
         original_price: product.price ?? 0,
-      }]);
+      };
+
+      // If product has variants, select the first one by default
+      if (product.has_variants) {
+        const variations = getProductVariations(productId);
+        if (variations.length > 0) {
+          const firstVariation = variations[0];
+          bulkProduct.variation_type = firstVariation.variation_type;
+          bulkProduct.variation_value = firstVariation.variation_value;
+          bulkProduct.variation_id = firstVariation.id;
+          bulkProduct.price_adjustment = firstVariation.price_adjustment ?? 0;
+          bulkProduct.unit_price = (product.price ?? 0) + (firstVariation.price_adjustment ?? 0);
+        }
+      }
+
+      setBulkProducts([...bulkProducts, bulkProduct]);
     }
     setSelectedProductIds(newSelected);
   };
@@ -83,6 +130,33 @@ export default function AdminClientDetailPage() {
     setBulkProducts(bulkProducts.map(p =>
       p.product_id === productId ? { ...p, [field]: value } : p
     ));
+  };
+
+  // Update bulk product variation
+  const updateBulkProductVariation = (productId: string, variationType: string, variationValue: string) => {
+    setBulkProducts(bulkProducts.map(p => {
+      if (p.product_id !== productId) return p;
+      
+      const selectedVariation = allVariations?.find(v => 
+        v.product_id === productId && 
+        v.variation_type === variationType && 
+        v.variation_value === variationValue
+      );
+
+      if (!selectedVariation) return p;
+
+      const basePrice = products?.find(pr => pr.id === productId)?.price ?? 0;
+      const newPrice = basePrice + (selectedVariation.price_adjustment ?? 0);
+
+      return {
+        ...p,
+        variation_type: variationType,
+        variation_value: variationValue,
+        variation_id: selectedVariation.id,
+        price_adjustment: selectedVariation.price_adjustment ?? 0,
+        unit_price: newPrice,
+      };
+    }));
   };
 
   // Remove product from bulk list
@@ -336,7 +410,12 @@ export default function AdminClientDetailPage() {
                         id={`product-${product.id}`}
                       />
                       <label htmlFor={`product-${product.id}`} className="flex-1 cursor-pointer font-cairo text-sm">
-                        <div className="font-medium">{product.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{product.name}</span>
+                          {product.has_variants && (
+                            <Badge variant="secondary" className="text-xs font-cairo">{t('common.variants')}</Badge>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {t('products.stock')}: {product.stock} • {t('common.price')}: {formatPrice(product.price)}
                         </div>
@@ -359,6 +438,7 @@ export default function AdminClientDetailPage() {
                       <TableHeader>
                         <TableRow className="bg-muted/50">
                           <TableHead className="font-cairo text-xs sm:text-sm">{t('common.product')}</TableHead>
+                          <TableHead className="font-cairo text-xs sm:text-sm w-32">{t('common.variants')}</TableHead>
                           <TableHead className="font-cairo text-xs sm:text-sm">{t('common.quantity')}</TableHead>
                           <TableHead className="font-cairo text-xs sm:text-sm">{t('clients.unitPrice')}</TableHead>
                           <TableHead className="font-cairo text-xs sm:text-sm">{t('common.total')}</TableHead>
@@ -367,14 +447,50 @@ export default function AdminClientDetailPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {bulkProducts.map(bulkProduct => (
+                        {bulkProducts.map(bulkProduct => {
+                          const product = products?.find(p => p.id === bulkProduct.product_id);
+                          const variationTypes = getVariationTypes(bulkProduct.product_id);
+                          const selectedVariationValues = bulkProduct.variation_type ? getVariationValues(bulkProduct.product_id, bulkProduct.variation_type) : [];
+                          return (
                           <TableRow key={bulkProduct.product_id} className="hover:bg-muted/30">
                             <TableCell className="font-cairo text-xs sm:text-sm font-medium">{bulkProduct.product_name}</TableCell>
+                            <TableCell className="p-2">
+                              {product?.has_variants ? (
+                                <div className="space-y-2">
+                                  {variationTypes.map(vType => {
+                                    const values = getVariationValues(bulkProduct.product_id, vType);
+                                    return (
+                                      <div key={vType} className="flex flex-col gap-1">
+                                        <label className="text-xs font-cairo text-muted-foreground">{vType}</label>
+                                        <Select
+                                          value={bulkProduct.variation_type === vType ? bulkProduct.variation_value || '' : ''}
+                                          onValueChange={(value) => updateBulkProductVariation(bulkProduct.product_id, vType, value)}
+                                        >
+                                          <SelectTrigger className="font-cairo h-7 text-xs">
+                                            <SelectValue placeholder={t('common.select')} />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {values.map(v => (
+                                              <SelectItem key={v.id} value={v.variation_value} className="font-cairo text-xs">
+                                                {v.variation_value}
+                                                {v.price_adjustment ? ` (+${formatPrice(v.price_adjustment)})` : ''}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground font-cairo">—</span>
+                              )}
+                            </TableCell>
                             <TableCell className="p-2">
                               <Input
                                 type="number"
                                 min={1}
-                                max={products?.find(p => p.id === bulkProduct.product_id)?.stock ?? 9999}
+                                max={9999}
                                 value={bulkProduct.quantity}
                                 onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'quantity', Number(e.target.value))}
                                 className="font-cairo h-8 text-xs sm:text-sm w-16"
@@ -413,8 +529,8 @@ export default function AdminClientDetailPage() {
                               </Button>
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
+                          );
+                        })}
                     </Table>
                   </div>
                 </div>
