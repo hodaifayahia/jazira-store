@@ -15,7 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Package, DollarSign, RotateCcw, Wallet, TrendingUp, TrendingDown, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, Package, DollarSign, RotateCcw, Wallet, TrendingUp, TrendingDown, Trash2, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminClientDetailPage() {
@@ -41,9 +42,113 @@ export default function AdminClientDetailPage() {
   const [payForm, setPayForm] = useState({ amount: 0, notes: '', date: new Date().toISOString().split('T')[0] });
   // Return form
   const [returnForm, setReturnForm] = useState({ product_id: '', quantity: 1, unit_price: 0, notes: '' });
+  
+  // Bulk add products form
+  interface BulkProduct {
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    notes: string;
+    original_price: number;
+  }
+  const [bulkProducts, setBulkProducts] = useState<BulkProduct[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
   const selectedProduct = products?.find(p => p.id === giveForm.product_id);
   const selectedReturnProduct = products?.find(p => p.id === returnForm.product_id);
+
+  // Toggle product selection for bulk add
+  const toggleProductSelection = (productId: string, product: any) => {
+    const newSelected = new Set(selectedProductIds);
+    if (newSelected.has(productId)) {
+      newSelected.delete(productId);
+      setBulkProducts(bulkProducts.filter(p => p.product_id !== productId));
+    } else {
+      newSelected.add(productId);
+      setBulkProducts([...bulkProducts, {
+        product_id: productId,
+        product_name: product.name,
+        quantity: 1,
+        unit_price: product.price ?? 0,
+        notes: '',
+        original_price: product.price ?? 0,
+      }]);
+    }
+    setSelectedProductIds(newSelected);
+  };
+
+  // Update bulk product quantity
+  const updateBulkProduct = (productId: string, field: keyof BulkProduct, value: any) => {
+    setBulkProducts(bulkProducts.map(p =>
+      p.product_id === productId ? { ...p, [field]: value } : p
+    ));
+  };
+
+  // Remove product from bulk list
+  const removeBulkProduct = (productId: string) => {
+    setBulkProducts(bulkProducts.filter(p => p.product_id !== productId));
+    const newSelected = new Set(selectedProductIds);
+    newSelected.delete(productId);
+    setSelectedProductIds(newSelected);
+  };
+
+  // Calculate total bulk amount
+  const bulkTotalAmount = useMemo(() => {
+    return bulkProducts.reduce((sum, p) => sum + (p.quantity * p.unit_price), 0);
+  }, [bulkProducts]);
+
+  // Handle bulk add products
+  const handleBulkAddProducts = async () => {
+    if (bulkProducts.length === 0) {
+      toast.error(t('clients.noProductsSelected'));
+      return;
+    }
+
+    // Validate all products
+    for (const product of bulkProducts) {
+      if (product.quantity <= 0) {
+        toast.error(t('common.required'));
+        return;
+      }
+      const stock = products?.find(p => p.id === product.product_id)?.stock ?? 0;
+      if (product.quantity > stock) {
+        toast.error(`${t('clients.insufficientStock')} ${stock} ${product.product_name}`);
+        return;
+      }
+    }
+
+    try {
+      // Add all transactions
+      for (const product of bulkProducts) {
+        const amount = product.quantity * product.unit_price;
+        await createTx.mutateAsync({
+          client_id: id!,
+          transaction_type: 'product_given',
+          product_id: product.product_id,
+          product_name: product.product_name,
+          quantity: product.quantity,
+          unit_price: product.unit_price,
+          amount,
+          date: new Date().toISOString().split('T')[0],
+          notes: product.notes || null,
+        });
+
+        // Deduct stock
+        const stock = products?.find(p => p.id === product.product_id)?.stock ?? 0;
+        await supabase
+          .from('products')
+          .update({ stock: Math.max(0, stock - product.quantity) })
+          .eq('id', product.product_id);
+      }
+
+      toast.success(t('clients.bulkProductsSuccess'));
+      setBulkProducts([]);
+      setSelectedProductIds(new Set());
+    } catch (error) {
+      toast.error(t('common.errorOccurred'));
+    }
+  };
 
   const handleGiveProduct = async () => {
     if (!giveForm.product_id || giveForm.quantity <= 0) { toast.error(t('common.required')); return; }
@@ -172,10 +277,11 @@ export default function AdminClientDetailPage() {
       </div>
 
       <Tabs defaultValue="give" className="w-full">
-        <TabsList className="w-full grid grid-cols-3 font-cairo">
-          <TabsTrigger value="give" className="gap-1 font-cairo"><Package className="w-4 h-4" />{t('clients.giveProduct')}</TabsTrigger>
-          <TabsTrigger value="payment" className="gap-1 font-cairo"><DollarSign className="w-4 h-4" />{t('clients.recordPayment')}</TabsTrigger>
-          <TabsTrigger value="return" className="gap-1 font-cairo"><RotateCcw className="w-4 h-4" />{t('clients.recordReturn')}</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 gap-1 font-cairo h-auto p-1">
+          <TabsTrigger value="give" className="gap-1 font-cairo text-xs sm:text-sm"><Package className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.giveProduct')}</span><span className="sm:hidden">Product</span></TabsTrigger>
+          <TabsTrigger value="bulk" className="gap-1 font-cairo text-xs sm:text-sm"><Plus className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.bulkAddProducts')}</span><span className="sm:hidden">Bulk</span></TabsTrigger>
+          <TabsTrigger value="payment" className="gap-1 font-cairo text-xs sm:text-sm"><DollarSign className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.recordPayment')}</span><span className="sm:hidden">Pay</span></TabsTrigger>
+          <TabsTrigger value="return" className="gap-1 font-cairo text-xs sm:text-sm"><RotateCcw className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.recordReturn')}</span><span className="sm:hidden">Return</span></TabsTrigger>
         </TabsList>
 
         {/* Give Product Tab */}
@@ -209,6 +315,152 @@ export default function AdminClientDetailPage() {
             </div>
             <div><Label className="font-cairo">{t('common.notes')}</Label><Input value={giveForm.notes} onChange={e => setGiveForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
             <Button onClick={handleGiveProduct} disabled={createTx.isPending} className="font-cairo gap-2"><Package className="w-4 h-4" />{t('clients.giveProduct')}</Button>
+          </CardContent></Card>
+        </TabsContent>
+
+        {/* Bulk Add Products Tab */}
+        <TabsContent value="bulk">
+          <Card><CardContent className="p-4 space-y-4">
+            {/* Products Selection */}
+            <div>
+              <Label className="font-cairo font-semibold mb-3 block">{t('clients.selectProductsForBulk')} *</Label>
+              <div className="border rounded-lg p-3 space-y-3 max-h-96 overflow-y-auto bg-muted/30">
+                {!products?.length ? (
+                  <p className="text-sm text-muted-foreground font-cairo text-center py-4">{t('common.noData')}</p>
+                ) : (
+                  products.map(product => (
+                    <div key={product.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 transition-colors">
+                      <Checkbox
+                        checked={selectedProductIds.has(product.id)}
+                        onCheckedChange={() => toggleProductSelection(product.id, product)}
+                        id={`product-${product.id}`}
+                      />
+                      <label htmlFor={`product-${product.id}`} className="flex-1 cursor-pointer font-cairo text-sm">
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {t('products.stock')}: {product.stock} • {t('common.price')}: {formatPrice(product.price)}
+                        </div>
+                      </label>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Selected Products Details */}
+            {bulkProducts.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="font-cairo font-semibold">{t('clients.selectedProducts')} ({bulkProducts.length})</Label>
+                </div>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-cairo text-xs sm:text-sm">{t('common.product')}</TableHead>
+                          <TableHead className="font-cairo text-xs sm:text-sm">{t('common.quantity')}</TableHead>
+                          <TableHead className="font-cairo text-xs sm:text-sm">{t('clients.unitPrice')}</TableHead>
+                          <TableHead className="font-cairo text-xs sm:text-sm">{t('common.total')}</TableHead>
+                          <TableHead className="font-cairo text-xs sm:text-sm">{t('common.notes')}</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bulkProducts.map(bulkProduct => (
+                          <TableRow key={bulkProduct.product_id} className="hover:bg-muted/30">
+                            <TableCell className="font-cairo text-xs sm:text-sm font-medium">{bulkProduct.product_name}</TableCell>
+                            <TableCell className="p-2">
+                              <Input
+                                type="number"
+                                min={1}
+                                max={products?.find(p => p.id === bulkProduct.product_id)?.stock ?? 9999}
+                                value={bulkProduct.quantity}
+                                onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'quantity', Number(e.target.value))}
+                                className="font-cairo h-8 text-xs sm:text-sm w-16"
+                              />
+                            </TableCell>
+                            <TableCell className="p-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={bulkProduct.unit_price}
+                                onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'unit_price', Number(e.target.value))}
+                                className="font-cairo h-8 text-xs sm:text-sm w-20"
+                              />
+                            </TableCell>
+                            <TableCell className="font-cairo text-xs sm:text-sm font-bold text-right">
+                              {formatPrice(bulkProduct.quantity * bulkProduct.unit_price)}
+                            </TableCell>
+                            <TableCell className="p-2">
+                              <Input
+                                type="text"
+                                placeholder={t('common.notes')}
+                                value={bulkProduct.notes}
+                                onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'notes', e.target.value)}
+                                className="font-cairo h-8 text-xs sm:text-sm"
+                              />
+                            </TableCell>
+                            <TableCell className="p-2">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-destructive"
+                                onClick={() => removeBulkProduct(bulkProduct.product_id)}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Summary Section */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-cairo">{t('common.quantity')}</p>
+                    <p className="text-lg font-bold font-cairo">{bulkProducts.reduce((sum, p) => sum + p.quantity, 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-cairo">{t('clients.selectedProducts')}</p>
+                    <p className="text-lg font-bold font-cairo">{bulkProducts.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-cairo">{t('clients.totalAmount')}</p>
+                    <p className="text-lg font-bold font-cairo text-primary">{formatPrice(bulkTotalAmount)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex gap-2 flex-col sm:flex-row">
+              <Button
+                onClick={handleBulkAddProducts}
+                disabled={bulkProducts.length === 0 || createTx.isPending}
+                className="font-cairo gap-2 flex-1"
+              >
+                <Plus className="w-4 h-4" />
+                {t('clients.addSelectedProducts')}
+              </Button>
+              {bulkProducts.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setBulkProducts([]);
+                    setSelectedProductIds(new Set());
+                  }}
+                  className="font-cairo gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  {t('common.clear')}
+                </Button>
+              )}
+            </div>
           </CardContent></Card>
         </TabsContent>
 
