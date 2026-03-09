@@ -28,7 +28,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Home, Sparkles, Watch, ShoppingBag, Gift, Star, Heart, Shirt,
   Laptop, Smartphone, Car, Utensils, Baby, Headphones, Camera, Sofa, Dumbbell, Palette,
   Book, Gem, Zap, Flame, Leaf, Music, Plane, Pizza, Coffee, Glasses, Footprints, Dog,
-  Wrench, Gamepad2, Crown, Flower2, Bike, Briefcase, Stethoscope,
+  Wrench, Gamepad2, Crown, Flower2, Bike, Briefcase, Stethoscope, Droplets,
 };
 
 function AnimatedCounter({ target }: { target: number }) {
@@ -184,13 +184,13 @@ export default function IndexPage() {
 
     const normalizeCategoryName = (value: string) => value.trim().toLowerCase();
 
-    const settingsByName = new Map<string, { name: string; image?: string }>();
+    const settingsByName = new Map<string, { name: string; image?: string; icon?: string }>();
     settingsCategories.forEach((cat: any) => {
       const rawName = typeof cat?.name === 'string' ? cat.name.trim() : '';
       if (!rawName) return;
       const key = normalizeCategoryName(rawName);
       if (!settingsByName.has(key)) {
-        settingsByName.set(key, { name: rawName, image: cat?.image || undefined });
+        settingsByName.set(key, { name: rawName, image: cat?.image || undefined, icon: cat?.icon || undefined });
       }
     });
 
@@ -223,10 +223,23 @@ export default function IndexPage() {
       .slice(0, 6)
       .map(([key, data], i) => {
         const settingsMeta = settingsByName.get(key);
+        const name = settingsMeta?.name || data.name;
+        const iconFromSettings = settingsMeta?.icon && ICON_MAP[settingsMeta.icon] ? settingsMeta.icon : null;
+        const iconFromName =
+          /عسل|honey/i.test(name) ? 'Droplets' :
+          /تمر|dates/i.test(name) ? 'Gift' :
+          /ملابس|jacket|fashion/i.test(name) ? 'Shirt' :
+          /الكترون|هاتف|phone|mobile/i.test(name) ? 'Smartphone' :
+          /أثاث|furniture/i.test(name) ? 'Sofa' :
+          /مجوهر|ساعات|watch|jewel/i.test(name) ? 'Gem' :
+          /رياض|sport|gym/i.test(name) ? 'Dumbbell' :
+          'ShoppingBag';
+
         return {
-          name: settingsMeta?.name || data.name,
+          name,
           image: settingsMeta?.image || data.image || heroImage,
           count: data.count,
+          icon: iconFromSettings || iconFromName,
           gradient: accentGradients[i % accentGradients.length],
         };
       })
@@ -235,9 +248,9 @@ export default function IndexPage() {
     if (cards.length > 0) return cards;
 
     return [
-      { name: 'تمور', image: heroImage, count: 0, gradient: accentGradients[0] },
-      { name: 'عسل', image: heroImage, count: 0, gradient: accentGradients[1] },
-      { name: 'هدايا', image: heroImage, count: 0, gradient: accentGradients[2] },
+      { name: 'تمور', image: heroImage, count: 0, icon: 'Gift', gradient: accentGradients[0] },
+      { name: 'عسل', image: heroImage, count: 0, icon: 'Droplets', gradient: accentGradients[1] },
+      { name: 'هدايا', image: heroImage, count: 0, icon: 'ShoppingBag', gradient: accentGradients[2] },
     ];
   }, [categoriesData, allProducts]);
 
@@ -384,7 +397,7 @@ export default function IndexPage() {
         </section>
       </AnimatedSection>
 
-      {/* ─── Featured Categories — photo mosaic ─── */}
+      {/* ─── Featured Categories — icon cards ─── */}
       <section className="py-20 md:py-28">
         <div className="container">
           <AnimatedSection>
@@ -394,30 +407,29 @@ export default function IndexPage() {
               <p className="font-cairo text-muted-foreground max-w-2xl mx-auto">اختر الفئة المناسبة واستمتع بتجربة تسوق فريدة</p>
             </div>
           </AnimatedSection>
-          <div className="grid grid-cols-1 sm:grid-cols-4 auto-rows-[180px] sm:auto-rows-[220px] gap-5 mt-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
             {categoryCards.map((cat, i) => (
               <AnimatedSection key={cat.name} delay={i * 120}>
                 <Link to={`/products?category=${encodeURIComponent(cat.name)}`}>
+                  {(() => {
+                    const Icon = ICON_MAP[cat.icon as string] || ShoppingBag;
+                    return (
                   <div
-                    className={`relative rounded-3xl overflow-hidden group cursor-pointer border border-white/10 hover:border-white/35 transition-all duration-500 hover:shadow-2xl hover:shadow-black/20 hover:-translate-y-1 ${
-                      i === 0 ? 'sm:col-span-2 sm:row-span-2' : i === 3 ? 'sm:col-span-2' : 'sm:col-span-1'
-                    }`}
+                    className="relative rounded-3xl overflow-hidden group cursor-pointer border border-primary/15 bg-gradient-to-br from-card to-muted/50 hover:border-primary/35 transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 min-h-[190px]"
                   >
-                    <img
-                      src={cat.image}
-                      alt={cat.name}
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700"
-                    />
-                    <div className={`absolute inset-0 bg-gradient-to-t ${cat.gradient}`} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
-                    <div className="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end items-start">
-                      <div className="inline-flex items-center gap-2 bg-white/90 text-foreground backdrop-blur-sm rounded-xl px-4 py-2 shadow-md">
-                        <span className="font-cairo font-bold text-base sm:text-2xl">{cat.name}</span>
+                    <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${cat.gradient}`} />
+                    <div className="relative p-5 sm:p-6 h-full flex flex-col justify-between">
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                        <Icon className="w-7 h-7" />
                       </div>
-                      <p className="font-cairo text-white/90 text-xs sm:text-sm mt-2">{cat.count} منتج</p>
+                      <div>
+                        <h3 className="font-cairo font-extrabold text-2xl text-foreground">{cat.name}</h3>
+                        <p className="font-cairo text-sm text-muted-foreground mt-1">{cat.count} منتج</p>
+                      </div>
                     </div>
                   </div>
+                    );
+                  })()}
                 </Link>
               </AnimatedSection>
             ))}
