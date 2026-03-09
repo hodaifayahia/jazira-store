@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,6 +74,8 @@ export default function IndexPage() {
   const { data: categoriesData } = useCategories();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleProductsCount, setVisibleProductsCount] = useState(8);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const { data: allProducts, isLoading } = useQuery({
     queryKey: ['all-active-products'],
@@ -117,8 +119,33 @@ export default function IndexPage() {
 
   const [emblaRef] = useEmblaCarousel({ direction: 'rtl', loop: true }, [Autoplay({ delay: 5000 })]);
 
-  const newestProducts = allProducts?.slice(0, 8) || [];
+  const newestProducts = allProducts?.slice(0, visibleProductsCount) || [];
   const bestProducts = [...(allProducts || [])].sort((a, b) => Number(b.price) - Number(a.price)).slice(0, 4);
+  const hasMoreNewestProducts = (allProducts?.length || 0) > newestProducts.length;
+
+  useEffect(() => {
+    setVisibleProductsCount(8);
+  }, [allProducts?.length]);
+
+  useEffect(() => {
+    if (!loadMoreRef.current || isLoading || !hasMoreNewestProducts) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleProductsCount(prev => prev + 8);
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px 0px',
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [isLoading, hasMoreNewestProducts]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,11 +169,58 @@ export default function IndexPage() {
     { icon: Leaf, label: 'بدون مواد حافظة', desc: '100% طبيعي', color: 'from-green-500 to-emerald-500' },
   ];
 
-  const categoryCards = [
-    { name: 'تمور', subtitle: 'أجود أنواع التمور الجزائرية', emoji: '🌴', gradient: 'from-amber-900/90 via-amber-800/80 to-amber-700/60', decorEmoji: '✨' },
-    { name: 'عسل', subtitle: 'عسل طبيعي خام من الجبال', emoji: '🍯', gradient: 'from-yellow-900/90 via-yellow-800/80 to-yellow-600/60', decorEmoji: '🐝' },
-    { name: 'هدايا وتشكيلات', subtitle: 'علب هدايا فاخرة للمناسبات', emoji: '🎁', gradient: 'from-emerald-900/90 via-emerald-800/80 to-emerald-700/60', decorEmoji: '🎀' },
-  ];
+  const categoryCards = useMemo(() => {
+    const accentGradients = [
+      'from-amber-700/75 via-orange-700/45 to-transparent',
+      'from-emerald-700/75 via-teal-700/45 to-transparent',
+      'from-indigo-700/75 via-blue-700/45 to-transparent',
+      'from-rose-700/75 via-pink-700/45 to-transparent',
+      'from-violet-700/75 via-fuchsia-700/45 to-transparent',
+      'from-cyan-700/75 via-sky-700/45 to-transparent',
+    ];
+
+    const products = allProducts || [];
+    const settingsCategories = categoriesData || [];
+
+    const fromSettings = settingsCategories.map((cat, i) => {
+      const inCategory = products.filter((p: any) => {
+        const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
+        return cats.includes(cat.name);
+      });
+      const fallbackImage = inCategory.find((p: any) => Array.isArray(p.images) && p.images.length > 0)?.images?.[0] || '';
+
+      return {
+        name: cat.name,
+        image: cat.image || fallbackImage || heroImage,
+        count: inCategory.length,
+        gradient: accentGradients[i % accentGradients.length],
+      };
+    });
+
+    if (fromSettings.length > 0) return fromSettings.slice(0, 6);
+
+    const byCategory = new Map<string, { count: number; image: string }>();
+    products.forEach((p: any) => {
+      const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
+      cats.forEach((name: string) => {
+        const current = byCategory.get(name) || { count: 0, image: '' };
+        byCategory.set(name, {
+          count: current.count + 1,
+          image: current.image || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : ''),
+        });
+      });
+    });
+
+    return Array.from(byCategory.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 6)
+      .map(([name, data], i) => ({
+        name,
+        image: data.image || heroImage,
+        count: data.count,
+        gradient: accentGradients[i % accentGradients.length],
+      }));
+  }, [categoriesData, allProducts]);
 
   const renderProductGrid = (products: typeof newestProducts, columns?: string) => (
     <div className={columns || "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"}>
@@ -291,33 +365,38 @@ export default function IndexPage() {
         </section>
       </AnimatedSection>
 
-      {/* ─── Featured Categories — with hover effects, decorative emojis, shimmer ─── */}
+      {/* ─── Featured Categories — photo mosaic ─── */}
       <section className="py-20 md:py-28">
         <div className="container">
           <AnimatedSection>
-            <div className="text-center mb-14">
-              <span className="font-cairo text-sm font-bold text-primary bg-primary/10 rounded-full px-5 py-2 inline-block mb-4">تصنيفاتنا</span>
-              <SectionHeader title="تصفح حسب الفئة" subtitle="اختر الفئة المناسبة واستمتع بتجربة تسوق فريدة" center />
+            <div className="text-center mb-14 space-y-3">
+              <span className="font-cairo text-sm font-bold text-primary bg-primary/10 rounded-full px-5 py-2 inline-block">تصنيفاتنا</span>
+              <h2 className="font-cairo font-black text-3xl md:text-4xl text-foreground">تصفح حسب الفئة</h2>
+              <p className="font-cairo text-muted-foreground max-w-2xl mx-auto">اختر الفئة المناسبة واستمتع بتجربة تسوق فريدة</p>
             </div>
           </AnimatedSection>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-10">
+          <div className="grid grid-cols-1 sm:grid-cols-4 auto-rows-[180px] sm:auto-rows-[220px] gap-5 mt-10">
             {categoryCards.map((cat, i) => (
               <AnimatedSection key={cat.name} delay={i * 120}>
                 <Link to={`/products?category=${encodeURIComponent(cat.name)}`}>
-                  <div className="relative rounded-3xl overflow-hidden h-64 sm:h-72 group cursor-pointer border border-secondary/20 hover:border-secondary/50 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1">
+                  <div
+                    className={`relative rounded-3xl overflow-hidden group cursor-pointer border border-white/10 hover:border-white/35 transition-all duration-500 hover:shadow-2xl hover:shadow-black/20 hover:-translate-y-1 ${
+                      i === 0 ? 'sm:col-span-2 sm:row-span-2' : i === 3 ? 'sm:col-span-2' : 'sm:col-span-1'
+                    }`}
+                  >
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700"
+                    />
                     <div className={`absolute inset-0 bg-gradient-to-t ${cat.gradient}`} />
-                    {/* Shimmer overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-10">
-                      <span className="absolute top-4 left-4 text-2xl opacity-30 group-hover:opacity-60 transition-opacity">{cat.decorEmoji}</span>
-                      <span className="text-6xl mb-4 group-hover:scale-125 group-hover:-rotate-6 transition-all duration-500 drop-shadow-lg">{cat.emoji}</span>
-                      <h3 className="font-cairo font-extrabold text-2xl text-amber-50 mb-2">{cat.name}</h3>
-                      <p className="font-cairo text-sm text-amber-200/70 max-w-[200px]">{cat.subtitle}</p>
-                      <div className="mt-4 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                        <span className="font-cairo text-xs text-amber-100 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/20">
-                          تصفح الآن ←
-                        </span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+                    <div className="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end items-start">
+                      <div className="inline-flex items-center gap-2 bg-white/90 text-foreground backdrop-blur-sm rounded-xl px-4 py-2 shadow-md">
+                        <span className="font-cairo font-bold text-base sm:text-2xl">{cat.name}</span>
                       </div>
+                      <p className="font-cairo text-white/90 text-xs sm:text-sm mt-2">{cat.count} منتج</p>
                     </div>
                   </div>
                 </Link>
@@ -357,6 +436,22 @@ export default function IndexPage() {
                 <ShoppingBag className="w-14 h-14 text-muted-foreground/30 mx-auto mb-5" />
                 <p className="font-cairo text-muted-foreground text-lg">لا توجد منتجات حالياً</p>
                 <p className="font-cairo text-muted-foreground/60 text-sm mt-1">ترقبوا منتجات جديدة قريباً!</p>
+              </div>
+            )}
+
+            {!isLoading && newestProducts.length > 0 && (
+              <div className="mt-8 flex flex-col items-center justify-center gap-3">
+                {hasMoreNewestProducts ? (
+                  <>
+                    <div ref={loadMoreRef} className="h-2 w-full" aria-hidden="true" />
+                    <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2">
+                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
+                      <span className="font-cairo text-xs text-primary">جاري تحميل المزيد من المنتجات...</span>
+                    </div>
+                  </>
+                ) : (
+                  <span className="font-cairo text-xs text-muted-foreground">تم عرض جميع المنتجات</span>
+                )}
               </div>
             )}
           </AnimatedSection>
