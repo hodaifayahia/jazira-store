@@ -39,6 +39,22 @@ export default function AdminClientDetailPage() {
     is_active: boolean | null;
   };
 
+  type ProductVariantRow = {
+    id: string;
+    product_id: string;
+    price: number;
+    quantity: number;
+    option_values: Record<string, unknown> | null;
+    is_active: boolean | null;
+  };
+
+  type VariationValueOption = {
+    id: string;
+    variation_value: string;
+    price_adjustment: number;
+    stock: number | null;
+  };
+
   type SelectedVariations = Record<string, string>;
 
   type BulkProduct = {
@@ -79,6 +95,18 @@ export default function AdminClientDetailPage() {
     },
   });
 
+  // Fetch modern variants (option combinations)
+  const { data: allProductVariants } = useQuery({
+    queryKey: ['product-variants-for-client-detail'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('product_variants')
+        .select('id, product_id, price, quantity, option_values, is_active')
+        .eq('is_active', true);
+      return (data ?? []) as ProductVariantRow[];
+    },
+  });
+
   // Give product form
   const [giveForm, setGiveForm] = useState({
     product_id: '',
@@ -98,20 +126,73 @@ export default function AdminClientDetailPage() {
   const selectedProduct = products?.find(p => p.id === giveForm.product_id);
   const selectedReturnProduct = products?.find(p => p.id === returnForm.product_id);
 
+  const normalizeOptionValues = (raw: Record<string, unknown> | null | undefined): SelectedVariations => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    return Object.entries(raw).reduce<SelectedVariations>((acc, [key, value]) => {
+      if (typeof value === 'string' || typeof value === 'number') {
+        acc[key] = String(value);
+      }
+      return acc;
+    }, {});
+  };
+
   // Get variations for a product
   const getProductVariations = (productId: string) => {
     return allVariations?.filter(v => v.product_id === productId) ?? [];
   };
 
+  const getProductVariantRows = (productId: string) => {
+    return allProductVariants?.filter(v => v.product_id === productId) ?? [];
+  };
+
   // Get unique variation types for a product
   const getVariationTypes = (productId: string) => {
-    const variations = getProductVariations(productId);
-    return [...new Set(variations.map(v => v.variation_type))];
+    const legacyTypes = getProductVariations(productId).map(v => v.variation_type);
+    const modernTypes = getProductVariantRows(productId)
+      .flatMap(v => Object.keys(normalizeOptionValues(v.option_values)));
+    return [...new Set([...legacyTypes, ...modernTypes])];
   };
 
   // Get variation values for a specific type and product
   const getVariationValues = (productId: string, variationType: string) => {
-    return getProductVariations(productId).filter(v => v.variation_type === variationType);
+    const basePrice = products?.find(pr => pr.id === productId)?.price ?? 0;
+
+    const legacyValues: VariationValueOption[] = getProductVariations(productId)
+      .filter(v => v.variation_type === variationType)
+      .map(v => ({
+        id: v.id,
+        variation_value: v.variation_value,
+        price_adjustment: v.price_adjustment ?? 0,
+        stock: v.stock,
+      }));
+
+    if (legacyValues.length > 0) return legacyValues;
+
+    const optionsMap = new Map<string, VariationValueOption>();
+    getProductVariantRows(productId).forEach(variant => {
+      const values = normalizeOptionValues(variant.option_values);
+      const value = values[variationType];
+      if (!value || optionsMap.has(value)) return;
+
+      optionsMap.set(value, {
+        id: `${variant.id}-${variationType}-${value}`,
+        variation_value: value,
+        price_adjustment: Number(variant.price ?? 0) - Number(basePrice),
+        stock: Number.isFinite(Number(variant.quantity)) ? Number(variant.quantity) : null,
+      });
+    });
+
+    return Array.from(optionsMap.values());
+  };
+
+  const findMatchingProductVariant = (productId: string, selectedVariations: SelectedVariations) => {
+    const selectedEntries = Object.entries(selectedVariations).filter(([, value]) => value);
+    if (selectedEntries.length === 0) return null;
+
+    return getProductVariantRows(productId).find(variant => {
+      const values = normalizeOptionValues(variant.option_values);
+      return selectedEntries.every(([type, value]) => values[type] === value);
+    }) ?? null;
   };
 
   const buildDefaultSelectedVariations = (productId: string): SelectedVariations => {
@@ -139,12 +220,21 @@ export default function AdminClientDetailPage() {
   };
 
   const calculateUnitPrice = (productId: string, selectedVariations: SelectedVariations) => {
+    const matchedVariant = findMatchingProductVariant(productId, selectedVariations);
+    if (matchedVariant) return Number(matchedVariant.price ?? 0);
+
     const basePrice = products?.find(pr => pr.id === productId)?.price ?? 0;
     return basePrice + calculateVariationAdjustment(productId, selectedVariations);
   };
 
   const getEffectiveStock = (productId: string, selectedVariations: SelectedVariations) => {
     const baseStock = products?.find(p => p.id === productId)?.stock ?? 0;
+    const matchedVariant = findMatchingProductVariant(productId, selectedVariations);
+
+    if (matchedVariant && Number.isFinite(Number(matchedVariant.quantity))) {
+      return Math.min(baseStock, Number(matchedVariant.quantity));
+    }
+
     const variationStocks = Object.entries(selectedVariations)
       .map(([variationType, variationValue]) =>
         allVariations?.find(
@@ -174,7 +264,7 @@ export default function AdminClientDetailPage() {
       setBulkProducts(bulkProducts.filter(p => p.product_id !== productId));
     } else {
       newSelected.add(productId);
-      const defaultVariations = product.has_variants ? buildDefaultSelectedVariations(productId) : {};
+      const defaultVariations = getVariationTypes(productId).length > 0 ? buildDefaultSelectedVariations(productId) : {};
       const bulkProduct: BulkProduct = {
         product_id: productId,
         product_name: product.name,
@@ -436,7 +526,7 @@ export default function AdminClientDetailPage() {
                 <Label className="font-cairo">{t('common.product')} *</Label>
                 <Select value={giveForm.product_id} onValueChange={v => {
                   const p = products?.find(pr => pr.id === v);
-                  const selectedVariations = p?.has_variants ? buildDefaultSelectedVariations(v) : {};
+                  const selectedVariations = p && getVariationTypes(v).length > 0 ? buildDefaultSelectedVariations(v) : {};
                   setGiveForm(f => ({
                     ...f,
                     product_id: v,
@@ -450,12 +540,11 @@ export default function AdminClientDetailPage() {
                   ))}</SelectContent>
                 </Select>
               </div>
-              {selectedProduct?.has_variants && (
+              {selectedProduct && getVariationTypes(giveForm.product_id).length > 0 && (
                 <div className="space-y-2 rounded-md border bg-muted/20 p-3 md:col-span-2">
                   <Label className="font-cairo">{t('common.variants')}</Label>
-                  {getVariationTypes(giveForm.product_id).length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {getVariationTypes(giveForm.product_id).map(variationType => {
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {getVariationTypes(giveForm.product_id).map(variationType => {
                       const values = getVariationValues(giveForm.product_id, variationType);
                       return (
                         <div key={variationType}>
@@ -479,10 +568,7 @@ export default function AdminClientDetailPage() {
                         </div>
                       );
                     })}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground font-cairo">{t('common.noData')}</p>
-                  )}
+                  </div>
                 </div>
               )}
               <div>
@@ -534,7 +620,7 @@ export default function AdminClientDetailPage() {
                       <label htmlFor={`product-${product.id}`} className="flex-1 cursor-pointer font-cairo text-sm">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{product.name}</span>
-                          {product.has_variants && (
+                          {getVariationTypes(product.id).length > 0 && (
                             <Badge variant="secondary" className="text-xs font-cairo">{t('common.variants')}</Badge>
                           )}
                         </div>
