@@ -576,8 +576,7 @@ export default function AdminClientDetailPage() {
                           <TableRow key={bulkProduct.product_id} className="hover:bg-muted/30">
                             <TableCell className="font-cairo text-xs sm:text-sm font-medium">{bulkProduct.product_name}</TableCell>
                             <TableCell className="p-2">
-                              {product?.has_variants ? (
-                                getVariationTypes(bulkProduct.product_id).length > 0 ? (
+                              {variationTypes.length > 0 ? (
                                 <div className="space-y-2">
                                   {variationTypes.map(vType => {
                                     const values = getVariationValues(bulkProduct.product_id, vType);
@@ -604,9 +603,6 @@ export default function AdminClientDetailPage() {
                                     );
                                   })}
                                 </div>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground font-cairo">{t('common.noData')}</span>
-                                )
                               ) : (
                                 <span className="text-xs text-muted-foreground font-cairo">—</span>
                               )}
