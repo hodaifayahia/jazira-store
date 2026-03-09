@@ -182,44 +182,55 @@ export default function IndexPage() {
     const products = allProducts || [];
     const settingsCategories = categoriesData || [];
 
-    const fromSettings = settingsCategories.map((cat, i) => {
-      const inCategory = products.filter((p: any) => {
-        const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
-        return cats.includes(cat.name);
-      });
-      const fallbackImage = inCategory.find((p: any) => Array.isArray(p.images) && p.images.length > 0)?.images?.[0] || '';
+    const normalizeCategoryName = (value: string) => value.trim().toLowerCase();
 
-      return {
-        name: cat.name,
-        image: cat.image || fallbackImage || heroImage,
-        count: inCategory.length,
-        gradient: accentGradients[i % accentGradients.length],
-      };
+    const settingsByName = new Map<string, { name: string; image?: string }>();
+    settingsCategories.forEach((cat: any) => {
+      const rawName = typeof cat?.name === 'string' ? cat.name.trim() : '';
+      if (!rawName) return;
+      const key = normalizeCategoryName(rawName);
+      if (!settingsByName.has(key)) {
+        settingsByName.set(key, { name: rawName, image: cat?.image || undefined });
+      }
     });
 
-    if (fromSettings.length > 0) return fromSettings.slice(0, 6);
-
-    const byCategory = new Map<string, { count: number; image: string }>();
+    const byCategory = new Map<string, { name: string; count: number; image: string }>();
     products.forEach((p: any) => {
       const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
-      cats.forEach((name: string) => {
-        const current = byCategory.get(name) || { count: 0, image: '' };
-        byCategory.set(name, {
+      cats.forEach((rawName: string) => {
+        const cleanName = typeof rawName === 'string' ? rawName.trim() : '';
+        if (!cleanName) return;
+
+        const key = normalizeCategoryName(cleanName);
+        const current = byCategory.get(key) || { name: cleanName, count: 0, image: '' };
+        byCategory.set(key, {
+          name: current.name || cleanName,
           count: current.count + 1,
           image: current.image || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : ''),
         });
       });
     });
 
+    // Also include settings categories that do not yet appear in products.
+    settingsByName.forEach((meta, key) => {
+      if (!byCategory.has(key)) {
+        byCategory.set(key, { name: meta.name, count: 0, image: meta.image || '' });
+      }
+    });
+
     return Array.from(byCategory.entries())
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 6)
-      .map(([name, data], i) => ({
-        name,
-        image: data.image || heroImage,
-        count: data.count,
-        gradient: accentGradients[i % accentGradients.length],
-      }));
+      .map(([key, data], i) => {
+        const settingsMeta = settingsByName.get(key);
+        return {
+          name: settingsMeta?.name || data.name,
+          image: settingsMeta?.image || data.image || heroImage,
+          count: data.count,
+          gradient: accentGradients[i % accentGradients.length],
+        };
+      })
+      .filter(card => card.name);
   }, [categoriesData, allProducts]);
 
   const renderProductGrid = (products: typeof newestProducts, columns?: string) => (
