@@ -218,7 +218,7 @@ export default function IndexPage() {
       }
     });
 
-    return Array.from(byCategory.entries())
+    const cards = Array.from(byCategory.entries())
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 6)
       .map(([key, data], i) => {
@@ -231,6 +231,14 @@ export default function IndexPage() {
         };
       })
       .filter(card => card.name);
+
+    if (cards.length > 0) return cards;
+
+    return [
+      { name: 'تمور', image: heroImage, count: 0, gradient: accentGradients[0] },
+      { name: 'عسل', image: heroImage, count: 0, gradient: accentGradients[1] },
+      { name: 'هدايا', image: heroImage, count: 0, gradient: accentGradients[2] },
+    ];
   }, [categoriesData, allProducts]);
 
   const renderProductGrid = (products: typeof newestProducts, columns?: string) => (
@@ -414,6 +422,9 @@ export default function IndexPage() {
               </AnimatedSection>
             ))}
           </div>
+          {categoryCards.length === 0 && (
+            <p className="mt-6 text-center font-cairo text-sm text-muted-foreground">لا توجد تصنيفات متاحة حالياً</p>
+          )}
         </div>
       </section>
 
