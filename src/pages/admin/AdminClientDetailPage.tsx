@@ -450,11 +450,12 @@ export default function AdminClientDetailPage() {
                   ))}</SelectContent>
                 </Select>
               </div>
-              {selectedProduct?.has_variants && getVariationTypes(giveForm.product_id).length > 0 && (
+              {selectedProduct?.has_variants && (
                 <div className="space-y-2 rounded-md border bg-muted/20 p-3 md:col-span-2">
                   <Label className="font-cairo">{t('common.variants')}</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {getVariationTypes(giveForm.product_id).map(variationType => {
+                  {getVariationTypes(giveForm.product_id).length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {getVariationTypes(giveForm.product_id).map(variationType => {
                       const values = getVariationValues(giveForm.product_id, variationType);
                       return (
                         <div key={variationType}>
@@ -478,7 +479,10 @@ export default function AdminClientDetailPage() {
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground font-cairo">{t('common.noData')}</p>
+                  )}
                 </div>
               )}
               <div>
@@ -573,6 +577,7 @@ export default function AdminClientDetailPage() {
                             <TableCell className="font-cairo text-xs sm:text-sm font-medium">{bulkProduct.product_name}</TableCell>
                             <TableCell className="p-2">
                               {product?.has_variants ? (
+                                getVariationTypes(bulkProduct.product_id).length > 0 ? (
                                 <div className="space-y-2">
                                   {variationTypes.map(vType => {
                                     const values = getVariationValues(bulkProduct.product_id, vType);
@@ -599,6 +604,9 @@ export default function AdminClientDetailPage() {
                                     );
                                   })}
                                 </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground font-cairo">{t('common.noData')}</span>
+                                )
                               ) : (
                                 <span className="text-xs text-muted-foreground font-cairo">—</span>
                               )}
