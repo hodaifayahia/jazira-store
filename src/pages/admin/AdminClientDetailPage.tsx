@@ -20,6 +20,37 @@ import { ArrowLeft, Package, DollarSign, RotateCcw, Wallet, TrendingUp, Trending
 import { toast } from 'sonner';
 
 export default function AdminClientDetailPage() {
+  type ProductRow = {
+    id: string;
+    name: string;
+    price: number;
+    stock: number | null;
+    has_variants: boolean | null;
+  };
+
+  type VariationRow = {
+    id: string;
+    product_id: string;
+    variation_type: string;
+    variation_value: string;
+    price_adjustment: number | null;
+    stock: number | null;
+    image_url: string | null;
+    is_active: boolean | null;
+  };
+
+  type SelectedVariations = Record<string, string>;
+
+  type BulkProduct = {
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    notes: string;
+    original_price: number;
+    selected_variations: SelectedVariations;
+  };
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -32,7 +63,7 @@ export default function AdminClientDetailPage() {
     queryKey: ['products-list'],
     queryFn: async () => {
       const { data } = await supabase.from('products').select('id, name, price, stock, has_variants').eq('is_active', true);
-      return data ?? [];
+      return (data ?? []) as ProductRow[];
     },
   });
 
@@ -42,32 +73,25 @@ export default function AdminClientDetailPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('product_variations')
-        .select('product_id, variation_type, variation_value, price_adjustment, stock, image_url, is_active')
+        .select('id, product_id, variation_type, variation_value, price_adjustment, stock, image_url, is_active')
         .eq('is_active', true);
-      return data ?? [];
+      return (data ?? []) as VariationRow[];
     },
   });
 
   // Give product form
-  const [giveForm, setGiveForm] = useState({ product_id: '', quantity: 1, unit_price: 0, notes: '' });
+  const [giveForm, setGiveForm] = useState({
+    product_id: '',
+    quantity: 1,
+    unit_price: 0,
+    notes: '',
+    selected_variations: {} as SelectedVariations,
+  });
   // Payment form
   const [payForm, setPayForm] = useState({ amount: 0, notes: '', date: new Date().toISOString().split('T')[0] });
   // Return form
   const [returnForm, setReturnForm] = useState({ product_id: '', quantity: 1, unit_price: 0, notes: '' });
   
-  // Bulk add products form
-  interface BulkProduct {
-    product_id: string;
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-    notes: string;
-    original_price: number;
-    variation_type?: string;
-    variation_value?: string;
-    variation_id?: string;
-    price_adjustment?: number;
-  }
   const [bulkProducts, setBulkProducts] = useState<BulkProduct[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
@@ -90,6 +114,58 @@ export default function AdminClientDetailPage() {
     return getProductVariations(productId).filter(v => v.variation_type === variationType);
   };
 
+  const buildDefaultSelectedVariations = (productId: string): SelectedVariations => {
+    const selected: SelectedVariations = {};
+    const variationTypes = getVariationTypes(productId);
+    variationTypes.forEach(type => {
+      const values = getVariationValues(productId, type);
+      if (values.length > 0) {
+        selected[type] = values[0].variation_value;
+      }
+    });
+    return selected;
+  };
+
+  const calculateVariationAdjustment = (productId: string, selectedVariations: SelectedVariations) => {
+    return Object.entries(selectedVariations).reduce((sum, [variationType, variationValue]) => {
+      const matched = allVariations?.find(
+        v =>
+          v.product_id === productId &&
+          v.variation_type === variationType &&
+          v.variation_value === variationValue
+      );
+      return sum + (matched?.price_adjustment ?? 0);
+    }, 0);
+  };
+
+  const calculateUnitPrice = (productId: string, selectedVariations: SelectedVariations) => {
+    const basePrice = products?.find(pr => pr.id === productId)?.price ?? 0;
+    return basePrice + calculateVariationAdjustment(productId, selectedVariations);
+  };
+
+  const getEffectiveStock = (productId: string, selectedVariations: SelectedVariations) => {
+    const baseStock = products?.find(p => p.id === productId)?.stock ?? 0;
+    const variationStocks = Object.entries(selectedVariations)
+      .map(([variationType, variationValue]) =>
+        allVariations?.find(
+          v =>
+            v.product_id === productId &&
+            v.variation_type === variationType &&
+            v.variation_value === variationValue
+        )?.stock
+      )
+      .filter((stock): stock is number => typeof stock === 'number');
+
+    if (variationStocks.length === 0) return baseStock;
+    return Math.min(baseStock, ...variationStocks);
+  };
+
+  const buildVariationLabel = (selectedVariations: SelectedVariations) => {
+    const entries = Object.entries(selectedVariations);
+    if (entries.length === 0) return '';
+    return entries.map(([type, value]) => `${type}: ${value}`).join(' | ');
+  };
+
   // Toggle product selection for bulk add
   const toggleProductSelection = (productId: string, product: any) => {
     const newSelected = new Set(selectedProductIds);
@@ -98,27 +174,16 @@ export default function AdminClientDetailPage() {
       setBulkProducts(bulkProducts.filter(p => p.product_id !== productId));
     } else {
       newSelected.add(productId);
+      const defaultVariations = product.has_variants ? buildDefaultSelectedVariations(productId) : {};
       const bulkProduct: BulkProduct = {
         product_id: productId,
         product_name: product.name,
         quantity: 1,
-        unit_price: product.price ?? 0,
+        unit_price: calculateUnitPrice(productId, defaultVariations),
         notes: '',
         original_price: product.price ?? 0,
+        selected_variations: defaultVariations,
       };
-
-      // If product has variants, select the first one by default
-      if (product.has_variants) {
-        const variations = getProductVariations(productId);
-        if (variations.length > 0) {
-          const firstVariation = variations[0];
-          bulkProduct.variation_type = firstVariation.variation_type;
-          bulkProduct.variation_value = firstVariation.variation_value;
-          bulkProduct.variation_id = firstVariation.id;
-          bulkProduct.price_adjustment = firstVariation.price_adjustment ?? 0;
-          bulkProduct.unit_price = (product.price ?? 0) + (firstVariation.price_adjustment ?? 0);
-        }
-      }
 
       setBulkProducts([...bulkProducts, bulkProduct]);
     }
@@ -132,31 +197,36 @@ export default function AdminClientDetailPage() {
     ));
   };
 
-  // Update bulk product variation
+  // Update bulk product category/variation
   const updateBulkProductVariation = (productId: string, variationType: string, variationValue: string) => {
     setBulkProducts(bulkProducts.map(p => {
       if (p.product_id !== productId) return p;
-      
-      const selectedVariation = allVariations?.find(v => 
-        v.product_id === productId && 
-        v.variation_type === variationType && 
-        v.variation_value === variationValue
-      );
 
-      if (!selectedVariation) return p;
-
-      const basePrice = products?.find(pr => pr.id === productId)?.price ?? 0;
-      const newPrice = basePrice + (selectedVariation.price_adjustment ?? 0);
+      const selectedVariations: SelectedVariations = {
+        ...p.selected_variations,
+        [variationType]: variationValue,
+      };
 
       return {
         ...p,
-        variation_type: variationType,
-        variation_value: variationValue,
-        variation_id: selectedVariation.id,
-        price_adjustment: selectedVariation.price_adjustment ?? 0,
-        unit_price: newPrice,
+        selected_variations: selectedVariations,
+        unit_price: calculateUnitPrice(productId, selectedVariations),
       };
     }));
+  };
+
+  const updateGiveFormVariation = (variationType: string, variationValue: string) => {
+    setGiveForm(current => {
+      const selectedVariations: SelectedVariations = {
+        ...current.selected_variations,
+        [variationType]: variationValue,
+      };
+      return {
+        ...current,
+        selected_variations: selectedVariations,
+        unit_price: calculateUnitPrice(current.product_id, selectedVariations),
+      };
+    });
   };
 
   // Remove product from bulk list
@@ -185,7 +255,7 @@ export default function AdminClientDetailPage() {
         toast.error(t('common.required'));
         return;
       }
-      const stock = products?.find(p => p.id === product.product_id)?.stock ?? 0;
+      const stock = getEffectiveStock(product.product_id, product.selected_variations);
       if (product.quantity > stock) {
         toast.error(`${t('clients.insufficientStock')} ${stock} ${product.product_name}`);
         return;
@@ -200,7 +270,7 @@ export default function AdminClientDetailPage() {
           client_id: id!,
           transaction_type: 'product_given',
           product_id: product.product_id,
-          product_name: product.product_name,
+          product_name: `${product.product_name}${buildVariationLabel(product.selected_variations) ? ` (${buildVariationLabel(product.selected_variations)})` : ''}`,
           quantity: product.quantity,
           unit_price: product.unit_price,
           amount,
@@ -230,7 +300,7 @@ export default function AdminClientDetailPage() {
     if (!product) return;
     
     // Stock validation
-    const availableStock = product.stock ?? 0;
+    const availableStock = getEffectiveStock(giveForm.product_id, giveForm.selected_variations);
     if (giveForm.quantity > availableStock) {
       toast.error(`${t('clients.insufficientStock')} ${availableStock}`);
       return;
@@ -242,7 +312,7 @@ export default function AdminClientDetailPage() {
         client_id: id!,
         transaction_type: 'product_given',
         product_id: giveForm.product_id,
-        product_name: product.name,
+        product_name: `${product.name}${buildVariationLabel(giveForm.selected_variations) ? ` (${buildVariationLabel(giveForm.selected_variations)})` : ''}`,
         quantity: giveForm.quantity,
         unit_price: giveForm.unit_price,
         amount,
@@ -252,7 +322,7 @@ export default function AdminClientDetailPage() {
       // Deduct stock
       await supabase.from('products').update({ stock: Math.max(0, (product.stock ?? 0) - giveForm.quantity) }).eq('id', product.id);
       toast.success(t('clients.productGivenSuccess'));
-      setGiveForm({ product_id: '', quantity: 1, unit_price: 0, notes: '' });
+      setGiveForm({ product_id: '', quantity: 1, unit_price: 0, notes: '', selected_variations: {} });
     } catch { toast.error(t('common.errorOccurred')); }
   };
 
@@ -361,12 +431,18 @@ export default function AdminClientDetailPage() {
         {/* Give Product Tab */}
         <TabsContent value="give">
           <Card><CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="font-cairo">{t('common.product')} *</Label>
                 <Select value={giveForm.product_id} onValueChange={v => {
                   const p = products?.find(pr => pr.id === v);
-                  setGiveForm(f => ({ ...f, product_id: v, unit_price: p?.price ?? 0 }));
+                  const selectedVariations = p?.has_variants ? buildDefaultSelectedVariations(v) : {};
+                  setGiveForm(f => ({
+                    ...f,
+                    product_id: v,
+                    selected_variations: selectedVariations,
+                    unit_price: calculateUnitPrice(v, selectedVariations),
+                  }));
                 }}>
                   <SelectTrigger className="font-cairo"><SelectValue placeholder={t('clients.selectProduct')} /></SelectTrigger>
                   <SelectContent>{products?.map(p => (
@@ -374,9 +450,51 @@ export default function AdminClientDetailPage() {
                   ))}</SelectContent>
                 </Select>
               </div>
+              {selectedProduct?.has_variants && getVariationTypes(giveForm.product_id).length > 0 && (
+                <div className="space-y-2 rounded-md border bg-muted/20 p-3 md:col-span-2">
+                  <Label className="font-cairo">{t('common.variants')}</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {getVariationTypes(giveForm.product_id).map(variationType => {
+                      const values = getVariationValues(giveForm.product_id, variationType);
+                      return (
+                        <div key={variationType}>
+                          <Label className="font-cairo text-xs text-muted-foreground">{variationType}</Label>
+                          <Select
+                            value={giveForm.selected_variations[variationType] ?? ''}
+                            onValueChange={value => updateGiveFormVariation(variationType, value)}
+                          >
+                            <SelectTrigger className="font-cairo">
+                              <SelectValue placeholder={t('common.select')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {values.map(v => (
+                                <SelectItem key={v.id} value={v.variation_value} className="font-cairo">
+                                  {v.variation_value}
+                                  {v.price_adjustment ? ` (+${formatPrice(v.price_adjustment)})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div>
-                <Label className="font-cairo">{t('common.quantity')} * {selectedProduct && <span className="text-xs text-muted-foreground">({t('products.stock')}: {selectedProduct.stock ?? 0})</span>}</Label>
-                <Input type="number" min={1} max={selectedProduct?.stock ?? 9999} value={giveForm.quantity} onChange={e => setGiveForm(f => ({ ...f, quantity: Number(e.target.value) }))} className="font-cairo" />
+                <Label className="font-cairo">
+                  {t('common.quantity')} * {selectedProduct && (
+                    <span className="text-xs text-muted-foreground">({t('products.stock')}: {getEffectiveStock(giveForm.product_id, giveForm.selected_variations)})</span>
+                  )}
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={Math.max(1, getEffectiveStock(giveForm.product_id, giveForm.selected_variations))}
+                  value={giveForm.quantity}
+                  onChange={e => setGiveForm(f => ({ ...f, quantity: Number(e.target.value) }))}
+                  className="font-cairo"
+                />
               </div>
               <div>
                 <Label className="font-cairo">{t('clients.unitPrice')}</Label>
@@ -450,7 +568,6 @@ export default function AdminClientDetailPage() {
                         {bulkProducts.map(bulkProduct => {
                           const product = products?.find(p => p.id === bulkProduct.product_id);
                           const variationTypes = getVariationTypes(bulkProduct.product_id);
-                          const selectedVariationValues = bulkProduct.variation_type ? getVariationValues(bulkProduct.product_id, bulkProduct.variation_type) : [];
                           return (
                           <TableRow key={bulkProduct.product_id} className="hover:bg-muted/30">
                             <TableCell className="font-cairo text-xs sm:text-sm font-medium">{bulkProduct.product_name}</TableCell>
@@ -463,7 +580,7 @@ export default function AdminClientDetailPage() {
                                       <div key={vType} className="flex flex-col gap-1">
                                         <label className="text-xs font-cairo text-muted-foreground">{vType}</label>
                                         <Select
-                                          value={bulkProduct.variation_type === vType ? bulkProduct.variation_value || '' : ''}
+                                          value={bulkProduct.selected_variations[vType] ?? ''}
                                           onValueChange={(value) => updateBulkProductVariation(bulkProduct.product_id, vType, value)}
                                         >
                                           <SelectTrigger className="font-cairo h-7 text-xs">
@@ -490,11 +607,14 @@ export default function AdminClientDetailPage() {
                               <Input
                                 type="number"
                                 min={1}
-                                max={9999}
+                                max={Math.max(1, getEffectiveStock(bulkProduct.product_id, bulkProduct.selected_variations))}
                                 value={bulkProduct.quantity}
                                 onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'quantity', Number(e.target.value))}
                                 className="font-cairo h-8 text-xs sm:text-sm w-16"
                               />
+                              <p className="mt-1 text-[10px] text-muted-foreground font-cairo">
+                                {t('products.stock')}: {getEffectiveStock(bulkProduct.product_id, bulkProduct.selected_variations)}
+                              </p>
                             </TableCell>
                             <TableCell className="p-2">
                               <Input
