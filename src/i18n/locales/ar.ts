@@ -1035,7 +1035,6 @@ export const ar: Record<string, string> = {
   'common.results': 'نتيجة',
   'common.refresh': 'تحديث',
   'common.bulkActions': 'إجراءات جماعية',
-  'common.selected': 'محدد',
   'common.selectAll': 'تحديد الكل',
   'common.deleteSelected': 'حذف المحدد',
   'common.noResults': 'لا توجد نتائج',
