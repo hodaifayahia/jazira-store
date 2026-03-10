@@ -1020,7 +1020,6 @@ export const ar: Record<string, string> = {
   'sidebar.expand': 'توسيع',
 
   // ═══ Enhanced Pages ═══
-  'common.export': 'تصدير',
   'common.exportCSV': 'تصدير CSV',
   'common.sortBy': 'ترتيب حسب',
   'common.sortName': 'الاسم',
@@ -1036,7 +1035,6 @@ export const ar: Record<string, string> = {
   'common.results': 'نتيجة',
   'common.refresh': 'تحديث',
   'common.bulkActions': 'إجراءات جماعية',
-  'common.selected': 'محدد',
   'common.selectAll': 'تحديد الكل',
   'common.deleteSelected': 'حذف المحدد',
   'common.noResults': 'لا توجد نتائج',

@@ -1,0 +1,2 @@
+ALTER TABLE public.abandoned_orders DROP CONSTRAINT IF EXISTS abandoned_orders_recovered_order_id_fkey;
+ALTER TABLE public.abandoned_orders ADD CONSTRAINT abandoned_orders_recovered_order_id_fkey FOREIGN KEY (recovered_order_id) REFERENCES public.orders(id) ON DELETE SET NULL;
