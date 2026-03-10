@@ -1031,7 +1031,6 @@ export const en: Record<string, string> = {
   'common.results': 'results',
   'common.refresh': 'Refresh',
   'common.bulkActions': 'Bulk Actions',
-  'common.selected': 'selected',
   'common.selectAll': 'Select All',
   'common.deleteSelected': 'Delete Selected',
   'common.noResults': 'No results found',
