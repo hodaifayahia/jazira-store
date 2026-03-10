@@ -1020,7 +1020,6 @@ export const ar: Record<string, string> = {
   'sidebar.expand': 'توسيع',
 
   // ═══ Enhanced Pages ═══
-  'common.export': 'تصدير',
   'common.exportCSV': 'تصدير CSV',
   'common.sortBy': 'ترتيب حسب',
   'common.sortName': 'الاسم',
