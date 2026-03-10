@@ -1016,7 +1016,6 @@ export const fr: Record<string, string> = {
   'sidebar.expand': 'Développer',
 
   // ═══ Enhanced Pages ═══
-  'common.export': 'Exporter',
   'common.exportCSV': 'Exporter CSV',
   'common.sortBy': 'Trier par',
   'common.sortName': 'Nom',
