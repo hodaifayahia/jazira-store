@@ -250,8 +250,14 @@ export default function AdminDashboardPage() {
         <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => navigate('/admin/orders/create')}>
           <ShoppingCart className="w-3.5 h-3.5" /> {t('dashboard.createOrder')}
         </Button>
+        <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => navigate('/admin/orders/create?fast=1')}>
+          <ShoppingCart className="w-3.5 h-3.5" /> طلب سريع
+        </Button>
         <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => navigate('/admin/costs')}>
           <BarChart3 className="w-3.5 h-3.5" /> {t('dashboard.viewReports')}
+        </Button>
+        <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => navigate('/admin/statistics')}>
+          <TrendingUp className="w-3.5 h-3.5" /> إحصائيات الأرباح
         </Button>
         <Button size="sm" variant="ghost" className="font-cairo gap-1.5" onClick={() => navigate('/admin/settings')}>
           <Settings className="w-3.5 h-3.5" /> {t('dashboard.manageSettings')}

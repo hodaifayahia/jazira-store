@@ -125,6 +125,8 @@ export default function AdminClientDetailPage() {
 
   const selectedProduct = products?.find(p => p.id === giveForm.product_id);
   const selectedReturnProduct = products?.find(p => p.id === returnForm.product_id);
+  const isFixedClientPrice = Boolean((client as any)?.fixed_price_enabled && Number((client as any)?.fixed_unit_price || 0) > 0);
+  const fixedClientUnitPrice = Number((client as any)?.fixed_unit_price || 0);
 
   const normalizeOptionValues = (raw: Record<string, unknown> | null | undefined): SelectedVariations => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
@@ -220,6 +222,8 @@ export default function AdminClientDetailPage() {
   };
 
   const calculateUnitPrice = (productId: string, selectedVariations: SelectedVariations) => {
+    if (isFixedClientPrice) return fixedClientUnitPrice;
+
     const matchedVariant = findMatchingProductVariant(productId, selectedVariations);
     if (matchedVariant) return Number(matchedVariant.price ?? 0);
 
@@ -472,17 +476,27 @@ export default function AdminClientDetailPage() {
   if (!client) return <p className="p-4 font-cairo">{t('common.noData')}</p>;
 
   return (
-    <div className="space-y-6 p-1">
+    <div className="space-y-6 p-1 min-w-0">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="icon" onClick={() => navigate('/admin/clients')}><ArrowLeft className="w-5 h-5" /></Button>
         <div>
           <h1 className="text-2xl font-cairo font-bold">{client.name}</h1>
           <p className="text-sm text-muted-foreground font-cairo">{client.phone} {client.wilaya && `• ${client.wilaya}`}</p>
         </div>
-        <Badge variant={client.status === 'active' ? 'default' : 'secondary'} className="font-cairo ms-auto">
+        <div className="ms-auto flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="font-cairo"
+            onClick={() => navigate(`/admin/orders/create?fast=1&customerName=${encodeURIComponent(client.name)}&customerPhone=${encodeURIComponent(client.phone || '')}&wilaya=${encodeURIComponent(client.wilaya || 'غرداية')}&fixedUnitPrice=${encodeURIComponent(String((client as any).fixed_unit_price || ''))}`)}
+          >
+            طلب سريع
+          </Button>
+          <Badge variant={client.status === 'active' ? 'default' : 'secondary'} className="font-cairo">
           {client.status === 'active' ? t('common.active') : t('common.inactive')}
-        </Badge>
+          </Badge>
+        </div>
       </div>
 
       {/* Balance KPIs */}
@@ -589,6 +603,7 @@ export default function AdminClientDetailPage() {
               <div>
                 <Label className="font-cairo">{t('clients.unitPrice')}</Label>
                 <Input type="number" min={0} value={giveForm.unit_price} onChange={e => setGiveForm(f => ({ ...f, unit_price: Number(e.target.value) }))} className="font-cairo" />
+                {isFixedClientPrice ? <p className="font-cairo text-xs text-muted-foreground mt-1">تم تطبيق سعر عميل ثابت</p> : null}
               </div>
               <div>
                 <Label className="font-cairo">{t('common.total')}</Label>
@@ -641,7 +656,7 @@ export default function AdminClientDetailPage() {
                   <Label className="font-cairo font-semibold">{t('clients.selectedProducts')} ({bulkProducts.length})</Label>
                 </div>
                 <div className="border rounded-lg overflow-hidden">
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto max-w-full">
                     <Table className="min-w-full">
                       <TableHeader>
                         <TableRow className="bg-muted/50">
@@ -851,7 +866,7 @@ export default function AdminClientDetailPage() {
           {!transactions?.length ? (
             <p className="p-6 text-center text-muted-foreground font-cairo">{t('common.noData')}</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-w-full">
               <Table>
                 <TableHeader><TableRow>
                   <TableHead className="font-cairo">{t('common.date')}</TableHead>

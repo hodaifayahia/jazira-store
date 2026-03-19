@@ -390,10 +390,10 @@ export default function AdminProductsPage() {
 
       {/* Bulk Actions Bar */}
       {someSelected && (
-        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3">
+        <div className="flex flex-wrap items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3">
           <CheckSquare className="w-5 h-5 text-primary" />
           <span className="font-cairo text-sm font-medium text-primary">{selectedIds.size} منتج محدد</span>
-          <div className="flex gap-2 mr-auto">
+          <div className="flex flex-wrap gap-2 mr-auto w-full sm:w-auto">
             <Button size="sm" variant="outline" className="font-cairo gap-1.5" onClick={() => { setBulkPrice(''); setBulkPriceDialog(true); }}>
               <DollarSign className="w-3.5 h-3.5" /> تغيير السعر
             </Button>
@@ -463,7 +463,7 @@ export default function AdminProductsPage() {
                         />
                       </td>
                       <td className="p-3">
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)} title="تعديل"><Pencil className="w-3.5 h-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-secondary/10 hover:text-secondary" onClick={() => duplicateMutation.mutate(p)} title="نسخ"><Copy className="w-3.5 h-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteDialog(p.id)} title="حذف"><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -1138,9 +1138,9 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
     Object.values(optionValues).join(' / ');
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-4xl w-full min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="font-cairo font-bold text-2xl text-foreground">
             {product ? 'تعديل المنتج' : 'إضافة منتج جديد'}
@@ -1186,7 +1186,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                       <Star className="w-3 h-3 fill-current" /> رئيسية
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                  <div className="absolute inset-0 bg-foreground/20 md:bg-foreground/0 md:group-hover:bg-foreground/30 transition-colors flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                     {idx !== mainImageIndex && (
                       <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full shadow-lg" onClick={() => setMainImageIndex(idx)} title="تعيين كصورة رئيسية">
                         <Star className="w-4 h-4" />

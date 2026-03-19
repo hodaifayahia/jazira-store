@@ -10,6 +10,8 @@ export interface Client {
   wilaya: string | null;
   notes: string | null;
   status: string;
+  fixed_price_enabled: boolean;
+  fixed_unit_price: number | null;
   created_at: string;
   updated_at: string;
 }

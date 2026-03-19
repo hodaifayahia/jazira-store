@@ -280,23 +280,23 @@ export default function IndexPage() {
 
       {/* ─── Hero Section ─── */}
       {heroSlides && heroSlides.length > 0 ? (
-        <section className="relative isolate overflow-hidden" ref={emblaRef}>
+        <section className="relative isolate overflow-hidden px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4" ref={emblaRef}>
           <div className="flex">
             {heroSlides.map((slide, i) => (
               <div key={i} className="flex-[0_0_100%] min-w-0 relative">
                 {slide.link ? (
                   <Link to={slide.link}>
-                    <img src={slide.url} alt={slide.alt || `Slide ${i + 1}`} className="w-full h-[320px] sm:h-[420px] lg:h-[540px] object-cover" />
+                    <img src={slide.url} alt={slide.alt || `Slide ${i + 1}`} className="w-full h-[320px] sm:h-[420px] lg:h-[540px] object-cover rounded-2xl" />
                   </Link>
                 ) : (
-                  <img src={slide.url} alt={slide.alt || `Slide ${i + 1}`} className="w-full h-[320px] sm:h-[420px] lg:h-[540px] object-cover" />
+                  <img src={slide.url} alt={slide.alt || `Slide ${i + 1}`} className="w-full h-[320px] sm:h-[420px] lg:h-[540px] object-cover rounded-2xl" />
                 )}
               </div>
             ))}
           </div>
         </section>
       ) : (
-        <section className="relative isolate overflow-hidden min-h-[85vh] sm:min-h-[90vh] flex items-center grain-texture">
+        <section className="relative isolate overflow-hidden min-h-[85vh] sm:min-h-[90vh] flex items-center grain-texture px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
           {/* Parallax background image */}
           <div className="absolute inset-0" style={{ transform: `translateY(${scrollY * 0.3}px)` }}>
             <img src={heroImage} alt="" aria-hidden className="w-full h-[120%] object-cover" />
@@ -373,6 +373,23 @@ export default function IndexPage() {
           </div>
         </section>
       )}
+
+      <section className="px-3 sm:px-4 lg:px-6 -mt-2 sm:mt-0">
+        <div className="bg-card border rounded-2xl p-3 sm:p-4 overflow-hidden">
+          <p className="font-cairo text-xs text-muted-foreground mb-2">أسماء منتجاتنا الأكثر طلبًا</p>
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+            {(allProducts || []).slice(0, 24).map((p: any) => (
+              <Link
+                key={`hero-name-${p.id}`}
+                to={`/product/${p.id}`}
+                className="shrink-0 px-3 py-1.5 rounded-full bg-muted hover:bg-primary/10 text-foreground hover:text-primary transition-colors font-cairo text-xs sm:text-sm"
+              >
+                {p.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ─── Trust Bar — with hover animations and gradient icons ─── */}
       <AnimatedSection>

@@ -485,6 +485,62 @@ export default function AdminCostDetailPage() {
         </div>
       )}
 
+      {/* Mobile cards */}
+      <div className="grid grid-cols-1 gap-3 md:hidden">
+        {rows.map(row => (
+          <Card key={`mobile-${row.key}`} className="border">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-cairo font-semibold truncate">{row.label}</p>
+                {!(row.hasCost || editMode) ? (
+                  <Badge variant="destructive" className="font-cairo text-xs">{t('costs.notSet')}</Badge>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="font-cairo text-xs text-muted-foreground">{t('costs.sellingPrice')}</p>
+                  <p className="font-roboto">{formatPrice(row.sellingPrice)}</p>
+                </div>
+                <div>
+                  <p className="font-cairo text-xs text-muted-foreground">{t('costs.totalCost')}</p>
+                  <p className="font-roboto">{row.hasCost || editMode ? formatPrice(row.totalCost) : '—'}</p>
+                </div>
+                <div>
+                  <p className="font-cairo text-xs text-muted-foreground">{t('costs.profit')}</p>
+                  <p className={`font-roboto ${profitColor(row.profit)}`}>{row.hasCost || editMode ? formatPrice(row.profit) : '—'}</p>
+                </div>
+                <div>
+                  <p className="font-cairo text-xs text-muted-foreground">{t('costs.margin')}</p>
+                  <p className="font-roboto">{row.hasCost || editMode ? `${row.margin.toFixed(1)}%` : '—'}</p>
+                </div>
+              </div>
+
+              {editMode ? (
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                  <div>
+                    <p className="font-cairo text-xs text-muted-foreground mb-1">{t('costs.purchaseCost')}</p>
+                    <Input type="number" min={0} value={drafts[row.key]?.purchase ?? ''} onChange={e => updateDraft(row.key, 'purchase', e.target.value)} className="font-roboto h-8" />
+                  </div>
+                  <div>
+                    <p className="font-cairo text-xs text-muted-foreground mb-1">{t('costs.packagingCost')}</p>
+                    <Input type="number" min={0} value={drafts[row.key]?.packaging ?? ''} onChange={e => updateDraft(row.key, 'packaging', e.target.value)} className="font-roboto h-8" />
+                  </div>
+                  <div>
+                    <p className="font-cairo text-xs text-muted-foreground mb-1">{t('costs.storageCost')}</p>
+                    <Input type="number" min={0} value={drafts[row.key]?.storage ?? ''} onChange={e => updateDraft(row.key, 'storage', e.target.value)} className="font-roboto h-8" />
+                  </div>
+                  <div>
+                    <p className="font-cairo text-xs text-muted-foreground mb-1">{t('costs.otherCost')}</p>
+                    <Input type="number" min={0} value={drafts[row.key]?.other ?? ''} onChange={e => updateDraft(row.key, 'other', e.target.value)} className="font-roboto h-8" />
+                  </div>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       {/* Main table */}
       <Card className="border">
         <CardHeader className="pb-3 border-b">
@@ -492,7 +548,7 @@ export default function AdminCostDetailPage() {
             {t('costs.variationCosts')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 hidden md:block">
           <div className="overflow-x-auto">
             <table className="text-sm w-full min-w-[820px] whitespace-nowrap">
               <thead>

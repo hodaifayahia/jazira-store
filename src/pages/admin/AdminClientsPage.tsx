@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Users, Plus, Search, Phone, MapPin, Eye, Trash2, Edit, DollarSign, Package, Wallet, Download, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,20 +41,29 @@ export default function AdminClientsPage() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active' });
+  const [form, setForm] = useState({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active', fixed_price_enabled: false, fixed_unit_price: '' });
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'balance'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const openAdd = () => {
     setEditingClient(null);
-    setForm({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active' });
+    setForm({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active', fixed_price_enabled: false, fixed_unit_price: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (c: any) => {
     setEditingClient(c);
-    setForm({ name: c.name, phone: c.phone || '', address: c.address || '', wilaya: c.wilaya || '', notes: c.notes || '', status: c.status });
+    setForm({
+      name: c.name,
+      phone: c.phone || '',
+      address: c.address || '',
+      wilaya: c.wilaya || '',
+      notes: c.notes || '',
+      status: c.status,
+      fixed_price_enabled: Boolean((c as any).fixed_price_enabled),
+      fixed_unit_price: (c as any).fixed_unit_price != null ? String((c as any).fixed_unit_price) : '',
+    });
     setDialogOpen(true);
   };
 
@@ -61,10 +71,17 @@ export default function AdminClientsPage() {
     if (!form.name.trim()) { toast.error(t('common.required')); return; }
     try {
       if (editingClient) {
-        await updateClient.mutateAsync({ id: editingClient.id, ...form });
+        await updateClient.mutateAsync({
+          id: editingClient.id,
+          ...form,
+          fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
+        } as any);
         toast.success(t('common.savedSuccess'));
       } else {
-        await createClient.mutateAsync(form);
+        await createClient.mutateAsync({
+          ...form,
+          fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
+        } as any);
         toast.success(t('common.savedSuccess'));
       }
       setDialogOpen(false);
@@ -160,7 +177,7 @@ export default function AdminClientsPage() {
             <SelectItem value="inactive" className="font-cairo">{t('common.inactive')}</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" className="gap-1 font-cairo" onClick={() => {
+        <Button variant="outline" size="sm" className="gap-1 font-cairo w-full sm:w-auto" onClick={() => {
           if (sortBy === 'name' && sortDir === 'asc') setSortDir('desc');
           else if (sortBy === 'name' && sortDir === 'desc') { setSortBy('balance'); setSortDir('desc'); }
           else if (sortBy === 'balance' && sortDir === 'desc') setSortDir('asc');
@@ -169,7 +186,7 @@ export default function AdminClientsPage() {
           <ArrowUpDown className="w-4 h-4" />
           {sortBy === 'name' ? t('clients.sortByName') : t('clients.sortByBalance')} {sortDir === 'asc' ? '↑' : '↓'}
         </Button>
-        <Button variant="outline" size="sm" className="gap-1 font-cairo" onClick={handleExport}>
+        <Button variant="outline" size="sm" className="gap-1 font-cairo w-full sm:w-auto" onClick={handleExport}>
           <Download className="w-4 h-4" /> {t('common.exportCSV')}
         </Button>
       </div>
@@ -203,9 +220,9 @@ export default function AdminClientsPage() {
                   <div className={`text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>
                     {balance > 0 ? `${t('clients.owes')}: ${formatPrice(balance)}` : t('clients.settled')}
                   </div>
-                  <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                    <Button size="sm" variant="outline" className="gap-1 font-cairo" onClick={() => navigate(`/admin/clients/${c.id}`)}><Eye className="w-3 h-3" />{t('common.view')}</Button>
-                    <Button size="sm" variant="outline" className="gap-1 font-cairo" onClick={() => openEdit(c)}><Edit className="w-3 h-3" />{t('common.edit')}</Button>
+                  <div className="flex gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                    <Button size="sm" variant="outline" className="gap-1 font-cairo flex-1 min-w-[88px]" onClick={() => navigate(`/admin/clients/${c.id}`)}><Eye className="w-3 h-3" />{t('common.view')}</Button>
+                    <Button size="sm" variant="outline" className="gap-1 font-cairo flex-1 min-w-[88px]" onClick={() => openEdit(c)}><Edit className="w-3 h-3" />{t('common.edit')}</Button>
                     <Button size="sm" variant="destructive" className="gap-1 font-cairo" onClick={() => handleDelete(c.id)}><Trash2 className="w-3 h-3" /></Button>
                   </div>
                 </CardContent>
@@ -226,6 +243,18 @@ export default function AdminClientsPage() {
             <div><Label className="font-cairo">{t('common.phone')}</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="font-cairo" /></div>
             <div><Label className="font-cairo">{t('clients.wilaya')}</Label><Input value={form.wilaya} onChange={e => setForm(f => ({ ...f, wilaya: e.target.value }))} className="font-cairo" /></div>
             <div><Label className="font-cairo">{t('clients.address')}</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} className="font-cairo" /></div>
+            <div className="rounded-lg border p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="font-cairo">تسعير ثابت للعميل</Label>
+                <Switch checked={form.fixed_price_enabled} onCheckedChange={(checked) => setForm(f => ({ ...f, fixed_price_enabled: checked }))} />
+              </div>
+              {form.fixed_price_enabled ? (
+                <div>
+                  <Label className="font-cairo">السعر الثابت لكل منتج (دج)</Label>
+                  <Input type="number" min={0} value={form.fixed_unit_price} onChange={e => setForm(f => ({ ...f, fixed_unit_price: e.target.value }))} className="font-roboto" />
+                </div>
+              ) : null}
+            </div>
             <div><Label className="font-cairo">{t('common.notes')}</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
           </div>
           <DialogFooter>

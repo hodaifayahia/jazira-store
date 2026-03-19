@@ -298,6 +298,9 @@ export default function AdminOrdersPage() {
           <Button className="font-cairo gap-1.5" onClick={() => navigate('/admin/orders/create')}>
             <Plus className="w-4 h-4" /> إنشاء طلب
           </Button>
+          <Button variant="secondary" className="font-cairo gap-1.5" onClick={() => navigate('/admin/orders/create?fast=1')}>
+            <ShoppingCart className="w-4 h-4" /> طلب سريع
+          </Button>
           <Button
             variant="outline"
             className="font-cairo gap-1.5"

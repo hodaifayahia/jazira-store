@@ -5,7 +5,6 @@ import { useSupplier } from '@/hooks/useSuppliers';
 import { useSupplierTransactions, useCreateTransaction, useDeleteTransaction, SupplierTransaction } from '@/hooks/useSupplierTransactions';
 import TransactionForm from '@/components/admin/suppliers/TransactionForm';
 import DocumentViewer from '@/components/admin/suppliers/DocumentViewer';
-import SupplierProductsTab from '@/components/admin/suppliers/SupplierProductsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowRight, ArrowLeft, Plus, FileText, Trash2, ArrowDownToLine, ArrowUpFromLine, Scale, Receipt, Package } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Plus, FileText, Trash2, ArrowDownToLine, ArrowUpFromLine, Scale, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 
 const typeIcons: Record<string, any> = {
@@ -121,10 +120,6 @@ export default function AdminSupplierDetailPage() {
             <Receipt className="w-4 h-4" />
             {t('supplierProducts.transactionsTab')}
           </TabsTrigger>
-          <TabsTrigger value="products" className="font-cairo gap-2">
-            <Package className="w-4 h-4" />
-            {t('supplierProducts.tab')}
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions" className="space-y-6">
@@ -166,7 +161,50 @@ export default function AdminSupplierDetailPage() {
               </Button>
             </div>
           ) : (
-            <div className="bg-card rounded-xl border overflow-hidden">
+            <div className="space-y-3">
+              <div className="md:hidden space-y-3">
+                {txWithBalance.map(tx => {
+                  const TypeIcon = typeIcons[tx.transaction_type] || Receipt;
+                  return (
+                    <div key={`m-${tx.id}`} className="bg-card rounded-xl border p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <TypeIcon className={`w-4 h-4 shrink-0 ${typeColors[tx.transaction_type] || ''}`} />
+                          <p className="font-cairo text-sm truncate">{t(`suppliers.type${tx.transaction_type.charAt(0).toUpperCase() + tx.transaction_type.slice(1)}`)}</p>
+                        </div>
+                        <p className="font-roboto text-xs text-muted-foreground">{tx.date}</p>
+                      </div>
+                      <p className="font-cairo text-xs text-muted-foreground">{tx.description || '—'}</p>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <p className="font-cairo text-muted-foreground">{t('suppliers.itemsReceived')}</p>
+                          <p className="font-roboto text-green-600">{Number(tx.items_received) > 0 ? `+${Number(tx.items_received).toLocaleString()}` : '—'}</p>
+                        </div>
+                        <div>
+                          <p className="font-cairo text-muted-foreground">{t('suppliers.itemsGiven')}</p>
+                          <p className="font-roboto text-destructive">{Number(tx.items_given) > 0 ? `-${Number(tx.items_given).toLocaleString()}` : '—'}</p>
+                        </div>
+                        <div>
+                          <p className="font-cairo text-muted-foreground">{t('suppliers.runningBalance')}</p>
+                          <p className={`font-roboto ${tx.runningBalance >= 0 ? 'text-secondary' : 'text-destructive'}`}>{tx.runningBalance.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-1 pt-1">
+                        {tx.document_url ? (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDocViewer({ url: tx.document_url!, name: tx.document_name || 'Document' })} aria-label={t('suppliers.document')}>
+                            <FileText className="w-4 h-4 text-primary" />
+                          </Button>
+                        ) : null}
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTxId(tx.id)} aria-label={t('common.delete')}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="bg-card rounded-xl border overflow-hidden hidden md:block">
               <div className="overflow-x-auto max-w-full">
                 <Table className="min-w-[900px] whitespace-nowrap">
                   <TableHeader>
@@ -238,11 +276,8 @@ export default function AdminSupplierDetailPage() {
                 </Table>
               </div>
             </div>
+            </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="products">
-          <SupplierProductsTab supplierId={id!} />
         </TabsContent>
       </Tabs>
 

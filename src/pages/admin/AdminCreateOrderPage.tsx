@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -34,9 +34,12 @@ const STEPS = [
 export default function AdminCreateOrderPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isFastMode = searchParams.get('fast') === '1';
+  const fastFixedPrice = Number(searchParams.get('fixedUnitPrice') || 0);
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(isFastMode ? 1 : 0);
 
   // Customer fields
   const [customerName, setCustomerName] = useState('');
@@ -83,6 +86,34 @@ export default function AdminCreateOrderPage() {
   const selectedWilaya = wilayas?.find(w => w.id === selectedWilayaId);
   const wilayaName = selectedWilaya?.name || '';
 
+  useEffect(() => {
+    const name = searchParams.get('customerName');
+    const phone = searchParams.get('customerPhone');
+    if (name) setCustomerName(name);
+    if (phone) setCustomerPhone(phone);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!wilayas?.length || selectedWilayaId) return;
+
+    const requestedWilaya = searchParams.get('wilaya')?.trim();
+    if (requestedWilaya) {
+      const byRequested = wilayas.find(w =>
+        String(w.name || '').toLowerCase().includes(requestedWilaya.toLowerCase())
+      );
+      if (byRequested?.id) {
+        setSelectedWilayaId(byRequested.id);
+        return;
+      }
+    }
+
+    const ghardaia = wilayas.find(w => {
+      const name = String(w.name || '').toLowerCase();
+      return name.includes('غرداية') || name.includes('ghardaia');
+    });
+    if (ghardaia?.id) setSelectedWilayaId(ghardaia.id);
+  }, [wilayas, selectedWilayaId, searchParams]);
+
   const baladiyat = useMemo(() => {
     if (!wilayaName) return [];
     const cleanName = wilayaName.split(' - ')[1]?.trim() || wilayaName;
@@ -127,7 +158,7 @@ export default function AdminCreateOrderPage() {
       setOrderItems(updated);
       return;
     }
-    const price = Number(product.price) + (variation ? Number(variation.price_adjustment || 0) : 0);
+    const price = fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + (variation ? Number(variation.price_adjustment || 0) : 0);
     setOrderItems(prev => [...prev, {
       productId: product.id,
       productName: product.name + (variation ? ` (${variation.variation_value})` : ''),
@@ -268,7 +299,7 @@ export default function AdminCreateOrderPage() {
         <Button variant="ghost" size="sm" onClick={() => navigate('/admin/orders')} className="font-cairo gap-1">
           <ArrowRight className="w-4 h-4" /> {t('common.back')}
         </Button>
-        <h1 className="font-cairo font-bold text-xl">إنشاء طلب جديد</h1>
+        <h1 className="font-cairo font-bold text-xl">{isFastMode ? 'طلب سريع' : 'إنشاء طلب جديد'}</h1>
       </div>
 
       {/* Step Indicators */}

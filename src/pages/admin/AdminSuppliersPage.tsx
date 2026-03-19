@@ -152,8 +152,13 @@ export default function AdminSuppliersPage() {
           {filtered.map(s => <SupplierCard key={s.id} supplier={s} />)}
         </div>
       ) : (
-        <div className="bg-card rounded-xl border overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
+            {filtered.map(s => <SupplierCard key={`mobile-${s.id}`} supplier={s} />)}
+          </div>
+
+          <div className="bg-card rounded-xl border overflow-hidden hidden lg:block">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
@@ -215,6 +220,7 @@ export default function AdminSuppliersPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         </div>
       )}
