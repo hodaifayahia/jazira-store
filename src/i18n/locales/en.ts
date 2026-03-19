@@ -1016,7 +1016,6 @@ export const en: Record<string, string> = {
   'sidebar.expand': 'Expand',
 
   // ═══ Enhanced Pages ═══
-  'common.export': 'Export',
   'common.exportCSV': 'Export CSV',
   'common.sortBy': 'Sort by',
   'common.sortName': 'Name',
@@ -1032,7 +1031,6 @@ export const en: Record<string, string> = {
   'common.results': 'results',
   'common.refresh': 'Refresh',
   'common.bulkActions': 'Bulk Actions',
-  'common.selected': 'selected',
   'common.selectAll': 'Select All',
   'common.deleteSelected': 'Delete Selected',
   'common.noResults': 'No results found',
