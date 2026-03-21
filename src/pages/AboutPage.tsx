@@ -1,79 +1,121 @@
-import { ShieldCheck, Users, BookOpen, Layers } from 'lucide-react';
-import { useTranslation } from '@/i18n';
-import type { Lang } from '@/data/matsyCourses';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Store, Heart, Truck, Shield, Phone, Mail, MapPin, Star } from 'lucide-react';
+
+const missions = [
+  { icon: Heart, title: 'جودة عالية', desc: 'نختار لك أفضل المنتجات بعناية فائقة لضمان رضاك التام' },
+  { icon: Truck, title: 'توصيل سريع', desc: 'نوصّل طلبك إلى باب بيتك في أسرع وقت ممكن إلى 58 ولاية' },
+  { icon: Shield, title: 'أمان وثقة', desc: 'نحمي بياناتك ونضمن لك تجربة شراء آمنة وموثوقة' },
+  { icon: Star, title: 'خدمة متميزة', desc: 'فريقنا جاهز لمساعدتك والإجابة على استفساراتك في أي وقت' },
+];
 
 export default function AboutPage() {
-  const { language } = useTranslation();
-  const lang = language as Lang;
-
-  const title =
-    lang === 'ar' ? 'من نحن' : lang === 'fr' ? 'À propos de nous' : 'About Us';
-
-  const academyName =
-    lang === 'ar'
-      ? 'أكاديمية مايسي للتدريب و التطوير'
-      : lang === 'fr'
-      ? 'Matsy Academy Formation & Développement'
-      : 'Matsy Academy Training & Development';
-
-  const intro =
-    lang === 'ar'
-      ? 'نقدم تكويناً احترافياً عن بعد في مجالات الأمن والوقاية والإرشاد الديني، بمحتوى عملي وشهادات معتمدة.'
-      : lang === 'fr'
-      ? 'Nous proposons des formations professionnelles à distance en sécurité, prévention et guide religieux avec contenu pratique et certification.'
-      : 'We provide professional online training in safety, prevention, and religious guidance with practical content and certified pathways.';
-
-  const stats = [
-    {
-      icon: Users,
-      value: '+500',
-      label: lang === 'ar' ? 'طالب مسجّل' : lang === 'fr' ? 'Étudiants inscrits' : 'Enrolled Students',
+  const { data: settings } = useQuery({
+    queryKey: ['about-settings'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('*');
+      const map: Record<string, string> = {};
+      data?.forEach(s => { map[s.key] = s.value || ''; });
+      return map;
     },
-    {
-      icon: BookOpen,
-      value: '3',
-      label: lang === 'ar' ? 'دورات معتمدة' : lang === 'fr' ? 'Formations certifiées' : 'Certified Courses',
-    },
-    {
-      icon: Layers,
-      value: '2',
-      label: lang === 'ar' ? 'مجال تخصص' : lang === 'fr' ? 'Domaines' : 'Specialization Fields',
-    },
-  ];
+  });
 
-  const accreditation =
-    lang === 'ar'
-      ? 'مرخصة من وزارة التكوين المهني'
-      : lang === 'fr'
-      ? 'Agréée par le Ministère de la Formation Professionnelle'
-      : 'Accredited by the Ministry of Vocational Training';
+  const storeName = settings?.store_name || 'DZ Store';
+  const description = settings?.footer_description || 'متجرك الإلكتروني الأول في الجزائر للأدوات المنزلية، منتجات الزينة والإكسسوارات.';
+  const phone = settings?.footer_phone;
+  const email = settings?.footer_email;
+  const address = settings?.footer_address || 'الجزائر';
 
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-b from-primary/10 to-background py-16">
-        <div className="container text-center space-y-4">
-          <h1 className="font-cairo text-4xl font-black">{title}</h1>
-          <h2 className="font-cairo text-xl font-bold text-primary">{academyName}</h2>
-          <p className="font-cairo max-w-3xl mx-auto text-muted-foreground leading-relaxed">{intro}</p>
+      {/* Hero */}
+      <section className="relative bg-gradient-to-bl from-primary/10 via-background to-secondary/10 py-20 md:py-32 overflow-hidden">
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-10 right-10 w-72 h-72 bg-primary rounded-full blur-3xl" />
+          <div className="absolute bottom-10 left-10 w-96 h-96 bg-secondary rounded-full blur-3xl" />
+        </div>
+        <div className="container relative text-center">
+          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6 animate-fade-in">
+            <Store className="w-10 h-10 text-primary" />
+          </div>
+          <h1 className="font-cairo font-bold text-4xl md:text-5xl text-foreground mb-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            من نحن
+          </h1>
+          <p className="font-cairo text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            {description}
+          </p>
         </div>
       </section>
 
-      <section className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stats.map(item => (
-            <div key={item.label} className="rounded-2xl border bg-card p-5 text-center">
-              <item.icon className="w-6 h-6 text-primary mx-auto mb-2" />
-              <p className="font-roboto text-3xl font-black text-foreground">{item.value}</p>
-              <p className="font-cairo text-sm text-muted-foreground mt-1">{item.label}</p>
+      {/* Story */}
+      <section className="container py-16 md:py-24">
+        <div className="max-w-3xl mx-auto text-center animate-fade-in" style={{ animationDelay: '0.3s' }}>
+          <h2 className="font-cairo font-bold text-3xl text-foreground mb-6">قصتنا</h2>
+          <p className="font-cairo text-muted-foreground leading-loose text-lg">
+            بدأت رحلة <span className="text-primary font-bold">{storeName}</span> من شغفنا بتقديم أفضل المنتجات للعائلة الجزائرية.
+            نسعى دائماً لتوفير منتجات عالية الجودة بأسعار مناسبة مع خدمة توصيل سريعة وموثوقة إلى جميع ولايات الوطن.
+            هدفنا هو أن نكون الوجهة الأولى للتسوق الإلكتروني في الجزائر.
+          </p>
+        </div>
+      </section>
+
+      {/* Mission Cards */}
+      <section className="bg-muted/30 py-16 md:py-24">
+        <div className="container">
+          <h2 className="font-cairo font-bold text-3xl text-foreground text-center mb-12 animate-fade-in">لماذا تختارنا؟</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {missions.map((m, i) => (
+              <div
+                key={m.title}
+                className="bg-card border rounded-2xl p-6 text-center hover:shadow-lg hover:border-primary/20 transition-all duration-300 animate-fade-in"
+                style={{ animationDelay: `${0.1 * (i + 1)}s` }}
+              >
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <m.icon className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="font-cairo font-bold text-lg text-foreground mb-2">{m.title}</h3>
+                <p className="font-cairo text-sm text-muted-foreground leading-relaxed">{m.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact */}
+      <section className="container py-16 md:py-24">
+        <h2 className="font-cairo font-bold text-3xl text-foreground text-center mb-12 animate-fade-in">تواصل معنا</h2>
+        <div className="max-w-xl mx-auto space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          {phone && (
+            <a href={`tel:${phone}`} className="flex items-center gap-4 bg-card border rounded-xl p-5 hover:border-primary/30 hover:shadow-md transition-all group">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Phone className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-cairo font-semibold text-foreground">الهاتف</p>
+                <p className="font-roboto text-muted-foreground" dir="ltr">{phone}</p>
+              </div>
+            </a>
+          )}
+          {email && (
+            <a href={`mailto:${email}`} className="flex items-center gap-4 bg-card border rounded-xl p-5 hover:border-primary/30 hover:shadow-md transition-all group">
+              <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+                <Mail className="w-5 h-5 text-secondary" />
+              </div>
+              <div>
+                <p className="font-cairo font-semibold text-foreground">البريد الإلكتروني</p>
+                <p className="font-roboto text-muted-foreground" dir="ltr">{email}</p>
+              </div>
+            </a>
+          )}
+          <div className="flex items-center gap-4 bg-card border rounded-xl p-5">
+            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
+              <MapPin className="w-5 h-5 text-accent-foreground" />
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="container pb-16">
-        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 flex items-center gap-3">
-          <ShieldCheck className="w-6 h-6 text-primary shrink-0" />
-          <p className="font-cairo font-semibold text-foreground">{accreditation}</p>
+            <div>
+              <p className="font-cairo font-semibold text-foreground">العنوان</p>
+              <p className="font-cairo text-muted-foreground">{address}</p>
+            </div>
+          </div>
         </div>
       </section>
     </div>
