@@ -485,14 +485,6 @@ export default function AdminClientDetailPage() {
           <p className="text-sm text-muted-foreground font-cairo">{client.phone} {client.wilaya && `• ${client.wilaya}`}</p>
         </div>
         <div className="ms-auto flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="font-cairo"
-            onClick={() => navigate(`/admin/orders/create?fast=1&customerName=${encodeURIComponent(client.name)}&customerPhone=${encodeURIComponent(client.phone || '')}&wilaya=${encodeURIComponent(client.wilaya || 'غرداية')}&fixedUnitPrice=${encodeURIComponent(String((client as any).fixed_unit_price || ''))}`)}
-          >
-            طلب سريع
-          </Button>
           <Badge variant={client.status === 'active' ? 'default' : 'secondary'} className="font-cairo">
           {client.status === 'active' ? t('common.active') : t('common.inactive')}
           </Badge>

@@ -9,6 +9,7 @@ export const ar: Record<string, string> = {
   'sidebar.returns': 'الاسترجاع',
   'sidebar.costs': 'التكاليف والأرباح',
   'sidebar.leads': 'العملاء المحتملون',
+    'sidebar.statistics': 'الإحصائيات',
   'sidebar.confirmers': 'إدارة المؤكدين',
   'sidebar.abandoned': 'السلات المتروكة',
   'sidebar.wilayas': 'الولايات',

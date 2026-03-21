@@ -124,6 +124,10 @@ export default function SingleProductPage() {
   // Touch swipe for images
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [id]);
+
   // Sticky bar IntersectionObserver
   useEffect(() => {
     const el = orderFormRef.current;

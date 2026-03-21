@@ -61,7 +61,7 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
   const { data: existingProducts } = useQuery({
     queryKey: ['products-for-supplier-form'],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('id, name, sku, price').order('name');
+      const { data } = await supabase.from('products').select('id, name, sku').order('name');
       return data || [];
     },
     staleTime: 5 * 60 * 1000,
@@ -91,7 +91,6 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
     if (product) {
       updateRow(index, 'product_name', product.name);
       updateRow(index, 'reference_sku', product.sku || '');
-      if (product.price) updateRow(index, 'unit_price', product.price);
     }
   };
 
@@ -193,7 +192,7 @@ export default function ProductBulkEntryForm({ open, onOpenChange, supplierId, o
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="font-cairo text-xs text-muted-foreground">سعر الوحدة</label>
+                  <label className="font-cairo text-xs text-muted-foreground">سعر الشراء للوحدة</label>
                   <Input type="number" min={0} value={row.unit_price || ''} onChange={e => updateRow(i, 'unit_price', Number(e.target.value))} className="font-roboto" />
                 </div>
                 <div>

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, ReactNode, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe, Store, CreditCard, Bot, FormInput, Paintbrush, Shield, Rocket, Truck, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, ShoppingCart, Tag, Settings, LogOut, Menu, X, Layers, Users, UserCheck, Bell, AlertTriangle, Clock, Palette, Search, ExternalLink, User, ChevronDown, PackageX, RotateCcw, DollarSign, Globe, Store, CreditCard, Bot, FormInput, Paintbrush, Shield, Rocket, Truck, ChevronRight, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,7 @@ const NAV_KEYS = [
   { href: '/admin/orders', key: 'sidebar.orders', icon: ShoppingCart },
   { href: '/admin/returns', key: 'sidebar.returns', icon: RotateCcw },
   { href: '/admin/costs', key: 'sidebar.costs', icon: DollarSign },
+  { href: '/admin/statistics', key: 'sidebar.statistics', icon: BarChart3 },
   { href: '/admin/leads', key: 'sidebar.leads', icon: Users },
   { href: '/admin/confirmers', key: 'sidebar.confirmers', icon: UserCheck },
   { href: '/admin/abandoned', key: 'sidebar.abandoned', icon: PackageX },
@@ -79,6 +80,7 @@ const NAV_GROUPS = [
       { href: '/admin/orders', key: 'sidebar.orders', icon: ShoppingCart },
       { href: '/admin/returns', key: 'sidebar.returns', icon: RotateCcw },
       { href: '/admin/costs', key: 'sidebar.costs', icon: DollarSign },
+      { href: '/admin/statistics', key: 'sidebar.statistics', icon: BarChart3 },
       { href: '/admin/abandoned', key: 'sidebar.abandoned', icon: PackageX },
     ],
   },

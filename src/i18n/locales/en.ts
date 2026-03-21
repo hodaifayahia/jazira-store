@@ -9,6 +9,7 @@ export const en: Record<string, string> = {
   'sidebar.returns': 'Returns',
   'sidebar.costs': 'Costs & Profits',
   'sidebar.leads': 'Leads',
+  'sidebar.statistics': 'Statistics',
   'sidebar.confirmers': 'Confirmers',
   'sidebar.abandoned': 'Abandoned Carts',
   'sidebar.wilayas': 'Wilayas',

@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@/i18n';
 import { useSupplier } from '@/hooks/useSuppliers';
-import { useSupplierTransactions, useCreateTransaction, useDeleteTransaction, SupplierTransaction } from '@/hooks/useSupplierTransactions';
-import TransactionForm from '@/components/admin/suppliers/TransactionForm';
+import { useSupplierTransactions, useDeleteTransaction } from '@/hooks/useSupplierTransactions';
 import DocumentViewer from '@/components/admin/suppliers/DocumentViewer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -12,21 +11,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowRight, ArrowLeft, Plus, FileText, Trash2, ArrowDownToLine, ArrowUpFromLine, Scale, Receipt } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Plus, FileText, Trash2, ArrowDownToLine, ArrowUpFromLine, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 
 const typeIcons: Record<string, any> = {
   receipt: ArrowDownToLine,
   payment: ArrowUpFromLine,
-  return: Receipt,
-  adjustment: Scale,
 };
 
 const typeColors: Record<string, string> = {
   receipt: 'text-green-600',
   payment: 'text-destructive',
-  return: 'text-yellow-600',
-  adjustment: 'text-secondary',
 };
 
 export default function AdminSupplierDetailPage() {
@@ -35,10 +30,8 @@ export default function AdminSupplierDetailPage() {
   const navigate = useNavigate();
   const { data: supplier, isLoading: loadingSupplier } = useSupplier(id);
   const { data: transactions, isLoading: loadingTx } = useSupplierTransactions(id);
-  const createTxMut = useCreateTransaction();
   const deleteTxMut = useDeleteTransaction();
 
-  const [txFormOpen, setTxFormOpen] = useState(false);
   const [docViewer, setDocViewer] = useState<{ url: string; name: string } | null>(null);
   const [deleteTxId, setDeleteTxId] = useState<string | null>(null);
 
@@ -55,16 +48,6 @@ export default function AdminSupplierDetailPage() {
   const totalReceived = txWithBalance.reduce((s, tx) => s + Number(tx.items_received), 0);
   const totalGiven = txWithBalance.reduce((s, tx) => s + Number(tx.items_given), 0);
   const balance = totalReceived - totalGiven;
-
-  const handleAddTx = async (data: any) => {
-    try {
-      await createTxMut.mutateAsync(data);
-      toast.success(t('suppliers.transactionAdded'));
-      setTxFormOpen(false);
-    } catch {
-      toast.error(t('common.errorOccurred'));
-    }
-  };
 
   const handleDeleteTx = async () => {
     if (!deleteTxId || !id) return;
@@ -142,7 +125,7 @@ export default function AdminSupplierDetailPage() {
           {/* Transactions Header */}
           <div className="flex items-center justify-between">
             <h2 className="font-cairo font-bold text-lg">{t('suppliers.transactions')}</h2>
-            <Button onClick={() => setTxFormOpen(true)} className="font-cairo gap-2 hover-lift">
+            <Button onClick={() => navigate(`/admin/suppliers/${id}/transactions/new`)} className="font-cairo gap-2 hover-lift">
               <Plus className="w-4 h-4" /> {t('suppliers.addTransaction')}
             </Button>
           </div>
@@ -156,7 +139,7 @@ export default function AdminSupplierDetailPage() {
             <div className="text-center py-16 bg-card rounded-xl border">
               <Receipt className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
               <p className="font-cairo text-muted-foreground">{t('suppliers.noTransactions')}</p>
-              <Button onClick={() => setTxFormOpen(true)} variant="outline" className="font-cairo mt-3 gap-2">
+              <Button onClick={() => navigate(`/admin/suppliers/${id}/transactions/new`)} variant="outline" className="font-cairo mt-3 gap-2">
                 <Plus className="w-4 h-4" /> {t('suppliers.addFirstTransaction')}
               </Button>
             </div>
@@ -280,14 +263,6 @@ export default function AdminSupplierDetailPage() {
           )}
         </TabsContent>
       </Tabs>
-
-      <TransactionForm
-        open={txFormOpen}
-        onOpenChange={setTxFormOpen}
-        supplierId={id!}
-        onSave={handleAddTx}
-        saving={createTxMut.isPending}
-      />
 
       {docViewer && (
         <DocumentViewer

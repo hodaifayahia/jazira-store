@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { formatPrice } from '@/lib/format';
-import { BarChart3, CalendarDays, CalendarRange, Calendar, Trophy, MapPin, RotateCcw } from 'lucide-react';
+import { BarChart3, CalendarDays, CalendarRange, Calendar, Trophy, MapPin, Package, ShoppingCart } from 'lucide-react';
 
 type CostMap = Map<string, number>;
 
@@ -41,6 +42,8 @@ function StatCard({
 
 export default function AdminStatisticsPage() {
   const now = new Date();
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
 
   const { data: deliveredOrders = [], isLoading: loadingOrders } = useQuery({
     queryKey: ['admin-statistics-delivered-orders'],
@@ -59,8 +62,31 @@ export default function AdminStatisticsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, wilaya_id, wilayas(name)')
+        .select('id, created_at, wilaya_id, wilayas(name)')
         .eq('status', 'ملغي');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['admin-statistics-all-orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, created_at, status');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['admin-statistics-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id')
+        .eq('is_active', true);
       if (error) throw error;
       return data || [];
     },
@@ -112,14 +138,37 @@ export default function AdminStatisticsPage() {
     return byOrder;
   }, [orderItems, costMap]);
 
-  const metrics = useMemo(() => {
-    const dailyStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const yearStart = new Date(now.getFullYear(), 0, 1);
+  const getRangeStart = (range: 'today' | 'month' | 'twoMonths' | 'year') => {
+    if (range === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (range === 'month') return new Date(now.getFullYear(), now.getMonth(), 1);
+    if (range === 'twoMonths') return new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return new Date(now.getFullYear(), 0, 1);
+  };
 
-    let dayProfit = 0;
-    let monthProfit = 0;
-    let yearProfit = 0;
+  const profitForRange = (start: Date, end?: Date) => {
+    return (deliveredOrders || []).reduce((sum, o: any) => {
+      const createdAt = new Date(o.created_at);
+      if (createdAt < start) return sum;
+      if (end && createdAt > end) return sum;
+      const orderProfit = (orderProfitMap.get(o.id) || 0) - Number(o.shipping_cost || 0);
+      return sum + orderProfit;
+    }, 0);
+  };
+
+  const countOrdersForRange = (start: Date, end?: Date) => {
+    return (allOrders || []).filter((o: any) => {
+      const createdAt = new Date(o.created_at);
+      if (createdAt < start) return false;
+      if (end && createdAt > end) return false;
+      return true;
+    }).length;
+  };
+
+  const metrics = useMemo(() => {
+    const todayStart = getRangeStart('today');
+    const monthStart = getRangeStart('month');
+    const twoMonthsStart = getRangeStart('twoMonths');
+    const yearStart = getRangeStart('year');
 
     const productProfit: Record<string, { name: string; profit: number; qty: number }> = {};
     const wilayaProfit: Record<string, { name: string; profit: number; orders: number }> = {};
@@ -139,11 +188,7 @@ export default function AdminStatisticsPage() {
     });
 
     (deliveredOrders || []).forEach((o: any) => {
-      const createdAt = new Date(o.created_at);
       const orderProfit = (orderProfitMap.get(o.id) || 0) - Number(o.shipping_cost || 0);
-      if (createdAt >= dailyStart) dayProfit += orderProfit;
-      if (createdAt >= monthStart) monthProfit += orderProfit;
-      if (createdAt >= yearStart) yearProfit += orderProfit;
 
       const wName = (o as any).wilayas?.name || 'غير محدد';
       if (!wilayaProfit[wName]) wilayaProfit[wName] = { name: wName, profit: 0, orders: 0 };
@@ -151,8 +196,11 @@ export default function AdminStatisticsPage() {
       wilayaProfit[wName].orders += 1;
     });
 
-    const topProduct = Object.values(productProfit).sort((a, b) => b.profit - a.profit)[0] || null;
-    const topWilaya = Object.values(wilayaProfit).sort((a, b) => b.profit - a.profit)[0] || null;
+    const sortedProducts = Object.values(productProfit).sort((a, b) => b.profit - a.profit);
+    const sortedWilayas = Object.values(wilayaProfit).sort((a, b) => b.profit - a.profit);
+    const topProduct = sortedProducts[0] || null;
+    const topWilaya = sortedWilayas[0] || null;
+    const worstWilaya = sortedWilayas.length > 0 ? sortedWilayas[sortedWilayas.length - 1] : null;
 
     const totalByWilaya: Record<string, number> = {};
     const cancelledByWilaya: Record<string, number> = {};
@@ -177,14 +225,36 @@ export default function AdminStatisticsPage() {
       .sort((a, b) => b.rate - a.rate)[0] || null;
 
     return {
-      dayProfit,
-      monthProfit,
-      yearProfit,
+      todayProfit: profitForRange(todayStart),
+      monthProfit: profitForRange(monthStart),
+      twoMonthsProfit: profitForRange(twoMonthsStart),
+      yearProfit: profitForRange(yearStart),
+      customProfit: customFrom && customTo
+        ? profitForRange(new Date(customFrom), new Date(`${customTo}T23:59:59`))
+        : 0,
+      ordersToday: countOrdersForRange(todayStart),
+      ordersMonth: countOrdersForRange(monthStart),
+      ordersTwoMonths: countOrdersForRange(twoMonthsStart),
+      ordersYear: countOrdersForRange(yearStart),
+      totalProducts: products.length,
+      totalOrders: allOrders.length,
       topProduct,
       topWilaya,
+      worstWilaya,
       returnWilaya,
     };
-  }, [now, deliveredOrders, orderItems, costMap, orderProfitMap, cancelledOrders]);
+  }, [
+    now,
+    deliveredOrders,
+    orderItems,
+    costMap,
+    orderProfitMap,
+    cancelledOrders,
+    customFrom,
+    customTo,
+    allOrders,
+    products.length,
+  ]);
 
   const isLoading = loadingOrders || loadingItems || loadingCosts;
 
@@ -200,10 +270,43 @@ export default function AdminStatisticsPage() {
         <div className="font-cairo text-muted-foreground">جاري تحميل الإحصائيات...</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <StatCard title="ربح اليوم" value={formatPrice(metrics.dayProfit)} icon={CalendarDays} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard title="إجمالي المنتجات" value={String(metrics.totalProducts)} icon={Package} />
+            <StatCard title="إجمالي الطلبات" value={String(metrics.totalOrders)} icon={ShoppingCart} />
+            <StatCard title="طلبات اليوم" value={String(metrics.ordersToday)} icon={CalendarDays} />
+            <StatCard title="طلبات الشهر" value={String(metrics.ordersMonth)} icon={CalendarRange} />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <StatCard title="ربح اليوم" value={formatPrice(metrics.todayProfit)} icon={CalendarDays} />
             <StatCard title="ربح الشهر" value={formatPrice(metrics.monthProfit)} icon={CalendarRange} />
+            <StatCard title="ربح آخر شهرين" value={formatPrice(metrics.twoMonthsProfit)} icon={CalendarRange} subtitle={`الطلبات: ${metrics.ordersTwoMonths}`} />
             <StatCard title="ربح السنة" value={formatPrice(metrics.yearProfit)} icon={Calendar} />
+            <StatCard title="ربح مخصص" value={formatPrice(metrics.customProfit)} icon={Calendar} subtitle={customFrom && customTo ? `${customFrom} → ${customTo}` : 'اختر تاريخ البداية والنهاية'} />
+          </div>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="font-cairo text-base">تاريخ مخصص</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="font-cairo text-xs text-muted-foreground mb-1">من</p>
+                  <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="font-roboto" />
+                </div>
+                <div>
+                  <p className="font-cairo text-xs text-muted-foreground mb-1">إلى</p>
+                  <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="font-roboto" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard title="طلبات السنة" value={String(metrics.ordersYear)} icon={Calendar} />
+            <StatCard title="أفضل ولاية (ربح)" value={metrics.topWilaya ? metrics.topWilaya.name : '—'} icon={MapPin} subtitle={metrics.topWilaya ? formatPrice(metrics.topWilaya.profit) : 'لا توجد بيانات'} />
+            <StatCard title="أسوأ ولاية (ربح)" value={metrics.worstWilaya ? metrics.worstWilaya.name : '—'} icon={MapPin} subtitle={metrics.worstWilaya ? formatPrice(metrics.worstWilaya.profit) : 'لا توجد بيانات'} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -239,14 +342,14 @@ export default function AdminStatisticsPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="font-cairo text-base flex items-center gap-2"><RotateCcw className="w-4 h-4 text-primary" />أعلى ولاية إرجاع</CardTitle>
+                <CardTitle className="font-cairo text-base flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" />أسوأ ولاية ربحًا</CardTitle>
               </CardHeader>
               <CardContent>
-                {metrics.returnWilaya ? (
+                {metrics.worstWilaya ? (
                   <div className="space-y-1">
-                    <p className="font-cairo font-semibold">{metrics.returnWilaya.name}</p>
-                    <p className="font-roboto text-sm text-muted-foreground">نسبة الإرجاع/الإلغاء: {metrics.returnWilaya.rate}%</p>
-                    <p className="font-roboto text-sm text-muted-foreground">{metrics.returnWilaya.cancelled} / {metrics.returnWilaya.total}</p>
+                    <p className="font-cairo font-semibold">{metrics.worstWilaya.name}</p>
+                    <p className="font-roboto text-sm text-muted-foreground">الربح: {formatPrice(metrics.worstWilaya.profit)}</p>
+                    <p className="font-roboto text-sm text-muted-foreground">عدد الطلبات: {metrics.worstWilaya.orders}</p>
                   </div>
                 ) : <p className="font-cairo text-sm text-muted-foreground">لا توجد بيانات كافية</p>}
               </CardContent>

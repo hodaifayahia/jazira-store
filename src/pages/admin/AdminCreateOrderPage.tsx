@@ -292,6 +292,8 @@ export default function AdminCreateOrderPage() {
   const canProceedStep0 = customerName.trim() && customerPhone.trim();
   const canProceedStep1 = orderItems.length > 0;
 
+  const canSubmitFast = customerName.trim() && customerPhone.trim() && selectedWilayaId && orderItems.length > 0;
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
@@ -302,6 +304,173 @@ export default function AdminCreateOrderPage() {
         <h1 className="font-cairo font-bold text-xl">{isFastMode ? 'طلب سريع' : 'إنشاء طلب جديد'}</h1>
       </div>
 
+      {isFastMode ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-card border rounded-2xl p-6 space-y-5">
+              <div className="flex items-center gap-2 pb-3 border-b">
+                <User className="w-5 h-5 text-primary" />
+                <h2 className="font-cairo font-bold text-lg">بيانات العميل السريعة</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <Label className="font-cairo text-sm font-semibold">الاسم *</Label>
+                  <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="اسم العميل" className="mt-1.5 font-cairo h-11" />
+                </div>
+                <div>
+                  <Label className="font-cairo text-sm font-semibold">الهاتف *</Label>
+                  <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="05XXXXXXXX" className="mt-1.5 font-roboto h-11" dir="ltr" />
+                </div>
+                <div>
+                  <Label className="font-cairo text-sm font-semibold">الولاية *</Label>
+                  <Select value={selectedWilayaId} onValueChange={(v) => { setSelectedWilayaId(v); setSelectedBaladiya(''); }}>
+                    <SelectTrigger className="mt-1.5 font-cairo h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {wilayas?.map(w => (
+                        <SelectItem key={w.id} value={w.id} className="font-cairo">{w.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card border rounded-2xl p-6 space-y-5">
+              <div className="flex items-center gap-2 pb-3 border-b">
+                <Package className="w-5 h-5 text-primary" />
+                <h2 className="font-cairo font-bold text-lg">المنتجات</h2>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ابحث عن منتج..." className="pr-10 font-cairo h-11" />
+              </div>
+
+              <div className="max-h-80 overflow-y-auto border rounded-xl divide-y">
+                {filteredProducts.map(product => {
+                  const prodVariations = getProductVariations(product.id);
+                  return (
+                    <div key={product.id} className="p-3 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        {product.images?.[0] && (
+                          <img src={product.images[0]} alt={product.name} className="w-14 h-14 rounded-xl object-cover border" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-cairo text-sm font-semibold truncate">{product.name}</p>
+                          <div className="flex items-center gap-3 mt-0.5">
+                            <span className="font-roboto text-sm font-bold text-primary">{formatPrice(Number(product.price))}</span>
+                            <span className={`font-cairo text-xs px-2 py-0.5 rounded-full ${(product.stock ?? 0) > 5 ? 'bg-primary/10 text-primary' : (product.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-600' : 'bg-destructive/10 text-destructive'}`}>
+                              {product.stock ?? 0} في المخزون
+                            </span>
+                          </div>
+                        </div>
+                        {prodVariations.length === 0 ? (
+                          <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg" onClick={() => addProduct(product)}>
+                            <Plus className="w-3.5 h-3.5" /> أضف
+                          </Button>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {prodVariations.map(v => (
+                              <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[11px] h-7 px-2 rounded-lg" onClick={() => addProduct(product, v)}>
+                                {v.variation_value}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredProducts.length === 0 && (
+                  <p className="p-6 text-center text-sm text-muted-foreground font-cairo">لا توجد منتجات</p>
+                )}
+              </div>
+
+              {orderItems.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-cairo text-sm font-bold text-foreground flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4 text-primary" />
+                    المنتجات المختارة ({orderItems.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {orderItems.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-3 bg-muted/40 rounded-xl p-3 border">
+                        {item.image && <img src={item.image} alt="" className="w-12 h-12 rounded-lg object-cover border" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-cairo text-sm font-medium truncate">{item.productName}</p>
+                          <p className="font-roboto text-xs text-muted-foreground">{formatPrice(item.price)} × {item.quantity} = <span className="font-bold text-foreground">{formatPrice(item.price * item.quantity)}</span></p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg" onClick={() => updateQuantity(idx, -1)}>
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="font-roboto font-bold text-sm w-8 text-center">{item.quantity}</span>
+                          <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg" onClick={() => updateQuantity(idx, 1)}>
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive rounded-lg" onClick={() => removeItem(idx)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="lg:col-span-1">
+            <div className="bg-card border rounded-2xl p-5 sticky top-20 space-y-4">
+              <h3 className="font-cairo font-bold text-base flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-primary" />
+                ملخص الطلب السريع
+              </h3>
+
+              {orderItems.length === 0 ? (
+                <p className="font-cairo text-sm text-muted-foreground text-center py-6">أضف منتجًا واحدًا على الأقل</p>
+              ) : (
+                <div className="space-y-2">
+                  {orderItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between font-cairo text-sm">
+                      <span className="truncate flex-1">{item.productName} ×{item.quantity}</span>
+                      <span className="font-roboto font-semibold mr-2">{formatPrice(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <hr />
+
+              <div className="space-y-2 font-cairo text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">المجموع الفرعي</span>
+                  <span className="font-roboto font-semibold">{formatPrice(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">التوصيل</span>
+                  <span className="font-roboto font-semibold">{formatPrice(shippingCost)}</span>
+                </div>
+                <hr />
+                <div className="flex justify-between font-bold text-base">
+                  <span>الإجمالي</span>
+                  <span className="font-roboto text-primary text-lg">{formatPrice(total)}</span>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => submitOrder.mutate()}
+                disabled={submitOrder.isPending || !canSubmitFast}
+                className="w-full font-cairo gap-2 h-12 text-base"
+              >
+                {submitOrder.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
+                تأكيد الطلب السريع
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Step Indicators */}
       <div className="flex items-center gap-2">
         {STEPS.map((s, i) => (
@@ -647,6 +816,8 @@ export default function AdminCreateOrderPage() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
