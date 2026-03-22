@@ -41,14 +41,14 @@ export default function AdminClientsPage() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active' });
+  const [form, setForm] = useState({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active', fixed_price_enabled: false, fixed_unit_price: '' });
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'balance'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const openAdd = () => {
     setEditingClient(null);
-    setForm({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active' });
+    setForm({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active', fixed_price_enabled: false, fixed_unit_price: '' });
     setDialogOpen(true);
   };
 
@@ -61,30 +61,27 @@ export default function AdminClientsPage() {
       wilaya: c.wilaya || '',
       notes: c.notes || '',
       status: c.status,
+      fixed_price_enabled: Boolean((c as any).fixed_price_enabled),
+      fixed_unit_price: (c as any).fixed_unit_price != null ? String((c as any).fixed_unit_price) : '',
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error(t('common.required')); return; }
-    // Construct the payload with only valid DB schema fields
-    const dbPayload = {
-      name: form.name,
-      phone: form.phone,
-      address: form.address,
-      wilaya: form.wilaya,
-      notes: form.notes,
-      status: form.status,
-    };
     try {
       if (editingClient) {
         await updateClient.mutateAsync({
           id: editingClient.id,
-          ...dbPayload,
-        });
+          ...form,
+          fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
+        } as any);
         toast.success(t('common.savedSuccess'));
       } else {
-        await createClient.mutateAsync(dbPayload);
+        await createClient.mutateAsync({
+          ...form,
+          fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
+        } as any);
         toast.success(t('common.savedSuccess'));
       }
       setDialogOpen(false);
@@ -142,59 +139,56 @@ export default function AdminClientsPage() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-1">
+    <div className="space-y-6 p-1">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl sm:text-2xl font-cairo font-bold">{t('clients.title')}</h1>
-        <Button onClick={openAdd} className="gap-2 font-cairo text-sm sm:text-base h-9 sm:h-10">
-          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">{t('clients.addClient')}</span><span className="sm:hidden">إضافة</span>
+        <h1 className="text-2xl font-cairo font-bold">{t('clients.title')}</h1>
+        <Button onClick={openAdd} className="gap-2 font-cairo w-full sm:w-auto">
+          <Plus className="w-4 h-4" /> {t('clients.addClient')}
         </Button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        <Card className="col-span-2 sm:col-span-1"><CardContent className="p-3 sm:p-4 flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"><Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /></div>
-          <div className="min-w-0"><p className="text-xs sm:text-sm text-muted-foreground font-cairo truncate">{t('clients.totalClients')}</p><p className="text-lg sm:text-xl font-bold font-cairo">{clients?.length ?? 0}</p></div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Users className="w-5 h-5 text-primary" /></div>
+          <div><p className="text-sm text-muted-foreground font-cairo">{t('clients.totalClients')}</p><p className="text-xl font-bold font-cairo">{clients?.length ?? 0}</p></div>
         </CardContent></Card>
-        <Card><CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0"><Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" /></div>
-          <div className="min-w-0"><p className="text-xs sm:text-sm text-muted-foreground font-cairo truncate">{t('clients.totalOwed')}</p><p className="text-base sm:text-xl font-bold font-cairo">{formatPrice(totalOwed)}</p></div>
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center"><Wallet className="w-5 h-5 text-destructive" /></div>
+          <div><p className="text-sm text-muted-foreground font-cairo">{t('clients.totalOwed')}</p><p className="text-xl font-bold font-cairo">{formatPrice(totalOwed)}</p></div>
         </CardContent></Card>
-        <Card><CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" /></div>
-          <div className="min-w-0"><p className="text-xs sm:text-sm text-muted-foreground font-cairo truncate">{t('clients.totalCollected')}</p><p className="text-base sm:text-xl font-bold font-cairo">{formatPrice(totalCollected)}</p></div>
+        <Card><CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center"><DollarSign className="w-5 h-5 text-green-600" /></div>
+          <div><p className="text-sm text-muted-foreground font-cairo">{t('clients.totalCollected')}</p><p className="text-xl font-bold font-cairo">{formatPrice(totalCollected)}</p></div>
         </CardContent></Card>
       </div>
 
       {/* Search, Filter, Sort, Export */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
           <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('clients.searchPlaceholder')} className="ps-9 font-cairo h-9 sm:h-10" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('clients.searchPlaceholder')} className="ps-9 font-cairo" />
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[110px] sm:w-[140px] font-cairo h-9 sm:h-10 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="font-cairo">{t('common.all')}</SelectItem>
-              <SelectItem value="active" className="font-cairo">{t('common.active')}</SelectItem>
-              <SelectItem value="inactive" className="font-cairo">{t('common.inactive')}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" className="gap-1 font-cairo h-9 sm:h-10 text-xs sm:text-sm" onClick={() => {
-            if (sortBy === 'name' && sortDir === 'asc') setSortDir('desc');
-            else if (sortBy === 'name' && sortDir === 'desc') { setSortBy('balance'); setSortDir('desc'); }
-            else if (sortBy === 'balance' && sortDir === 'desc') setSortDir('asc');
-            else { setSortBy('name'); setSortDir('asc'); }
-          }}>
-            <ArrowUpDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">{sortBy === 'name' ? t('clients.sortByName') : t('clients.sortByBalance')}</span> {sortDir === 'asc' ? '↑' : '↓'}
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1 font-cairo h-9 sm:h-10 text-xs sm:text-sm" onClick={handleExport}>
-            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">{t('common.exportCSV')}</span><span className="sm:hidden">CSV</span>
-          </Button>
-        </div>
-
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[140px] font-cairo"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="font-cairo">{t('common.all')}</SelectItem>
+            <SelectItem value="active" className="font-cairo">{t('common.active')}</SelectItem>
+            <SelectItem value="inactive" className="font-cairo">{t('common.inactive')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" className="gap-1 font-cairo w-full sm:w-auto" onClick={() => {
+          if (sortBy === 'name' && sortDir === 'asc') setSortDir('desc');
+          else if (sortBy === 'name' && sortDir === 'desc') { setSortBy('balance'); setSortDir('desc'); }
+          else if (sortBy === 'balance' && sortDir === 'desc') setSortDir('asc');
+          else { setSortBy('name'); setSortDir('asc'); }
+        }}>
+          <ArrowUpDown className="w-4 h-4" />
+          {sortBy === 'name' ? t('clients.sortByName') : t('clients.sortByBalance')} {sortDir === 'asc' ? '↑' : '↓'}
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1 font-cairo w-full sm:w-auto" onClick={handleExport}>
+          <Download className="w-4 h-4" /> {t('common.exportCSV')}
+        </Button>
       </div>
 
       {/* Client List */}
@@ -207,29 +201,29 @@ export default function AdminClientsPage() {
           <Button onClick={openAdd} variant="outline" className="mt-3 font-cairo gap-2"><Plus className="w-4 h-4" />{t('clients.addFirst')}</Button>
         </CardContent></Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(c => {
             const balance = getClientBalance(c.id);
             return (
               <Card key={c.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/admin/clients/${c.id}`)}>
-                <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-cairo font-bold text-base sm:text-lg truncate">{c.name}</h3>
-                      {c.phone && <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3 flex-shrink-0" /><span className="truncate">{c.phone}</span></p>}
-                      {c.wilaya && <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3 flex-shrink-0" /><span className="truncate">{c.wilaya}</span></p>}
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-cairo font-bold text-lg">{c.name}</h3>
+                      {c.phone && <p className="text-sm text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{c.phone}</p>}
+                      {c.wilaya && <p className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{c.wilaya}</p>}
                     </div>
-                    <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="font-cairo text-[10px] sm:text-xs flex-shrink-0">
+                    <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="font-cairo">
                       {c.status === 'active' ? t('common.active') : t('common.inactive')}
                     </Badge>
                   </div>
-                  <div className={`text-sm sm:text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                  <div className={`text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>
                     {balance > 0 ? `${t('clients.owes')}: ${formatPrice(balance)}` : t('clients.settled')}
                   </div>
-                  <div className="flex gap-1.5 sm:gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
-                    <Button size="sm" variant="outline" className="gap-1 font-cairo text-xs h-8 px-2 sm:px-3" onClick={() => navigate(`/admin/clients/${c.id}`)}><Eye className="w-3 h-3" /><span className="hidden sm:inline">{t('common.view')}</span></Button>
-                    <Button size="sm" variant="outline" className="gap-1 font-cairo text-xs h-8 px-2 sm:px-3" onClick={() => openEdit(c)}><Edit className="w-3 h-3" /><span className="hidden sm:inline">{t('common.edit')}</span></Button>
-                    <Button size="sm" variant="destructive" className="gap-1 font-cairo text-xs h-8 px-2" onClick={() => handleDelete(c.id)}><Trash2 className="w-3 h-3" /></Button>
+                  <div className="grid grid-cols-2 sm:flex gap-2 w-full" onClick={e => e.stopPropagation()}>
+                    <Button size="sm" variant="outline" className="gap-1 font-cairo w-full" onClick={() => navigate(`/admin/clients/${c.id}`)}><Eye className="w-3 h-3" />{t('common.view')}</Button>
+                    <Button size="sm" variant="outline" className="gap-1 font-cairo w-full" onClick={() => openEdit(c)}><Edit className="w-3 h-3" />{t('common.edit')}</Button>
+                    <Button size="sm" variant="destructive" className="gap-1 font-cairo col-span-2 sm:col-span-1 w-full sm:w-auto" onClick={() => handleDelete(c.id)}><Trash2 className="w-3 h-3" /></Button>
                   </div>
                 </CardContent>
               </Card>
@@ -240,19 +234,30 @@ export default function AdminClientsPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md w-[95vw] sm:w-full">
+        <DialogContent className="max-w-md w-[95vw]">
           <DialogHeader>
             <DialogTitle className="font-cairo">{editingClient ? t('clients.editClient') : t('clients.addClient')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 sm:space-y-4">
-            <div><Label className="font-cairo text-sm">{t('common.name')} *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="font-cairo mt-1" /></div>
-            <div><Label className="font-cairo text-sm">{t('common.phone')}</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="font-cairo mt-1" /></div>
-            <div><Label className="font-cairo text-sm">{t('clients.wilaya')}</Label><Input value={form.wilaya} onChange={e => setForm(f => ({ ...f, wilaya: e.target.value }))} className="font-cairo mt-1" /></div>
-            <div><Label className="font-cairo text-sm">{t('clients.address')}</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} className="font-cairo mt-1" /></div>
-
-            <div><Label className="font-cairo text-sm">{t('common.notes')}</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo mt-1" /></div>
+          <div className="space-y-4">
+            <div><Label className="font-cairo">{t('common.name')} *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="font-cairo" /></div>
+            <div><Label className="font-cairo">{t('common.phone')}</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="font-cairo" /></div>
+            <div><Label className="font-cairo">{t('clients.wilaya')}</Label><Input value={form.wilaya} onChange={e => setForm(f => ({ ...f, wilaya: e.target.value }))} className="font-cairo" /></div>
+            <div><Label className="font-cairo">{t('clients.address')}</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} className="font-cairo" /></div>
+            <div className="rounded-lg border p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="font-cairo">تسعير ثابت للعميل</Label>
+                <Switch checked={form.fixed_price_enabled} onCheckedChange={(checked) => setForm(f => ({ ...f, fixed_price_enabled: checked }))} />
+              </div>
+              {form.fixed_price_enabled ? (
+                <div>
+                  <Label className="font-cairo">السعر الثابت لكل منتج (دج)</Label>
+                  <Input type="number" min={0} value={form.fixed_unit_price} onChange={e => setForm(f => ({ ...f, fixed_unit_price: e.target.value }))} className="font-roboto" />
+                </div>
+              ) : null}
+            </div>
+            <div><Label className="font-cairo">{t('common.notes')}</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
           </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)} className="font-cairo w-full sm:w-auto">{t('common.cancel')}</Button>
             <Button onClick={handleSave} disabled={createClient.isPending || updateClient.isPending} className="font-cairo w-full sm:w-auto">{t('common.save')}</Button>
           </DialogFooter>

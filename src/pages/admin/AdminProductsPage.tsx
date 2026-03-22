@@ -1217,7 +1217,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
           </div>
           نوع المنتج
         </h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => setProductType('physical')}
@@ -1270,7 +1270,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
             />
             <p className="font-cairo text-xs text-muted-foreground mt-1">/product/{slug || 'your-slug'} — حروف لاتينية وأرقام وشرطات فقط</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="font-cairo">الفئة</Label>
               <Select value={category} onValueChange={setCategory}>
@@ -1325,7 +1325,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
           التسعير والمخزون
         </h3>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="font-cairo">السعر الحالي (دج) <span className="text-destructive">*</span></Label>
               <Input type="number" value={price} onChange={e => setPrice(e.target.value)} className="font-roboto mt-1.5 h-11" placeholder="0" />
@@ -1491,8 +1491,8 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
           <div className="space-y-4">
             {optionGroups.map((group, gIdx) => (
               <div key={gIdx} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 grid grid-cols-2 gap-2">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <Label className="font-cairo text-xs">اسم الخيار</Label>
                       {variationTypes.length > 0 ? (
@@ -1542,7 +1542,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                       </Select>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/60 hover:text-destructive shrink-0 mt-4" onClick={() => removeOptionGroup(gIdx)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/60 hover:text-destructive shrink-0 mt-1 sm:mt-4" onClick={() => removeOptionGroup(gIdx)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
@@ -1569,7 +1569,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                       </div>
                     ))}
                     {group.displayType === 'color_swatch' ? (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 w-full sm:w-auto">
                         <input
                           type="color"
                           value={newValueInputs[`color_${gIdx}`] || '#000000'}
@@ -1597,11 +1597,11 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                             }
                           }}
                           placeholder="اسم اللون + Enter"
-                          className="font-cairo h-8 w-32"
+                          className="font-cairo h-8 w-full sm:w-32"
                         />
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 w-full sm:w-auto">
                         <Input
                           value={newValueInputs[gIdx] || ''}
                           onChange={e => setNewValueInputs(prev => ({ ...prev, [gIdx]: e.target.value }))}
@@ -1612,7 +1612,7 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
                             }
                           }}
                           placeholder="أضف قيمة + Enter"
-                          className="font-cairo h-8 w-36"
+                          className="font-cairo h-8 w-full sm:w-36"
                         />
                       </div>
                     )}
@@ -1783,9 +1783,9 @@ function ProductForm({ product, categoryNames, onClose }: { product: any; catego
       )}
 
       {/* Actions */}
-      <div className="flex gap-3 justify-end">
-        <Button variant="outline" onClick={onClose} className="font-cairo px-6">إلغاء</Button>
-        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !name.trim() || !price} className="font-cairo px-8 gap-2">
+      <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+        <Button variant="outline" onClick={onClose} className="font-cairo px-6 w-full sm:w-auto">إلغاء</Button>
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !name.trim() || !price} className="font-cairo px-8 gap-2 w-full sm:w-auto">
           {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           {saveMutation.isPending ? 'جاري الحفظ...' : product ? 'حفظ التعديلات' : 'إضافة المنتج'}
         </Button>

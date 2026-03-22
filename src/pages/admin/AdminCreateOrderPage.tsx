@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/format';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Tag, Loader2, ArrowRight, User, MapPin, Package, CreditCard, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Tag, Loader2, ArrowRight, User, MapPin, Package, CreditCard, CheckCircle } from 'lucide-react';
 import { ALGERIA_WILAYAS } from '@/data/algeria-wilayas';
 import { useTranslation } from '@/i18n';
 
@@ -59,8 +59,6 @@ export default function AdminCreateOrderPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_type: string; discount_value: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
 
-
-
   const { data: wilayas } = useQuery({
     queryKey: ['wilayas-for-order'],
     queryFn: async () => {
@@ -81,38 +79,6 @@ export default function AdminCreateOrderPage() {
     queryKey: ['variations-for-order'],
     queryFn: async () => {
       const { data } = await supabase.from('product_variations').select('*').eq('is_active', true);
-      return data || [];
-    },
-  });
-
-  // New variant system queries
-  const { data: optionGroups, error: ogError } = useQuery({
-    queryKey: ['option-groups-for-order'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_option_groups')
-        .select('*, product_option_values(*)');
-      
-      if (error) {
-        console.error('Error fetching option groups:', error);
-        throw error;
-      }
-      return data || [];
-    },
-  });
-
-  const { data: productVariants, error: pvError } = useQuery({
-    queryKey: ['product-variants-for-order'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_variants')
-        .select('*')
-        .eq('is_active', true);
-        
-      if (error) {
-        console.error('Error fetching product variants:', error);
-        throw error;
-      }
       return data || [];
     },
   });
@@ -157,70 +123,13 @@ export default function AdminCreateOrderPage() {
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-
-    const flatList: any[] = [];
-    products.forEach(p => {
-      const legacyVars = getProductVariations(p.id);
-      const newGroups = getProductOptionGroups(p.id);
-      const variants = getProductVariants(p.id);
-
-      const hasNewVariants = newGroups.length > 0 && variants.length > 0;
-      const hasLegacyVariations = !hasNewVariants && legacyVars.length > 0;
-
-      if (hasNewVariants) {
-        variants.forEach(v => {
-          const ov = v.option_values as Record<string, string>;
-          const label = Object.values(ov).join(' / ');
-          flatList.push({
-            ...p,
-            _flatId: `${p.id}_${v.id}`,
-            name: `${p.name} (${label})`,
-            price: v.price || p.price,
-            stock: v.quantity ?? p.stock,
-            image: v.image_url || p.images?.[0],
-            _sourceProduct: p,
-            _matchedVariant: v
-          });
-        });
-      } else if (hasLegacyVariations) {
-        legacyVars.forEach(v => {
-          flatList.push({
-            ...p,
-            _flatId: `${p.id}_${v.id}`,
-            name: `${p.name} (${v.variation_value})`,
-            price: Number(p.price) + Number(v.price_adjustment || 0),
-            stock: v.stock ?? p.stock,
-            image: p.images?.[0],
-            _sourceProduct: p,
-            _matchedLegacyVariation: v
-          });
-        });
-      } else {
-        flatList.push({
-          ...p,
-          _flatId: p.id,
-          _sourceProduct: p
-        });
-      }
-    });
-
-    if (!productSearch) return flatList;
-    return flatList.filter(p => p.name.includes(productSearch) || p.sku?.includes(productSearch));
-  }, [products, productSearch, variations, optionGroups, productVariants]);
+    if (!productSearch) return products;
+    return products.filter(p => p.name.includes(productSearch) || p.sku?.includes(productSearch));
+  }, [products, productSearch]);
 
   const getProductVariations = (productId: string) => {
     return variations?.filter(v => v.product_id === productId) || [];
   };
-
-  const getProductOptionGroups = (productId: string) => {
-    return optionGroups?.filter((g: any) => g.product_id === productId) || [];
-  };
-
-  const getProductVariants = (productId: string) => {
-    return productVariants?.filter((v: any) => v.product_id === productId) || [];
-  };
-
-
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -239,10 +148,9 @@ export default function AdminCreateOrderPage() {
 
   const total = subtotal + shippingCost - discountAmount;
 
-  const addProduct = (product: any, variation?: any, variant?: any) => {
-    const varId = variant?.id || variation?.id || undefined;
+  const addProduct = (product: any, variation?: any) => {
     const existingIndex = orderItems.findIndex(
-      i => i.productId === product.id && i.variationId === varId
+      i => i.productId === product.id && i.variationId === (variation?.id || undefined)
     );
     if (existingIndex >= 0) {
       const updated = [...orderItems];
@@ -250,33 +158,18 @@ export default function AdminCreateOrderPage() {
       setOrderItems(updated);
       return;
     }
-
-    let price: number;
-    let label = '';
-    if (variant) {
-      price = fastFixedPrice > 0 ? fastFixedPrice : Number(variant.price);
-      const ov = variant.option_values as Record<string, string>;
-      label = Object.values(ov).join(' / ');
-    } else if (variation) {
-      price = fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + Number(variation.price_adjustment || 0);
-      label = variation.variation_value;
-    } else {
-      price = fastFixedPrice > 0 ? fastFixedPrice : Number(product.price);
-    }
-
+    const price = fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + (variation ? Number(variation.price_adjustment || 0) : 0);
     setOrderItems(prev => [...prev, {
       productId: product.id,
-      productName: product.name + (label ? ` (${label})` : ''),
+      productName: product.name + (variation ? ` (${variation.variation_value})` : ''),
       price,
       quantity: 1,
-      variationId: varId,
-      variationLabel: label || undefined,
-      image: variant?.image_url || product.images?.[0],
+      variationId: variation?.id,
+      variationLabel: variation?.variation_value,
+      image: product.images?.[0],
       stock: product.stock ?? 0,
     }]);
   };
-
-
 
   const updateQuantity = (index: number, delta: number) => {
     const updated = [...orderItems];
@@ -401,43 +294,6 @@ export default function AdminCreateOrderPage() {
 
   const canSubmitFast = customerName.trim() && customerPhone.trim() && selectedWilayaId && orderItems.length > 0;
 
-  // Shared product row renderer for both fast mode and step mode
-  const renderProductRow = (flatProduct: any) => {
-    return (
-      <div key={flatProduct._flatId} className="border-b last:border-b-0">
-        <div className="p-3 hover:bg-muted/50 transition-colors">
-          <div className="flex items-center gap-3">
-            {flatProduct.image ? (
-              <img src={flatProduct.image} alt={flatProduct.name} className="w-14 h-14 rounded-xl object-cover border flex-shrink-0" />
-            ) : flatProduct._sourceProduct?.images?.[0] ? (
-              <img src={flatProduct._sourceProduct.images[0]} alt={flatProduct.name} className="w-14 h-14 rounded-xl object-cover border flex-shrink-0" />
-            ) : null}
-            <div className="flex-1 min-w-0">
-              <p className="font-cairo text-sm font-semibold truncate">{flatProduct.name}</p>
-              <div className="flex items-center gap-3 mt-0.5">
-                <span className="font-roboto text-sm font-bold text-primary">{formatPrice(Number(flatProduct.price))}</span>
-                <span className={`font-cairo text-xs px-2 py-0.5 rounded-full ${(flatProduct.stock ?? 0) > 5 ? 'bg-primary/10 text-primary' : (flatProduct.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-600' : 'bg-destructive/10 text-destructive'}`}>
-                  {flatProduct.stock ?? 0} في المخزون
-                </span>
-              </div>
-            </div>
-
-            <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg" onClick={() => {
-              addProduct(
-                flatProduct._sourceProduct,
-                flatProduct._matchedLegacyVariation,
-                flatProduct._matchedVariant
-              );
-            }}>
-              <Plus className="w-3.5 h-3.5" /> أضف
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
@@ -490,8 +346,41 @@ export default function AdminCreateOrderPage() {
                 <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ابحث عن منتج..." className="pr-10 font-cairo h-11" />
               </div>
 
-              <div className="max-h-80 overflow-y-auto border rounded-xl">
-                {filteredProducts.map(product => renderProductRow(product))}
+              <div className="max-h-80 overflow-y-auto border rounded-xl divide-y">
+                {filteredProducts.map(product => {
+                  const prodVariations = getProductVariations(product.id);
+                  return (
+                    <div key={product.id} className="p-3 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        {product.images?.[0] && (
+                          <img src={product.images[0]} alt={product.name} className="w-14 h-14 rounded-xl object-cover border" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-cairo text-sm font-semibold truncate">{product.name}</p>
+                          <div className="flex items-center gap-3 mt-0.5">
+                            <span className="font-roboto text-sm font-bold text-primary">{formatPrice(Number(product.price))}</span>
+                            <span className={`font-cairo text-xs px-2 py-0.5 rounded-full ${(product.stock ?? 0) > 5 ? 'bg-primary/10 text-primary' : (product.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-600' : 'bg-destructive/10 text-destructive'}`}>
+                              {product.stock ?? 0} في المخزون
+                            </span>
+                          </div>
+                        </div>
+                        {prodVariations.length === 0 ? (
+                          <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg" onClick={() => addProduct(product)}>
+                            <Plus className="w-3.5 h-3.5" /> أضف
+                          </Button>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {prodVariations.map(v => (
+                              <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[11px] h-7 px-2 rounded-lg" onClick={() => addProduct(product, v)}>
+                                {v.variation_value} — {formatPrice(fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + Number(v.price_adjustment || 0))}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
                 {filteredProducts.length === 0 && (
                   <p className="p-6 text-center text-sm text-muted-foreground font-cairo">لا توجد منتجات</p>
                 )}
@@ -505,13 +394,13 @@ export default function AdminCreateOrderPage() {
                   </h3>
                   <div className="space-y-2">
                     {orderItems.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-3 bg-muted/40 rounded-xl p-3 border">
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-muted/40 rounded-xl p-3 border">
                         {item.image && <img src={item.image} alt="" className="w-12 h-12 rounded-lg object-cover border" />}
                         <div className="flex-1 min-w-0">
                           <p className="font-cairo text-sm font-medium truncate">{item.productName}</p>
                           <p className="font-roboto text-xs text-muted-foreground">{formatPrice(item.price)} × {item.quantity} = <span className="font-bold text-foreground">{formatPrice(item.price * item.quantity)}</span></p>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 self-end sm:self-auto">
                           <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg" onClick={() => updateQuantity(idx, -1)}>
                             <Minus className="w-3 h-3" />
                           </Button>
@@ -715,8 +604,41 @@ export default function AdminCreateOrderPage() {
                 <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ابحث عن منتج..." className="pr-10 font-cairo h-11" />
               </div>
 
-              <div className="max-h-80 overflow-y-auto border rounded-xl">
-                {filteredProducts.map(product => renderProductRow(product))}
+              <div className="max-h-80 overflow-y-auto border rounded-xl divide-y">
+                {filteredProducts.map(product => {
+                  const prodVariations = getProductVariations(product.id);
+                  return (
+                    <div key={product.id} className="p-3 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        {product.images?.[0] && (
+                          <img src={product.images[0]} alt={product.name} className="w-14 h-14 rounded-xl object-cover border" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-cairo text-sm font-semibold truncate">{product.name}</p>
+                          <div className="flex items-center gap-3 mt-0.5">
+                            <span className="font-roboto text-sm font-bold text-primary">{formatPrice(Number(product.price))}</span>
+                            <span className={`font-cairo text-xs px-2 py-0.5 rounded-full ${(product.stock ?? 0) > 5 ? 'bg-primary/10 text-primary' : (product.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-600' : 'bg-destructive/10 text-destructive'}`}>
+                              {product.stock ?? 0} في المخزون
+                            </span>
+                          </div>
+                        </div>
+                        {prodVariations.length === 0 ? (
+                          <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg" onClick={() => addProduct(product)}>
+                            <Plus className="w-3.5 h-3.5" /> أضف
+                          </Button>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {prodVariations.map(v => (
+                              <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[11px] h-7 px-2 rounded-lg" onClick={() => addProduct(product, v)}>
+                                {v.variation_value} — {formatPrice(fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + Number(v.price_adjustment || 0))}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
                 {filteredProducts.length === 0 && (
                   <p className="p-6 text-center text-sm text-muted-foreground font-cairo">لا توجد منتجات</p>
                 )}
@@ -731,13 +653,13 @@ export default function AdminCreateOrderPage() {
                   </h3>
                   <div className="space-y-2">
                     {orderItems.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-3 bg-muted/40 rounded-xl p-3 border">
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-muted/40 rounded-xl p-3 border">
                         {item.image && <img src={item.image} alt="" className="w-12 h-12 rounded-lg object-cover border" />}
                         <div className="flex-1 min-w-0">
                           <p className="font-cairo text-sm font-medium truncate">{item.productName}</p>
                           <p className="font-roboto text-xs text-muted-foreground">{formatPrice(item.price)} × {item.quantity} = <span className="font-bold text-foreground">{formatPrice(item.price * item.quantity)}</span></p>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 self-end sm:self-auto">
                           <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg" onClick={() => updateQuantity(idx, -1)}>
                             <Minus className="w-3 h-3" />
                           </Button>

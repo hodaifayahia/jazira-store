@@ -125,6 +125,8 @@ export default function AdminClientDetailPage() {
 
   const selectedProduct = products?.find(p => p.id === giveForm.product_id);
   const selectedReturnProduct = products?.find(p => p.id === returnForm.product_id);
+  const isFixedClientPrice = Boolean((client as any)?.fixed_price_enabled && Number((client as any)?.fixed_unit_price || 0) > 0);
+  const fixedClientUnitPrice = Number((client as any)?.fixed_unit_price || 0);
 
   const normalizeOptionValues = (raw: Record<string, unknown> | null | undefined): SelectedVariations => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
@@ -220,6 +222,7 @@ export default function AdminClientDetailPage() {
   };
 
   const calculateUnitPrice = (productId: string, selectedVariations: SelectedVariations) => {
+    if (isFixedClientPrice) return fixedClientUnitPrice;
 
     const matchedVariant = findMatchingProductVariant(productId, selectedVariations);
     if (matchedVariant) return Number(matchedVariant.price ?? 0);
@@ -473,52 +476,52 @@ export default function AdminClientDetailPage() {
   if (!client) return <p className="p-4 font-cairo">{t('common.noData')}</p>;
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-1 min-w-0">
+    <div className="space-y-6 p-1 min-w-0">
       {/* Header */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0" onClick={() => navigate('/admin/clients')}><ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" /></Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg sm:text-2xl font-cairo font-bold truncate">{client.name}</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground font-cairo truncate">{client.phone} {client.wilaya && `• ${client.wilaya}`}</p>
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/admin/clients')}><ArrowLeft className="w-5 h-5" /></Button>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-cairo font-bold">{client.name}</h1>
+          <p className="text-sm text-muted-foreground font-cairo break-words">{client.phone} {client.wilaya && `• ${client.wilaya}`}</p>
         </div>
         <div className="ms-auto flex items-center gap-2 flex-wrap">
-          <Badge variant={client.status === 'active' ? 'default' : 'secondary'} className="font-cairo text-xs flex-shrink-0">
+          <Badge variant={client.status === 'active' ? 'default' : 'secondary'} className="font-cairo">
           {client.status === 'active' ? t('common.active') : t('common.inactive')}
           </Badge>
         </div>
       </div>
 
       {/* Balance KPIs */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-4">
-        <Card><CardContent className="p-3 sm:p-4 text-center">
-          <Wallet className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 text-destructive" />
-          <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.currentBalance')}</p>
-          <p className={`text-base sm:text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatPrice(Math.abs(balance))}</p>
-          <p className="text-[10px] sm:text-xs font-cairo text-muted-foreground">{balance > 0 ? t('clients.owes') : t('clients.settled')}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card><CardContent className="p-4 text-center">
+          <Wallet className="w-5 h-5 mx-auto mb-1 text-destructive" />
+          <p className="text-xs text-muted-foreground font-cairo">{t('clients.currentBalance')}</p>
+          <p className={`text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatPrice(Math.abs(balance))}</p>
+          <p className="text-xs font-cairo text-muted-foreground">{balance > 0 ? t('clients.owes') : t('clients.settled')}</p>
         </CardContent></Card>
-        <Card><CardContent className="p-3 sm:p-4 text-center">
-          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 text-primary" />
-          <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.totalGiven')}</p>
-          <p className="text-base sm:text-lg font-bold font-cairo">{formatPrice(totalGiven)}</p>
+        <Card><CardContent className="p-4 text-center">
+          <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
+          <p className="text-xs text-muted-foreground font-cairo">{t('clients.totalGiven')}</p>
+          <p className="text-lg font-bold font-cairo">{formatPrice(totalGiven)}</p>
         </CardContent></Card>
-        <Card><CardContent className="p-3 sm:p-4 text-center">
-          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 text-green-600" />
-          <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.totalPaid')}</p>
-          <p className="text-base sm:text-lg font-bold font-cairo">{formatPrice(totalPaid)}</p>
+        <Card><CardContent className="p-4 text-center">
+          <DollarSign className="w-5 h-5 mx-auto mb-1 text-green-600" />
+          <p className="text-xs text-muted-foreground font-cairo">{t('clients.totalPaid')}</p>
+          <p className="text-lg font-bold font-cairo">{formatPrice(totalPaid)}</p>
         </CardContent></Card>
-        <Card><CardContent className="p-3 sm:p-4 text-center">
-          <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 text-orange-500" />
-          <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.totalReturnedAmount')}</p>
-          <p className="text-base sm:text-lg font-bold font-cairo">{formatPrice(totalReturned)}</p>
+        <Card><CardContent className="p-4 text-center">
+          <TrendingDown className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+          <p className="text-xs text-muted-foreground font-cairo">{t('clients.totalReturnedAmount')}</p>
+          <p className="text-lg font-bold font-cairo">{formatPrice(totalReturned)}</p>
         </CardContent></Card>
       </div>
 
       <Tabs defaultValue="give" className="w-full">
         <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 gap-1 font-cairo h-auto p-1">
-          <TabsTrigger value="give" className="gap-1 font-cairo text-xs sm:text-sm py-2"><Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">{t('clients.giveProduct')}</span><span className="sm:hidden">إعطاء</span></TabsTrigger>
-          <TabsTrigger value="bulk" className="gap-1 font-cairo text-xs sm:text-sm py-2"><Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">{t('clients.bulkAddProducts')}</span><span className="sm:hidden">جملة</span></TabsTrigger>
-          <TabsTrigger value="payment" className="gap-1 font-cairo text-xs sm:text-sm py-2"><DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">{t('clients.recordPayment')}</span><span className="sm:hidden">دفع</span></TabsTrigger>
-          <TabsTrigger value="return" className="gap-1 font-cairo text-xs sm:text-sm py-2"><RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">{t('clients.recordReturn')}</span><span className="sm:hidden">إرجاع</span></TabsTrigger>
+          <TabsTrigger value="give" className="gap-1 font-cairo text-xs sm:text-sm"><Package className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.giveProduct')}</span><span className="sm:hidden">Product</span></TabsTrigger>
+          <TabsTrigger value="bulk" className="gap-1 font-cairo text-xs sm:text-sm"><Plus className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.bulkAddProducts')}</span><span className="sm:hidden">Bulk</span></TabsTrigger>
+          <TabsTrigger value="payment" className="gap-1 font-cairo text-xs sm:text-sm"><DollarSign className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.recordPayment')}</span><span className="sm:hidden">Pay</span></TabsTrigger>
+          <TabsTrigger value="return" className="gap-1 font-cairo text-xs sm:text-sm"><RotateCcw className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.recordReturn')}</span><span className="sm:hidden">Return</span></TabsTrigger>
         </TabsList>
 
         {/* Give Product Tab */}
@@ -592,6 +595,7 @@ export default function AdminClientDetailPage() {
               <div>
                 <Label className="font-cairo">{t('clients.unitPrice')}</Label>
                 <Input type="number" min={0} value={giveForm.unit_price} onChange={e => setGiveForm(f => ({ ...f, unit_price: Number(e.target.value) }))} className="font-cairo" />
+                {isFixedClientPrice ? <p className="font-cairo text-xs text-muted-foreground mt-1">تم تطبيق سعر عميل ثابت</p> : null}
               </div>
               <div>
                 <Label className="font-cairo">{t('common.total')}</Label>
@@ -854,42 +858,72 @@ export default function AdminClientDetailPage() {
           {!transactions?.length ? (
             <p className="p-6 text-center text-muted-foreground font-cairo">{t('common.noData')}</p>
           ) : (
-            <div className="overflow-x-auto max-w-full">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead className="font-cairo">{t('common.date')}</TableHead>
-                  <TableHead className="font-cairo">{t('common.type')}</TableHead>
-                  <TableHead className="font-cairo">{t('common.product')}</TableHead>
-                  <TableHead className="font-cairo">{t('common.quantity')}</TableHead>
-                  <TableHead className="font-cairo">{t('common.total')}</TableHead>
-                  <TableHead className="font-cairo">{t('common.notes')}</TableHead>
-                  <TableHead></TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {transactions.map(tx => (
-                    <TableRow key={tx.id}>
-                      <TableCell className="font-cairo text-sm">{tx.date}</TableCell>
-                      <TableCell>
-                        <Badge variant={tx.transaction_type === 'product_given' ? 'destructive' : tx.transaction_type === 'payment_received' ? 'default' : 'secondary'} className="font-cairo text-xs">
-                          {tx.transaction_type === 'product_given' && t('clients.typeGiven')}
-                          {tx.transaction_type === 'payment_received' && t('clients.typePayment')}
-                          {tx.transaction_type === 'product_returned' && t('clients.typeReturn')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-cairo text-sm">{tx.product_name || '—'}</TableCell>
-                      <TableCell className="font-cairo text-sm">{tx.quantity || '—'}</TableCell>
-                      <TableCell className="font-cairo font-bold text-sm">{formatPrice(tx.amount)}</TableCell>
-                      <TableCell className="font-cairo text-xs text-muted-foreground max-w-[150px] truncate">{tx.notes || '—'}</TableCell>
-                      <TableCell>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteTx(tx.id)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              <div className="sm:hidden space-y-2 p-3">
+                {transactions.map(tx => (
+                  <div key={tx.id} className="rounded-lg border p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-cairo text-xs text-muted-foreground">{tx.date}</p>
+                        <p className="font-cairo text-sm font-medium truncate">{tx.product_name || '—'}</p>
+                      </div>
+                      <Badge variant={tx.transaction_type === 'product_given' ? 'destructive' : tx.transaction_type === 'payment_received' ? 'default' : 'secondary'} className="font-cairo text-xs shrink-0">
+                        {tx.transaction_type === 'product_given' && t('clients.typeGiven')}
+                        {tx.transaction_type === 'payment_received' && t('clients.typePayment')}
+                        {tx.transaction_type === 'product_returned' && t('clients.typeReturn')}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-cairo text-xs text-muted-foreground">{t('common.quantity')}: {tx.quantity || '—'}</span>
+                      <span className="font-cairo font-bold text-sm">{formatPrice(tx.amount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-cairo text-xs text-muted-foreground truncate">{tx.notes || '—'}</p>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive shrink-0" onClick={() => handleDeleteTx(tx.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden sm:block overflow-x-auto max-w-full">
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead className="font-cairo">{t('common.date')}</TableHead>
+                    <TableHead className="font-cairo">{t('common.type')}</TableHead>
+                    <TableHead className="font-cairo">{t('common.product')}</TableHead>
+                    <TableHead className="font-cairo">{t('common.quantity')}</TableHead>
+                    <TableHead className="font-cairo">{t('common.total')}</TableHead>
+                    <TableHead className="font-cairo">{t('common.notes')}</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {transactions.map(tx => (
+                      <TableRow key={tx.id}>
+                        <TableCell className="font-cairo text-sm">{tx.date}</TableCell>
+                        <TableCell>
+                          <Badge variant={tx.transaction_type === 'product_given' ? 'destructive' : tx.transaction_type === 'payment_received' ? 'default' : 'secondary'} className="font-cairo text-xs">
+                            {tx.transaction_type === 'product_given' && t('clients.typeGiven')}
+                            {tx.transaction_type === 'payment_received' && t('clients.typePayment')}
+                            {tx.transaction_type === 'product_returned' && t('clients.typeReturn')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-cairo text-sm">{tx.product_name || '—'}</TableCell>
+                        <TableCell className="font-cairo text-sm">{tx.quantity || '—'}</TableCell>
+                        <TableCell className="font-cairo font-bold text-sm">{formatPrice(tx.amount)}</TableCell>
+                        <TableCell className="font-cairo text-xs text-muted-foreground max-w-[150px] truncate">{tx.notes || '—'}</TableCell>
+                        <TableCell>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteTx(tx.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
