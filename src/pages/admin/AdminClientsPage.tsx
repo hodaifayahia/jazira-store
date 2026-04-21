@@ -69,19 +69,24 @@ export default function AdminClientsPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error(t('common.required')); return; }
+    // Only send fields that exist in the DB schema (no fixed_price_enabled / fixed_unit_price)
+    const dbPayload = {
+      name: form.name,
+      phone: form.phone,
+      address: form.address,
+      wilaya: form.wilaya,
+      notes: form.notes,
+      status: form.status,
+    };
     try {
       if (editingClient) {
         await updateClient.mutateAsync({
           id: editingClient.id,
-          ...form,
-          fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
-        } as any);
+          ...dbPayload,
+        });
         toast.success(t('common.savedSuccess'));
       } else {
-        await createClient.mutateAsync({
-          ...form,
-          fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
-        } as any);
+        await createClient.mutateAsync(dbPayload);
         toast.success(t('common.savedSuccess'));
       }
       setDialogOpen(false);

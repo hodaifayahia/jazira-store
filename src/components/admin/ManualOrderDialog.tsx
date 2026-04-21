@@ -378,8 +378,8 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
   const renderProductRow = (product: any) => {
     const legacyVars = getProductVariations(product.id);
     const newGroups = getProductOptionGroups(product.id);
-    const hasNewVariants = product.has_variants && newGroups.length > 0;
-    const hasLegacyVariations = !product.has_variants && legacyVars.length > 0;
+    const hasNewVariants = newGroups.length > 0;
+    const hasLegacyVariations = !hasNewVariants && legacyVars.length > 0;
     const hasAnyVariation = hasNewVariants || hasLegacyVariations;
     const isExpanded = expandedProductId === product.id;
 
