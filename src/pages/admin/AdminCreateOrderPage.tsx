@@ -88,24 +88,33 @@ export default function AdminCreateOrderPage() {
   });
 
   // New variant system queries
-  const { data: optionGroups } = useQuery({
+  const { data: optionGroups, error: ogError } = useQuery({
     queryKey: ['option-groups-for-order'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('product_option_groups')
-        .select('*, product_option_values(*)')
-        .order('position');
+        .select('*, product_option_values(*)');
+      
+      if (error) {
+        console.error('Error fetching option groups:', error);
+        throw error;
+      }
       return data || [];
     },
   });
 
-  const { data: productVariants } = useQuery({
+  const { data: productVariants, error: pvError } = useQuery({
     queryKey: ['product-variants-for-order'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('product_variants')
         .select('*')
         .eq('is_active', true);
+        
+      if (error) {
+        console.error('Error fetching product variants:', error);
+        throw error;
+      }
       return data || [];
     },
   });

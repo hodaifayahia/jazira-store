@@ -84,10 +84,10 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
   const { data: optionGroups } = useQuery({
     queryKey: ['option-groups-for-order'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('product_option_groups')
-        .select('*, product_option_values(*)')
-        .order('position');
+        .select('*, product_option_values(*)');
+      if (error) console.error(error);
       return data || [];
     },
   });
@@ -96,10 +96,11 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
   const { data: productVariants } = useQuery({
     queryKey: ['product-variants-for-order'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('product_variants')
         .select('*')
         .eq('is_active', true);
+      if (error) console.error(error);
       return data || [];
     },
   });
