@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="80" y1="48" x2="432" y2="432" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#39D1E5"/>
+      <stop offset="1" stop-color="#2A5FD2"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="68" y1="56" x2="448" y2="408" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5DE6F4"/>
+      <stop offset="1" stop-color="#1C4EC8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="88" fill="#F8FAFC"/>
+
+  <path d="M110 145C110 113 136 87 168 87H330C347 87 363 93 375 105L425 153C438 165 445 182 445 199V344C445 376 419 402 387 402H168C136 402 110 376 110 344V145Z" fill="url(#g1)"/>
+
+  <path d="M170 155C170 132 189 113 212 113H313C326 113 338 118 347 127L396 175C405 184 410 196 410 209V334C410 357 391 376 368 376H212C189 376 170 357 170 334V155Z" fill="url(#g2)" opacity="0.9"/>
+
+  <path d="M161 263C161 215 197 183 248 183C275 183 300 193 316 211L286 239C276 228 263 223 247 223C220 223 202 240 202 264C202 287 220 304 247 304C262 304 276 299 287 289L317 317C300 336 275 347 247 347C196 347 161 312 161 263Z" fill="white"/>
+
+  <path d="M342 183V347H302V280H252V247H302V183H342Z" fill="white"/>
+
+  <path d="M95 444H417" stroke="#2056C7" stroke-opacity="0.15" stroke-width="2"/>
+  <text x="256" y="486" text-anchor="middle" fill="#2158C9" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="600">SolutionsHub</text>
+</svg>

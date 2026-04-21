@@ -10,7 +10,8 @@ export function useStoreLogo() {
         .select('value')
         .eq('key', 'store_logo')
         .maybeSingle();
-      return data?.value || null;
+      // Return store logo if set, otherwise use local fallback
+      return data?.value || '/solutions-hub-logo.svg';
     },
     staleTime: 10 * 60 * 1000,
   });

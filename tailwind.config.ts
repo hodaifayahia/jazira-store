@@ -14,9 +14,11 @@ export default {
     },
     extend: {
       fontFamily: {
-        cairo: ["Cairo", "sans-serif"],
-        roboto: ["Roboto", "sans-serif"],
-        playfair: ["Playfair Display", "serif"],
+        inter: ["Inter", "system-ui", "sans-serif"],
+        space: ["Space Grotesk", "sans-serif"],
+        arabic: ["Tajawal", "Cairo", "sans-serif"],
+        cairo: ["Cairo", "Tajawal", "sans-serif"],
+        sans: ["Tajawal", "Cairo", "Inter", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

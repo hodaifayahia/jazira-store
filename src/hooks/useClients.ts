@@ -50,7 +50,16 @@ export function useCreateClient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (client: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase.from('clients').insert(client).select().single();
+      // Only send fields that exist in the database schema to prevent PGRST204 errors
+      const payload = {
+        name: client.name,
+        phone: client.phone || null,
+        address: client.address || null,
+        wilaya: client.wilaya || null,
+        notes: client.notes || null,
+        status: client.status || 'active',
+      };
+      const { data, error } = await supabase.from('clients').insert(payload).select().single();
       if (error) throw error;
       return data;
     },

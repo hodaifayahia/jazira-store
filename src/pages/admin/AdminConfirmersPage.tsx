@@ -138,8 +138,11 @@ export default function AdminConfirmersPage() {
           confirmerId: newConfirmer.id,
         },
       });
-      if (fnErr) throw fnErr;
-      if (fnData?.error) throw new Error(fnData.error);
+      if (fnErr || fnData?.error) {
+        // Cleanup: remove the confirmer record if auth creation failed
+        await supabase.from('confirmers').delete().eq('id', newConfirmer.id);
+        throw new Error(fnData?.error || fnErr?.message || 'فشل في إنشاء حساب المؤكد');
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-confirmers'] });
@@ -150,7 +153,16 @@ export default function AdminConfirmersPage() {
       setAddConfirmationPrice('0'); setAddCancellationPrice('0');
       setAddMonthlySalary('0'); setAddNotes('');
     },
-    onError: (err: any) => toast({ title: err.message || 'حدث خطأ', variant: 'destructive' }),
+    onError: (err: any) => {
+      const msg = err?.message || '';
+      if (msg.includes('already been registered') || msg.includes('already registered')) {
+        toast({ title: 'هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر.', variant: 'destructive' });
+      } else if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
+        toast({ title: 'هذا المؤكد موجود بالفعل. تحقق من البريد الإلكتروني أو رقم الهاتف.', variant: 'destructive' });
+      } else {
+        toast({ title: msg || 'حدث خطأ أثناء إضافة المؤكد', variant: 'destructive' });
+      }
+    },
   });
 
   const editMutation = useMutation({

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Home, Package, MapPin, User, LogIn, Info, Search, Shirt, Watch, Footprints, Smartphone, Home as HomeIcon, Grid3X3, ChevronDown, Heart, LayoutDashboard, type LucideIcon } from 'lucide-react';
+import { ShoppingCart, Menu, X, Home, Package, MapPin, User, LogIn, Info, Search, Shirt, Watch, Footprints, Smartphone, Home as HomeIcon, Grid3X3, ChevronDown, Heart, LayoutDashboard, HelpCircle, type LucideIcon } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useState, useRef, useCallback } from 'react';
@@ -10,6 +10,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import SmartSearch from '@/components/SmartSearch';
+import { useTranslation, type Language } from '@/i18n';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Shirt,
@@ -23,31 +24,35 @@ function getCategoryIcon(iconName: string): LucideIcon {
   return ICON_MAP[iconName] || Grid3X3;
 }
 
-const NAV_LINKS = [
-  { to: '/', label: 'الرئيسية', icon: Home },
-  { to: '/products', label: 'المنتجات', icon: Package },
-  { to: '/track', label: 'تتبع الطلب', icon: MapPin },
-  { to: '/about', label: 'من نحن', icon: Info },
-];
-
 export default function Navbar() {
   const { totalItems } = useCart();
   const { totalItems: wishlistCount } = useWishlist();
   const [menuOpen, setMenuOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const { data: logoUrl } = useStoreLogo();
+  const [searchQuery, setSearchQuery] = useState('');
+  const { data: logoUrl, isLoading: logoLoading } = useStoreLogo();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { data: categories } = useCategories();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { t, language, setLanguage } = useTranslation();
+
+  const NAV_LINKS = [
+    { to: '/', label: t('public.nav.home'), icon: Home },
+    { to: '/products', label: t('public.nav.products'), icon: Package },
+    { to: '/categories', label: t('public.nav.categories'), icon: Grid3X3 },
+    { to: '/faq', label: t('public.nav.faq'), icon: HelpCircle },
+    { to: '/track', label: t('public.nav.track'), icon: MapPin },
+    { to: '/about', label: t('public.nav.about'), icon: Info },
+  ];
 
   const { data: storeName } = useQuery({
     queryKey: ['store-name'],
     queryFn: async () => {
       const { data } = await supabase.from('settings').select('value').eq('key', 'store_name').maybeSingle();
-      return data?.value || 'DZ Store';
+      return data?.value || 'SloutionsHub';
     },
     staleTime: 10 * 60 * 1000,
   });
@@ -63,7 +68,7 @@ export default function Navbar() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const displayName = storeName || 'جزيرة الطبيعة';
+  const displayName = storeName || 'SloutionsHub';
 
   const handleCatEnter = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -74,32 +79,56 @@ export default function Navbar() {
     timeoutRef.current = setTimeout(() => setCatOpen(false), 150);
   }, []);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50">
       {/* Main Nav */}
       <div className="bg-card/90 backdrop-blur-xl border-b">
-        <div className="container flex items-center justify-between h-[60px]">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            {logoUrl ? (
-              <img src={logoUrl} alt={displayName} className="w-9 h-9 rounded-lg object-contain transition-transform group-hover:scale-105" />
-            ) : (
-              <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center transition-transform group-hover:scale-105">
-                <span className="text-primary-foreground font-cairo font-bold text-sm">🌴</span>
+        <div className="container flex items-center justify-between h-[60px] gap-4">
+          {/* Logo + Search */}
+          <div className="flex items-center gap-3 shrink-0">
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+              {logoUrl ? (
+                <img src={logoUrl} alt={displayName} className="w-9 h-9 rounded-lg object-contain transition-transform group-hover:scale-105" />
+              ) : (
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center transition-transform group-hover:scale-105 shadow-md shadow-violet-500/20">
+                  <span className="text-primary-foreground font-bold text-sm">S</span>
+                </div>
+              )}
+              <span className="font-space font-bold text-lg text-foreground">{displayName}</span>
+            </Link>
+
+            {/* Search Bar - Desktop */}
+            <form onSubmit={handleSearch} className="hidden md:flex shrink-0">
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('productsPage.searchPlaceholder')}
+                  className="w-48 pr-9 pl-3 py-2 rounded-xl bg-muted/50 border border-border/50 text-sm placeholder:text-muted-foreground hover:border-border focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 text-foreground"
+                />
               </div>
-            )}
-            <span className="font-cairo font-bold text-lg text-foreground">{displayName}</span>
-          </Link>
+            </form>
+          </div>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-0.5">
+          <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
             {NAV_LINKS.map(link => {
               const isActive = location.pathname === link.to;
               return (
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-cairo font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'text-primary bg-primary/10'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -119,24 +148,24 @@ export default function Navbar() {
                 onMouseLeave={handleCatLeave}
               >
                 <button
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-cairo font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     catOpen
                       ? 'text-primary bg-primary/10'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}
                 >
                   <Grid3X3 className="w-4 h-4" />
-                  التصنيفات
+                  الفئات
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${catOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown */}
                 {catOpen && (
-                  <div className="absolute top-full right-0 mt-1 w-72 bg-card border rounded-xl shadow-lg p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-full left-0 mt-1 w-72 bg-card border rounded-xl shadow-lg p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <Link
                       to="/products"
                       onClick={() => setCatOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-cairo font-semibold transition-colors hover:bg-muted text-muted-foreground hover:text-foreground"
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-muted text-muted-foreground hover:text-foreground"
                     >
                       <Grid3X3 className="w-4 h-4" />
                       الكل
@@ -150,7 +179,7 @@ export default function Navbar() {
                             key={cat.name}
                             to={`/products?category=${encodeURIComponent(cat.name)}`}
                             onClick={() => setCatOpen(false)}
-                            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-cairo font-medium transition-colors ${
+                            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                               isActive
                                 ? 'text-primary bg-primary/10'
                                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -169,15 +198,7 @@ export default function Navbar() {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="hidden md:flex p-2.5 rounded-xl hover:bg-muted transition-colors"
-              aria-label="بحث"
-            >
-              <Search className="w-5 h-5 text-muted-foreground" />
-            </button>
-
+          <div className="flex items-center gap-1 shrink-0">
             {!loading && (
               <Link
                 to={user ? '/dashboard' : '/auth'}
@@ -197,22 +218,33 @@ export default function Navbar() {
             {!loading && user && isAdmin && (
               <Link
                 to="/admin"
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-cairo font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                title="لوحة التحكم"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                title={t('public.nav.admin')}
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
-                لوحة التحكم
+                {t('public.nav.admin')}
               </Link>
             )}
+
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as Language)}
+              className="hidden md:block h-9 rounded-xl border border-border bg-background px-2 text-xs font-medium text-foreground"
+              aria-label={t('landing.language')}
+            >
+              <option value="ar">العربية</option>
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+            </select>
 
             <Link
               to="/wishlist"
               className="relative p-2.5 rounded-xl hover:bg-muted transition-colors"
-              aria-label="المفضلة"
+              aria-label={t('public.nav.wishlist')}
             >
               <Heart className={`w-5 h-5 ${wishlistCount > 0 ? 'text-destructive fill-destructive' : 'text-muted-foreground'}`} />
               {wishlistCount > 0 && (
-                <span className="absolute -top-0.5 -left-0.5 w-4 h-4 bg-destructive text-white text-[10px] font-roboto rounded-full flex items-center justify-center font-bold shadow-sm">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-white text-[10px] font-roboto rounded-full flex items-center justify-center font-bold shadow-sm">
                   {wishlistCount}
                 </span>
               )}
@@ -223,7 +255,7 @@ export default function Navbar() {
             >
               <ShoppingCart className="w-5 h-5 text-foreground" />
               {totalItems > 0 && (
-                <span className="absolute -top-0.5 -left-0.5 w-5 h-5 bg-primary text-primary-foreground text-[11px] font-roboto rounded-full flex items-center justify-center font-bold shadow-sm animate-in zoom-in-50 duration-200">
+                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-primary text-primary-foreground text-[11px] font-roboto rounded-full flex items-center justify-center font-bold shadow-sm animate-in zoom-in-50 duration-200">
                   {totalItems}
                 </span>
               )}
@@ -239,15 +271,29 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden border-b bg-card/95 backdrop-blur-xl animate-fade-in">
           <div className="container py-3 space-y-3">
+            {/* Mobile Search */}
+            <form onSubmit={handleSearch} className="flex">
+              <div className="relative w-full">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('productsPage.searchPlaceholder')}
+                  className="w-full pr-9 pl-3 py-2 rounded-xl bg-muted/50 border border-border/50 text-sm placeholder:text-muted-foreground hover:border-border focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 text-foreground"
+                />
+              </div>
+            </form>
+
             {categories && categories.length > 0 && (
               <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-2 border-b border-border/50">
                 <Link
                   to="/products"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-cairo font-semibold whitespace-nowrap shrink-0 bg-primary/10 text-primary"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 bg-primary/10 text-primary"
                 >
                   <Grid3X3 className="w-3.5 h-3.5" />
-                  الكل
+                  {t('common.all')}
                 </Link>
                 {categories.map(cat => {
                   const Icon = getCategoryIcon(cat.icon);
@@ -256,7 +302,7 @@ export default function Navbar() {
                       key={cat.name}
                       to={`/products?category=${encodeURIComponent(cat.name)}`}
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-cairo font-semibold whitespace-nowrap shrink-0 bg-muted text-muted-foreground hover:text-foreground"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 bg-muted text-muted-foreground hover:text-foreground"
                     >
                       <Icon className="w-3.5 h-3.5" />
                       {cat.name}
@@ -274,7 +320,7 @@ export default function Navbar() {
                     key={link.to}
                     to={link.to}
                     onClick={() => setMenuOpen(false)}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-cairo font-medium text-sm transition-colors ${
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-medium text-sm transition-colors ${
                       isActive
                         ? 'text-primary bg-primary/10'
                         : 'text-muted-foreground hover:bg-muted'
@@ -288,29 +334,43 @@ export default function Navbar() {
               <Link
                 to="/wishlist"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-cairo font-medium text-sm text-muted-foreground hover:bg-muted"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-medium text-sm text-muted-foreground hover:bg-muted"
               >
                 <Heart className={`w-4 h-4 ${wishlistCount > 0 ? 'text-destructive fill-destructive' : ''}`} />
-                المفضلة {wishlistCount > 0 && `(${wishlistCount})`}
+                {t('public.nav.wishlist')} {wishlistCount > 0 && `(${wishlistCount})`}
               </Link>
               <Link
                 to={user ? '/dashboard' : '/auth'}
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-cairo font-medium text-sm text-muted-foreground hover:bg-muted"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-medium text-sm text-muted-foreground hover:bg-muted"
               >
                 <User className="w-4 h-4" />
-                {user ? 'حسابي' : 'تسجيل الدخول'}
+                {user ? t('public.nav.account') : t('public.nav.login')}
               </Link>
               {user && isAdmin && (
                 <Link
                   to="/admin"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-cairo font-semibold text-sm bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-semibold text-sm bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  لوحة التحكم
+                  {t('public.nav.admin')}
                 </Link>
               )}
+
+              <div className="pt-2 border-t border-border/50 mt-1">
+                <label className="text-xs text-muted-foreground mb-1 block">{t('landing.language')}</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as Language)}
+                  className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground"
+                  aria-label={t('landing.language')}
+                >
+                  <option value="ar">العربية</option>
+                  <option value="en">English</option>
+                  <option value="fr">Français</option>
+                </select>
+              </div>
             </nav>
           </div>
         </div>

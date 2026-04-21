@@ -53,6 +53,8 @@ import AdminStatisticsPage from "./pages/admin/AdminStatisticsPage";
 import AdminDeliveryPage from "./pages/admin/settings/AdminDeliveryPage";
 import AdminPixelsPage from "./pages/admin/settings/AdminPixelsPage";
 import AboutPage from "./pages/AboutPage";
+import FAQPage from "./pages/FAQPage";
+import CategoriesPage from "./pages/CategoriesPage";
 import LandingPage from "./pages/LandingPage";
 import WishlistPage from "./pages/WishlistPage";
 import NotFound from "./pages/NotFound";
@@ -64,6 +66,7 @@ import { useFacebookPixel } from "@/hooks/useFacebookPixel";
 import { LanguageProvider } from "@/i18n";
 import OfflineBanner from "@/components/OfflineBanner";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import AutoPageTranslator from "@/components/AutoPageTranslator";
 const queryClient = new QueryClient();
 
 function StoreThemeProvider({ children }: { children: React.ReactNode }) {
@@ -95,6 +98,8 @@ const App = () => (
         <Toaster />
         <Sonner />
         <OfflineBanner />
+        <LanguageProvider>
+        <AutoPageTranslator />
         <BrowserRouter>
           <Routes>
             {/* Public */}
@@ -108,6 +113,8 @@ const App = () => (
             <Route path="/auth" element={<PublicLayout><AuthPage /></PublicLayout>} />
             <Route path="/dashboard" element={<PublicLayout><CustomerDashboardPage /></PublicLayout>} />
             <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
+            <Route path="/faq" element={<PublicLayout><FAQPage /></PublicLayout>} />
+            <Route path="/categories" element={<PublicLayout><CategoriesPage /></PublicLayout>} />
             <Route path="/wishlist" element={<PublicLayout><WishlistPage /></PublicLayout>} />
             <Route path="/lp/:id" element={<LandingPage />} />
 
@@ -153,6 +160,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </LanguageProvider>
       </TooltipProvider>
       </StoreThemeProvider>
       </WishlistProvider>

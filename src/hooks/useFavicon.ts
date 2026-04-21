@@ -7,7 +7,7 @@ export function useFavicon() {
     queryKey: ['store-favicon'],
     queryFn: async () => {
       const { data } = await supabase.from('settings').select('value').eq('key', 'store_favicon').maybeSingle();
-      return data?.value || '';
+      return data?.value || '/solutions-hub-logo.svg';
     },
     staleTime: 10 * 60 * 1000,
   });

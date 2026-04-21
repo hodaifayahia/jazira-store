@@ -41,7 +41,7 @@ export default function AnnouncementBar() {
     <div className="bg-primary text-primary-foreground">
       <div className="container py-2 text-center">
         <p
-          className={`font-cairo text-sm font-medium transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+          className={`text-sm font-medium transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
         >
           {texts[currentIndex]}
         </p>

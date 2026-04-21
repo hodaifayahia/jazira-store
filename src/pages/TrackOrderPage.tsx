@@ -5,16 +5,24 @@ import { Button } from '@/components/ui/button';
 import { Search, Package, Truck, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/format';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/i18n';
 
 const STATUS_STEPS = ['جديد', 'قيد المعالجة', 'تم الشحن', 'تم التسليم'];
 const STATUS_ICONS = [Clock, Package, Truck, CheckCircle];
 
 export default function TrackOrderPage() {
+  const { t } = useTranslation();
   const [orderNumber, setOrderNumber] = useState('');
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const { toast } = useToast();
+  const statusStepLabels = [
+    t('trackOrder.status.new'),
+    t('trackOrder.status.processing'),
+    t('trackOrder.status.shipped'),
+    t('trackOrder.status.delivered'),
+  ];
 
   const handleSearch = async () => {
     if (!orderNumber.trim()) return;
@@ -28,7 +36,7 @@ export default function TrackOrderPage() {
     setOrder(data);
     setLoading(false);
     if (error || !data) {
-      toast({ title: 'غير موجود', description: 'لم يتم العثور على الطلب', variant: 'destructive' });
+      toast({ title: t('trackOrder.toast.notFoundTitle'), description: t('trackOrder.toast.notFoundDescription'), variant: 'destructive' });
     }
   };
 
@@ -36,27 +44,27 @@ export default function TrackOrderPage() {
 
   return (
     <div className="container py-8 max-w-2xl">
-      <h1 className="font-cairo font-bold text-3xl mb-6">تتبع الطلب</h1>
+      <h1 className="font-cairo font-bold text-3xl mb-6">{t('trackOrder.title')}</h1>
       
       <div className="flex gap-2 mb-8">
         <Input
           value={orderNumber}
           onChange={e => setOrderNumber(e.target.value)}
-          placeholder="أدخل رقم الطلب (مثال: ORD-001)"
+          placeholder={t('trackOrder.inputPlaceholder')}
           className="font-roboto"
           dir="ltr"
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
         />
         <Button onClick={handleSearch} disabled={loading} className="font-cairo shrink-0 gap-1">
           <Search className="w-4 h-4" />
-          تتبع
+          {t('trackOrder.search')}
         </Button>
       </div>
 
       {order && (
         <div className="bg-card border rounded-lg p-6 animate-fade-in space-y-6">
           <div className="text-center">
-            <p className="font-cairo text-sm text-muted-foreground">رقم الطلب</p>
+            <p className="font-cairo text-sm text-muted-foreground">{t('trackOrder.orderNumber')}</p>
             <p className="font-roboto font-bold text-xl text-primary">{order.order_number}</p>
             <p className="font-cairo text-sm text-muted-foreground mt-1">{formatDate(order.created_at)}</p>
           </div>
@@ -64,11 +72,11 @@ export default function TrackOrderPage() {
           {order.status === 'ملغي' ? (
             <div className="flex items-center justify-center gap-2 text-destructive py-4">
               <XCircle className="w-6 h-6" />
-              <span className="font-cairo font-bold text-lg">تم إلغاء الطلب</span>
+              <span className="font-cairo font-bold text-lg">{t('trackOrder.cancelled')}</span>
             </div>
           ) : (
             <div className="flex items-center justify-between px-4">
-              {STATUS_STEPS.map((step, i) => {
+              {statusStepLabels.map((step, i) => {
                 const Icon = STATUS_ICONS[i];
                 const active = i <= currentStep;
                 return (
@@ -88,15 +96,15 @@ export default function TrackOrderPage() {
 
           <div className="space-y-2 pt-4 border-t">
             <div className="flex justify-between font-cairo text-sm">
-              <span className="text-muted-foreground">الاسم</span>
+              <span className="text-muted-foreground">{t('trackOrder.customerName')}</span>
               <span>{order.customer_name}</span>
             </div>
             <div className="flex justify-between font-cairo text-sm">
-              <span className="text-muted-foreground">الولاية</span>
+              <span className="text-muted-foreground">{t('trackOrder.wilaya')}</span>
               <span>{order.wilayas?.name}</span>
             </div>
             <div className="flex justify-between font-cairo text-sm font-bold">
-              <span>الإجمالي</span>
+              <span>{t('trackOrder.total')}</span>
               <span className="font-roboto text-primary">{formatPrice(Number(order.total_amount))}</span>
             </div>
           </div>
@@ -105,7 +113,7 @@ export default function TrackOrderPage() {
 
       {searched && !order && !loading && (
         <div className="text-center py-12">
-          <p className="font-cairo text-muted-foreground text-lg">لم يتم العثور على الطلب</p>
+          <p className="font-cairo text-muted-foreground text-lg">{t('trackOrder.notFound')}</p>
         </div>
       )}
     </div>
