@@ -41,14 +41,14 @@ export default function AdminClientsPage() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active', fixed_price_enabled: false, fixed_unit_price: '' });
+  const [form, setForm] = useState({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active' });
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'balance'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const openAdd = () => {
     setEditingClient(null);
-    setForm({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active', fixed_price_enabled: false, fixed_unit_price: '' });
+    setForm({ name: '', phone: '', address: '', wilaya: '', notes: '', status: 'active' });
     setDialogOpen(true);
   };
 
@@ -61,15 +61,13 @@ export default function AdminClientsPage() {
       wilaya: c.wilaya || '',
       notes: c.notes || '',
       status: c.status,
-      fixed_price_enabled: Boolean((c as any).fixed_price_enabled),
-      fixed_unit_price: (c as any).fixed_unit_price != null ? String((c as any).fixed_unit_price) : '',
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error(t('common.required')); return; }
-    // Only send fields that exist in the DB schema (no fixed_price_enabled / fixed_unit_price)
+    // Construct the payload with only valid DB schema fields
     const dbPayload = {
       name: form.name,
       phone: form.phone,
@@ -251,18 +249,7 @@ export default function AdminClientsPage() {
             <div><Label className="font-cairo text-sm">{t('common.phone')}</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="font-cairo mt-1" /></div>
             <div><Label className="font-cairo text-sm">{t('clients.wilaya')}</Label><Input value={form.wilaya} onChange={e => setForm(f => ({ ...f, wilaya: e.target.value }))} className="font-cairo mt-1" /></div>
             <div><Label className="font-cairo text-sm">{t('clients.address')}</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} className="font-cairo mt-1" /></div>
-            <div className="rounded-lg border p-3 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <Label className="font-cairo text-sm">تسعير ثابت للعميل</Label>
-                <Switch checked={form.fixed_price_enabled} onCheckedChange={(checked) => setForm(f => ({ ...f, fixed_price_enabled: checked }))} />
-              </div>
-              {form.fixed_price_enabled ? (
-                <div>
-                  <Label className="font-cairo text-sm">السعر الثابت لكل منتج (دج)</Label>
-                  <Input type="number" min={0} value={form.fixed_unit_price} onChange={e => setForm(f => ({ ...f, fixed_unit_price: e.target.value }))} className="font-roboto mt-1" />
-                </div>
-              ) : null}
-            </div>
+
             <div><Label className="font-cairo text-sm">{t('common.notes')}</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo mt-1" /></div>
           </div>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
