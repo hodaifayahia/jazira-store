@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/format';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Tag, Loader2, X } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Tag, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { ALGERIA_WILAYAS } from '@/data/algeria-wilayas';
 
 interface OrderItem {
@@ -44,6 +44,10 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
   // Product selection
   const [productSearch, setProductSearch] = useState('');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  // Track which product is expanded (for variant selection)
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  // Track selected options per product for the new variant system
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, Record<string, string>>>({});
 
   // Coupon
   const [couponCode, setCouponCode] = useState('');
@@ -67,10 +71,35 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
     },
   });
 
+  // Legacy variations
   const { data: variations } = useQuery({
     queryKey: ['variations-for-order'],
     queryFn: async () => {
       const { data } = await supabase.from('product_variations').select('*').eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  // New variant system: option groups with their values
+  const { data: optionGroups } = useQuery({
+    queryKey: ['option-groups-for-order'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('product_option_groups')
+        .select('*, product_option_values(*)')
+        .order('position');
+      return data || [];
+    },
+  });
+
+  // New variant system: product variants
+  const { data: productVariants } = useQuery({
+    queryKey: ['product-variants-for-order'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('is_active', true);
       return data || [];
     },
   });
@@ -92,8 +121,30 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
     return products.filter(p => p.name.includes(productSearch) || p.sku?.includes(productSearch));
   }, [products, productSearch]);
 
+  // Get legacy variations for a product
   const getProductVariations = (productId: string) => {
     return variations?.filter(v => v.product_id === productId) || [];
+  };
+
+  // Get new-system option groups for a product
+  const getProductOptionGroups = (productId: string) => {
+    return optionGroups?.filter(g => g.product_id === productId) || [];
+  };
+
+  // Get new-system variants for a product
+  const getProductVariants = (productId: string) => {
+    return productVariants?.filter(v => v.product_id === productId) || [];
+  };
+
+  // Match selected options to a variant
+  const findMatchingVariant = (productId: string, opts: Record<string, string>) => {
+    const groups = getProductOptionGroups(productId);
+    const variants = getProductVariants(productId);
+    if (Object.keys(opts).length < groups.length) return null;
+    return variants.find(v => {
+      const ov = v.option_values as Record<string, string>;
+      return groups.every(g => ov[g.name] === opts[g.name]);
+    }) || null;
   };
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -114,9 +165,10 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
   const total = subtotal + shippingCost - discountAmount;
 
   // Add product to order
-  const addProduct = (product: any, variation?: any) => {
+  const addProduct = (product: any, variation?: any, variant?: any) => {
+    const varId = variant?.id || variation?.id || undefined;
     const existingIndex = orderItems.findIndex(
-      i => i.productId === product.id && i.variationId === (variation?.id || undefined)
+      i => i.productId === product.id && i.variationId === varId
     );
 
     if (existingIndex >= 0) {
@@ -126,16 +178,57 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
       return;
     }
 
-    const price = Number(product.price) + (variation ? Number(variation.price_adjustment || 0) : 0);
+    let price: number;
+    let label = '';
+    if (variant) {
+      // New variant system
+      price = Number(variant.price);
+      const ov = variant.option_values as Record<string, string>;
+      label = Object.values(ov).join(' / ');
+    } else if (variation) {
+      // Legacy variation system
+      price = Number(product.price) + Number(variation.price_adjustment || 0);
+      label = variation.variation_value;
+    } else {
+      price = Number(product.price);
+    }
+
     setOrderItems(prev => [...prev, {
       productId: product.id,
-      productName: product.name + (variation ? ` (${variation.variation_value})` : ''),
+      productName: product.name + (label ? ` (${label})` : ''),
       price,
       quantity: 1,
-      variationId: variation?.id,
-      variationLabel: variation?.variation_value,
-      image: product.images?.[0],
+      variationId: varId,
+      variationLabel: label || undefined,
+      image: variant?.image_url || product.images?.[0],
     }]);
+
+    // Collapse after adding
+    setExpandedProductId(null);
+    setSelectedOptions(prev => {
+      const next = { ...prev };
+      delete next[product.id];
+      return next;
+    });
+  };
+
+  // Add variant product (new system) with option validation
+  const addVariantProduct = (product: any) => {
+    const groups = getProductOptionGroups(product.id);
+    const opts = selectedOptions[product.id] || {};
+
+    if (Object.keys(opts).length < groups.length) {
+      toast({ title: 'يرجى اختيار جميع الخيارات أولاً', variant: 'destructive' });
+      return;
+    }
+
+    const matchedVariant = findMatchingVariant(product.id, opts);
+    if (!matchedVariant) {
+      toast({ title: 'هذا الخيار غير متوفر', variant: 'destructive' });
+      return;
+    }
+
+    addProduct(product, undefined, matchedVariant);
   };
 
   const updateQuantity = (index: number, delta: number) => {
@@ -277,6 +370,155 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
     setOrderItems([]);
     setCouponCode('');
     setAppliedCoupon(null);
+    setExpandedProductId(null);
+    setSelectedOptions({});
+  };
+
+  // Render product row in list
+  const renderProductRow = (product: any) => {
+    const legacyVars = getProductVariations(product.id);
+    const newGroups = getProductOptionGroups(product.id);
+    const hasNewVariants = product.has_variants && newGroups.length > 0;
+    const hasLegacyVariations = !product.has_variants && legacyVars.length > 0;
+    const hasAnyVariation = hasNewVariants || hasLegacyVariations;
+    const isExpanded = expandedProductId === product.id;
+
+    return (
+      <div key={product.id} className="border-b last:border-b-0">
+        <div className="p-2.5 hover:bg-muted/50 transition-colors">
+          <div className="flex items-center gap-3">
+            {product.images?.[0] && (
+              <img src={product.images[0]} alt={product.name} className="w-10 h-10 rounded object-cover border flex-shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-cairo text-sm font-medium truncate">{product.name}</p>
+              <p className="font-roboto text-xs text-muted-foreground">
+                {formatPrice(Number(product.price))} · المخزون: {product.stock || 0}
+              </p>
+            </div>
+
+            {/* No variations: simple add button */}
+            {!hasAnyVariation && (
+              <Button size="sm" variant="outline" className="font-cairo text-xs h-7" onClick={() => addProduct(product)}>
+                <Plus className="w-3 h-3 ml-1" /> أضف
+              </Button>
+            )}
+
+            {/* Has legacy variations: show inline buttons */}
+            {hasLegacyVariations && (
+              <div className="flex flex-wrap gap-1">
+                {legacyVars.map(v => (
+                  <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[10px] h-6 px-2" onClick={() => addProduct(product, v)}>
+                    {v.variation_value}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {/* Has new variant system: toggle expand */}
+            {hasNewVariants && (
+              <Button
+                size="sm"
+                variant={isExpanded ? "default" : "outline"}
+                className="font-cairo text-xs h-7 gap-1"
+                onClick={() => {
+                  setExpandedProductId(isExpanded ? null : product.id);
+                  if (!isExpanded) {
+                    // Reset selection for this product
+                    setSelectedOptions(prev => ({ ...prev, [product.id]: {} }));
+                  }
+                }}
+              >
+                اختر الخيارات
+                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Expanded variant selection for new system */}
+        {hasNewVariants && isExpanded && (
+          <div className="px-3 pb-3 bg-muted/20 border-t space-y-3 pt-3">
+            {newGroups
+              .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+              .map((group: any) => {
+                const values = (group.product_option_values || []).sort(
+                  (a: any, b: any) => (a.position || 0) - (b.position || 0)
+                );
+                const currentSelection = selectedOptions[product.id]?.[group.name];
+
+                return (
+                  <div key={group.id}>
+                    <Label className="font-cairo text-xs font-semibold mb-1.5 block">
+                      {group.name} <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {values.map((val: any) => {
+                        const isSelected = currentSelection === val.label;
+                        const isColor = group.display_type === 'color';
+
+                        return (
+                          <button
+                            key={val.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedOptions(prev => ({
+                                ...prev,
+                                [product.id]: {
+                                  ...(prev[product.id] || {}),
+                                  [group.name]: val.label,
+                                },
+                              }));
+                            }}
+                            className={`
+                              transition-all duration-150 font-cairo
+                              ${isColor
+                                ? `w-8 h-8 rounded-full border-2 ${isSelected ? 'border-primary ring-2 ring-primary/30 scale-110' : 'border-border hover:border-primary/50'}`
+                                : `px-3 py-1.5 rounded-md text-xs border ${isSelected ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-border bg-background hover:border-primary/50 hover:bg-muted/50'}`
+                              }
+                            `}
+                            style={isColor ? { backgroundColor: val.color_hex || '#888' } : undefined}
+                            title={val.label}
+                          >
+                            {!isColor && val.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+            {/* Show matched variant price & add button */}
+            {(() => {
+              const opts = selectedOptions[product.id] || {};
+              const allSelected = Object.keys(opts).length >= newGroups.length;
+              const matchedVariant = allSelected ? findMatchingVariant(product.id, opts) : null;
+
+              return (
+                <div className="flex items-center justify-between pt-2 border-t border-dashed">
+                  <div className="font-cairo text-sm">
+                    {allSelected && matchedVariant ? (
+                      <span className="font-bold text-primary">{formatPrice(Number(matchedVariant.price))}</span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">اختر جميع الخيارات لعرض السعر</span>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    className="font-cairo text-xs h-8 gap-1"
+                    disabled={!allSelected || !matchedVariant}
+                    onClick={() => addVariantProduct(product)}
+                  >
+                    <Plus className="w-3 h-3" /> إضافة للطلب
+                  </Button>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -368,36 +610,8 @@ export default function ManualOrderDialog({ open, onOpenChange }: ManualOrderDia
               <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ابحث عن منتج..." className="pr-10 font-cairo" />
             </div>
 
-            <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
-              {filteredProducts.map(product => {
-                const prodVariations = getProductVariations(product.id);
-                return (
-                  <div key={product.id} className="p-2.5 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      {product.images?.[0] && (
-                        <img src={product.images[0]} alt={product.name} className="w-10 h-10 rounded object-cover border" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-cairo text-sm font-medium truncate">{product.name}</p>
-                        <p className="font-roboto text-xs text-muted-foreground">{formatPrice(Number(product.price))} · المخزون: {product.stock || 0}</p>
-                      </div>
-                      {prodVariations.length === 0 ? (
-                        <Button size="sm" variant="outline" className="font-cairo text-xs h-7" onClick={() => addProduct(product)}>
-                          <Plus className="w-3 h-3 ml-1" /> أضف
-                        </Button>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {prodVariations.map(v => (
-                            <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[10px] h-6 px-2" onClick={() => addProduct(product, v)}>
-                              {v.variation_value}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="max-h-64 overflow-y-auto border rounded-lg">
+              {filteredProducts.map(product => renderProductRow(product))}
               {filteredProducts.length === 0 && (
                 <p className="p-4 text-center text-sm text-muted-foreground font-cairo">لا توجد منتجات</p>
               )}
