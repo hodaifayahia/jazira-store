@@ -10,8 +10,6 @@ export interface Client {
   wilaya: string | null;
   notes: string | null;
   status: string;
-  fixed_price_enabled: boolean;
-  fixed_unit_price: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -73,7 +71,15 @@ export function useUpdateClient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Client> & { id: string }) => {
-      const { error } = await supabase.from('clients').update(updates).eq('id', id);
+      // Only send fields that exist in the database schema
+      const payload: Record<string, any> = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.phone !== undefined) payload.phone = updates.phone || null;
+      if (updates.address !== undefined) payload.address = updates.address || null;
+      if (updates.wilaya !== undefined) payload.wilaya = updates.wilaya || null;
+      if (updates.notes !== undefined) payload.notes = updates.notes || null;
+      if (updates.status !== undefined) payload.status = updates.status;
+      const { error } = await supabase.from('clients').update(payload).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
