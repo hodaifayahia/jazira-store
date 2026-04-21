@@ -125,8 +125,6 @@ export default function AdminClientDetailPage() {
 
   const selectedProduct = products?.find(p => p.id === giveForm.product_id);
   const selectedReturnProduct = products?.find(p => p.id === returnForm.product_id);
-  const isFixedClientPrice = Boolean((client as any)?.fixed_price_enabled && Number((client as any)?.fixed_unit_price || 0) > 0);
-  const fixedClientUnitPrice = Number((client as any)?.fixed_unit_price || 0);
 
   const normalizeOptionValues = (raw: Record<string, unknown> | null | undefined): SelectedVariations => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
@@ -222,7 +220,6 @@ export default function AdminClientDetailPage() {
   };
 
   const calculateUnitPrice = (productId: string, selectedVariations: SelectedVariations) => {
-    if (isFixedClientPrice) return fixedClientUnitPrice;
 
     const matchedVariant = findMatchingProductVariant(productId, selectedVariations);
     if (matchedVariant) return Number(matchedVariant.price ?? 0);
@@ -595,7 +592,6 @@ export default function AdminClientDetailPage() {
               <div>
                 <Label className="font-cairo">{t('clients.unitPrice')}</Label>
                 <Input type="number" min={0} value={giveForm.unit_price} onChange={e => setGiveForm(f => ({ ...f, unit_price: Number(e.target.value) }))} className="font-cairo" />
-                {isFixedClientPrice ? <p className="font-cairo text-xs text-muted-foreground mt-1">تم تطبيق سعر عميل ثابت</p> : null}
               </div>
               <div>
                 <Label className="font-cairo">{t('common.total')}</Label>
