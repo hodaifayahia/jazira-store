@@ -59,9 +59,7 @@ export default function AdminCreateOrderPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_type: string; discount_value: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
 
-  // Variant selection state
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, Record<string, string>>>({});
+
 
   const { data: wilayas } = useQuery({
     queryKey: ['wilayas-for-order'],
@@ -159,9 +157,56 @@ export default function AdminCreateOrderPage() {
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    if (!productSearch) return products;
-    return products.filter(p => p.name.includes(productSearch) || p.sku?.includes(productSearch));
-  }, [products, productSearch]);
+
+    const flatList: any[] = [];
+    products.forEach(p => {
+      const legacyVars = getProductVariations(p.id);
+      const newGroups = getProductOptionGroups(p.id);
+      const variants = getProductVariants(p.id);
+
+      const hasNewVariants = newGroups.length > 0 && variants.length > 0;
+      const hasLegacyVariations = !hasNewVariants && legacyVars.length > 0;
+
+      if (hasNewVariants) {
+        variants.forEach(v => {
+          const ov = v.option_values as Record<string, string>;
+          const label = Object.values(ov).join(' / ');
+          flatList.push({
+            ...p,
+            _flatId: `${p.id}_${v.id}`,
+            name: `${p.name} (${label})`,
+            price: v.price || p.price,
+            stock: v.quantity ?? p.stock,
+            image: v.image_url || p.images?.[0],
+            _sourceProduct: p,
+            _matchedVariant: v
+          });
+        });
+      } else if (hasLegacyVariations) {
+        legacyVars.forEach(v => {
+          flatList.push({
+            ...p,
+            _flatId: `${p.id}_${v.id}`,
+            name: `${p.name} (${v.variation_value})`,
+            price: Number(p.price) + Number(v.price_adjustment || 0),
+            stock: v.stock ?? p.stock,
+            image: p.images?.[0],
+            _sourceProduct: p,
+            _matchedLegacyVariation: v
+          });
+        });
+      } else {
+        flatList.push({
+          ...p,
+          _flatId: p.id,
+          _sourceProduct: p
+        });
+      }
+    });
+
+    if (!productSearch) return flatList;
+    return flatList.filter(p => p.name.includes(productSearch) || p.sku?.includes(productSearch));
+  }, [products, productSearch, variations, optionGroups, productVariants]);
 
   const getProductVariations = (productId: string) => {
     return variations?.filter(v => v.product_id === productId) || [];
@@ -175,15 +220,7 @@ export default function AdminCreateOrderPage() {
     return productVariants?.filter((v: any) => v.product_id === productId) || [];
   };
 
-  const findMatchingVariant = (productId: string, opts: Record<string, string>) => {
-    const groups = getProductOptionGroups(productId);
-    const variants = getProductVariants(productId);
-    if (Object.keys(opts).length < groups.length) return null;
-    return variants.find((v: any) => {
-      const ov = v.option_values as Record<string, string>;
-      return groups.every((g: any) => ov[g.name] === opts[g.name]);
-    }) || null;
-  };
+
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -237,29 +274,9 @@ export default function AdminCreateOrderPage() {
       image: variant?.image_url || product.images?.[0],
       stock: product.stock ?? 0,
     }]);
-
-    setExpandedProductId(null);
-    setSelectedOptions(prev => {
-      const next = { ...prev };
-      delete next[product.id];
-      return next;
-    });
   };
 
-  const addVariantProduct = (product: any) => {
-    const groups = getProductOptionGroups(product.id);
-    const opts = selectedOptions[product.id] || {};
-    if (Object.keys(opts).length < groups.length) {
-      toast({ title: 'يرجى اختيار جميع الخيارات أولاً', variant: 'destructive' });
-      return;
-    }
-    const matchedVariant = findMatchingVariant(product.id, opts);
-    if (!matchedVariant) {
-      toast({ title: 'هذا الخيار غير متوفر', variant: 'destructive' });
-      return;
-    }
-    addProduct(product, undefined, matchedVariant);
-  };
+
 
   const updateQuantity = (index: number, delta: number) => {
     const updated = [...orderItems];
@@ -385,147 +402,37 @@ export default function AdminCreateOrderPage() {
   const canSubmitFast = customerName.trim() && customerPhone.trim() && selectedWilayaId && orderItems.length > 0;
 
   // Shared product row renderer for both fast mode and step mode
-  const renderProductRow = (product: any) => {
-    const legacyVars = getProductVariations(product.id);
-    const newGroups = getProductOptionGroups(product.id);
-    const hasNewVariants = newGroups.length > 0;
-    const hasLegacyVariations = !hasNewVariants && legacyVars.length > 0;
-    const hasAnyVariation = hasNewVariants || hasLegacyVariations;
-    const isExpanded = expandedProductId === product.id;
-
+  const renderProductRow = (flatProduct: any) => {
     return (
-      <div key={product.id} className="border-b last:border-b-0">
+      <div key={flatProduct._flatId} className="border-b last:border-b-0">
         <div className="p-3 hover:bg-muted/50 transition-colors">
           <div className="flex items-center gap-3">
-            {product.images?.[0] && (
-              <img src={product.images[0]} alt={product.name} className="w-14 h-14 rounded-xl object-cover border flex-shrink-0" />
-            )}
+            {flatProduct.image ? (
+              <img src={flatProduct.image} alt={flatProduct.name} className="w-14 h-14 rounded-xl object-cover border flex-shrink-0" />
+            ) : flatProduct._sourceProduct?.images?.[0] ? (
+              <img src={flatProduct._sourceProduct.images[0]} alt={flatProduct.name} className="w-14 h-14 rounded-xl object-cover border flex-shrink-0" />
+            ) : null}
             <div className="flex-1 min-w-0">
-              <p className="font-cairo text-sm font-semibold truncate">{product.name}</p>
+              <p className="font-cairo text-sm font-semibold truncate">{flatProduct.name}</p>
               <div className="flex items-center gap-3 mt-0.5">
-                <span className="font-roboto text-sm font-bold text-primary">{formatPrice(Number(product.price))}</span>
-                <span className={`font-cairo text-xs px-2 py-0.5 rounded-full ${(product.stock ?? 0) > 5 ? 'bg-primary/10 text-primary' : (product.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-600' : 'bg-destructive/10 text-destructive'}`}>
-                  {product.stock ?? 0} في المخزون
+                <span className="font-roboto text-sm font-bold text-primary">{formatPrice(Number(flatProduct.price))}</span>
+                <span className={`font-cairo text-xs px-2 py-0.5 rounded-full ${(flatProduct.stock ?? 0) > 5 ? 'bg-primary/10 text-primary' : (flatProduct.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-600' : 'bg-destructive/10 text-destructive'}`}>
+                  {flatProduct.stock ?? 0} في المخزون
                 </span>
               </div>
             </div>
 
-            {/* No variations: simple add button */}
-            {!hasAnyVariation && (
-              <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg" onClick={() => addProduct(product)}>
-                <Plus className="w-3.5 h-3.5" /> أضف
-              </Button>
-            )}
-
-            {/* Legacy variations: inline buttons */}
-            {hasLegacyVariations && (
-              <div className="flex flex-wrap gap-1">
-                {legacyVars.map(v => (
-                  <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[11px] h-7 px-2 rounded-lg" onClick={() => addProduct(product, v)}>
-                    {v.variation_value}
-                  </Button>
-                ))}
-              </div>
-            )}
-
-            {/* New variant system: expand/collapse */}
-            {hasNewVariants && (
-              <Button
-                size="sm"
-                variant={isExpanded ? "default" : "outline"}
-                className="font-cairo text-xs h-9 gap-1 rounded-lg"
-                onClick={() => {
-                  setExpandedProductId(isExpanded ? null : product.id);
-                  if (!isExpanded) {
-                    setSelectedOptions(prev => ({ ...prev, [product.id]: {} }));
-                  }
-                }}
-              >
-                اختر الخيارات
-                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              </Button>
-            )}
+            <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg" onClick={() => {
+              addProduct(
+                flatProduct._sourceProduct,
+                flatProduct._matchedLegacyVariation,
+                flatProduct._matchedVariant
+              );
+            }}>
+              <Plus className="w-3.5 h-3.5" /> أضف
+            </Button>
           </div>
         </div>
-
-        {/* Expanded option groups for new variant system */}
-        {hasNewVariants && isExpanded && (
-          <div className="px-4 pb-4 bg-muted/20 border-t space-y-3 pt-3">
-            {newGroups
-              .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
-              .map((group: any) => {
-                const values = (group.product_option_values || []).sort(
-                  (a: any, b: any) => (a.position || 0) - (b.position || 0)
-                );
-                const currentSelection = selectedOptions[product.id]?.[group.name];
-                return (
-                  <div key={group.id}>
-                    <Label className="font-cairo text-xs font-semibold mb-1.5 block">
-                      {group.name} <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {values.map((val: any) => {
-                        const isSelected = currentSelection === val.label;
-                        const isColor = group.display_type === 'color';
-                        return (
-                          <button
-                            key={val.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedOptions(prev => ({
-                                ...prev,
-                                [product.id]: {
-                                  ...(prev[product.id] || {}),
-                                  [group.name]: val.label,
-                                },
-                              }));
-                            }}
-                            className={`
-                              transition-all duration-150 font-cairo
-                              ${isColor
-                                ? `w-8 h-8 rounded-full border-2 ${isSelected ? 'border-primary ring-2 ring-primary/30 scale-110' : 'border-border hover:border-primary/50'}`
-                                : `px-3 py-1.5 rounded-md text-xs border ${isSelected ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-border bg-background hover:border-primary/50 hover:bg-muted/50'}`
-                              }
-                            `}
-                            style={isColor ? { backgroundColor: val.color_hex || '#888' } : undefined}
-                            title={val.label}
-                          >
-                            {!isColor && val.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-
-            {/* Matched variant price and add button */}
-            {(() => {
-              const opts = selectedOptions[product.id] || {};
-              const allSelected = Object.keys(opts).length >= newGroups.length;
-              const matchedVariant = allSelected ? findMatchingVariant(product.id, opts) : null;
-              return (
-                <div className="flex items-center justify-between pt-2 border-t border-dashed">
-                  <div className="font-cairo text-sm">
-                    {allSelected && matchedVariant ? (
-                      <span className="font-bold text-primary">{formatPrice(Number(matchedVariant.price))}</span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">اختر جميع الخيارات لعرض السعر</span>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    className="font-cairo text-xs h-8 gap-1"
-                    disabled={!allSelected || !matchedVariant}
-                    onClick={() => addVariantProduct(product)}
-                  >
-                    <Plus className="w-3 h-3" /> إضافة للطلب
-                  </Button>
-                </div>
-              );
-            })()}
-          </div>
-        )}
       </div>
     );
   };
