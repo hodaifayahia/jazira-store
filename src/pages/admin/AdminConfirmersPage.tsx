@@ -103,6 +103,31 @@ export default function AdminConfirmersPage() {
   }, [settings]);
 
   // Mutations
+  // Helper to translate common error messages to Arabic
+  const translateConfirmerError = (message: string): string => {
+    if (!message) return 'حدث خطأ غير متوقع';
+    const lower = message.toLowerCase();
+    if (lower.includes('already been registered') || lower.includes('already registered') || lower.includes('already exists')) {
+      return 'هذا البريد الإلكتروني مسجل مسبقًا. يرجى استخدام بريد إلكتروني آخر.';
+    }
+    if (lower.includes('invalid email')) {
+      return 'البريد الإلكتروني غير صالح. يرجى التحقق من صيغته.';
+    }
+    if (lower.includes('password')) {
+      return 'كلمة السر ضعيفة جدًا. يرجى استخدام كلمة سر أقوى (8 أحرف على الأقل).';
+    }
+    if (lower.includes('rate limit') || lower.includes('too many')) {
+      return 'تم إجراء الكثير من المحاولات. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.';
+    }
+    if (lower.includes('network') || lower.includes('fetch')) {
+      return 'خطأ في الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
+    }
+    if (lower.includes('duplicate') || lower.includes('unique')) {
+      return 'هذا البريد الإلكتروني أو البيانات موجودة مسبقًا.';
+    }
+    return message;
+  };
+
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!addName.trim()) throw new Error('الاسم مطلوب');
@@ -130,18 +155,21 @@ export default function AdminConfirmersPage() {
       if (insertErr) throw insertErr;
 
       // 2. Call edge function to create auth account
-      const { data: fnData, error: fnErr } = await supabase.functions.invoke('manage-confirmer', {
-        body: {
-          action: 'create',
-          email: addEmail.trim(),
-          password: addPassword,
-          confirmerId: newConfirmer.id,
-        },
-      });
-      if (fnErr || fnData?.error) {
-        // Cleanup: remove the confirmer record if auth creation failed
+      try {
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke('manage-confirmer', {
+          body: {
+            action: 'create',
+            email: addEmail.trim(),
+            password: addPassword,
+            confirmerId: newConfirmer.id,
+          },
+        });
+        if (fnErr) throw fnErr;
+        if (fnData?.error) throw new Error(fnData.error);
+      } catch (authErr: any) {
+        // If auth account creation fails, clean up the confirmer record
         await supabase.from('confirmers').delete().eq('id', newConfirmer.id);
-        throw new Error(fnData?.error || fnErr?.message || 'فشل في إنشاء حساب المؤكد');
+        throw authErr;
       }
     },
     onSuccess: () => {
@@ -154,14 +182,12 @@ export default function AdminConfirmersPage() {
       setAddMonthlySalary('0'); setAddNotes('');
     },
     onError: (err: any) => {
-      const msg = err?.message || '';
-      if (msg.includes('already been registered') || msg.includes('already registered')) {
-        toast({ title: 'هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر.', variant: 'destructive' });
-      } else if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
-        toast({ title: 'هذا المؤكد موجود بالفعل. تحقق من البريد الإلكتروني أو رقم الهاتف.', variant: 'destructive' });
-      } else {
-        toast({ title: msg || 'حدث خطأ أثناء إضافة المؤكد', variant: 'destructive' });
-      }
+      const friendlyMessage = translateConfirmerError(err?.message || '');
+      toast({
+        title: '❌ فشل إضافة المؤكد',
+        description: friendlyMessage,
+        variant: 'destructive',
+      });
     },
   });
 

@@ -476,15 +476,15 @@ export default function AdminClientDetailPage() {
   if (!client) return <p className="p-4 font-cairo">{t('common.noData')}</p>;
 
   return (
-    <div className="space-y-6 p-1 min-w-0">
+    <div className="space-y-3 sm:space-y-6 px-1 min-w-0">
       {/* Header */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/admin/clients')}><ArrowLeft className="w-5 h-5" /></Button>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-cairo font-bold">{client.name}</h1>
-          <p className="text-sm text-muted-foreground font-cairo break-words">{client.phone} {client.wilaya && `• ${client.wilaya}`}</p>
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => navigate('/admin/clients')}><ArrowLeft className="w-5 h-5" /></Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-cairo font-bold truncate">{client.name}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground font-cairo break-words">{client.phone} {client.wilaya && `• ${client.wilaya}`}</p>
         </div>
-        <div className="ms-auto flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant={client.status === 'active' ? 'default' : 'secondary'} className="font-cairo">
           {client.status === 'active' ? t('common.active') : t('common.inactive')}
           </Badge>
@@ -492,42 +492,42 @@ export default function AdminClientDetailPage() {
       </div>
 
       {/* Balance KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4 text-center">
-          <Wallet className="w-5 h-5 mx-auto mb-1 text-destructive" />
-          <p className="text-xs text-muted-foreground font-cairo">{t('clients.currentBalance')}</p>
-          <p className={`text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatPrice(Math.abs(balance))}</p>
-          <p className="text-xs font-cairo text-muted-foreground">{balance > 0 ? t('clients.owes') : t('clients.settled')}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+        <Card><CardContent className="p-3 sm:p-4 text-center">
+          <Wallet className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 text-destructive" />
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.currentBalance')}</p>
+          <p className={`text-sm sm:text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatPrice(Math.abs(balance))}</p>
+          <p className="text-[10px] sm:text-xs font-cairo text-muted-foreground">{balance > 0 ? t('clients.owes') : t('clients.settled')}</p>
         </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-          <p className="text-xs text-muted-foreground font-cairo">{t('clients.totalGiven')}</p>
-          <p className="text-lg font-bold font-cairo">{formatPrice(totalGiven)}</p>
+        <Card><CardContent className="p-3 sm:p-4 text-center">
+          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 text-primary" />
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.totalGiven')}</p>
+          <p className="text-sm sm:text-lg font-bold font-cairo">{formatPrice(totalGiven)}</p>
         </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <DollarSign className="w-5 h-5 mx-auto mb-1 text-green-600" />
-          <p className="text-xs text-muted-foreground font-cairo">{t('clients.totalPaid')}</p>
-          <p className="text-lg font-bold font-cairo">{formatPrice(totalPaid)}</p>
+        <Card><CardContent className="p-3 sm:p-4 text-center">
+          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 text-green-600" />
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.totalPaid')}</p>
+          <p className="text-sm sm:text-lg font-bold font-cairo">{formatPrice(totalPaid)}</p>
         </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <TrendingDown className="w-5 h-5 mx-auto mb-1 text-orange-500" />
-          <p className="text-xs text-muted-foreground font-cairo">{t('clients.totalReturnedAmount')}</p>
-          <p className="text-lg font-bold font-cairo">{formatPrice(totalReturned)}</p>
+        <Card><CardContent className="p-3 sm:p-4 text-center">
+          <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 text-orange-500" />
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.totalReturnedAmount')}</p>
+          <p className="text-sm sm:text-lg font-bold font-cairo">{formatPrice(totalReturned)}</p>
         </CardContent></Card>
       </div>
 
       <Tabs defaultValue="give" className="w-full">
-        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 gap-1 font-cairo h-auto p-1">
-          <TabsTrigger value="give" className="gap-1 font-cairo text-xs sm:text-sm"><Package className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.giveProduct')}</span><span className="sm:hidden">Product</span></TabsTrigger>
-          <TabsTrigger value="bulk" className="gap-1 font-cairo text-xs sm:text-sm"><Plus className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.bulkAddProducts')}</span><span className="sm:hidden">Bulk</span></TabsTrigger>
-          <TabsTrigger value="payment" className="gap-1 font-cairo text-xs sm:text-sm"><DollarSign className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.recordPayment')}</span><span className="sm:hidden">Pay</span></TabsTrigger>
-          <TabsTrigger value="return" className="gap-1 font-cairo text-xs sm:text-sm"><RotateCcw className="w-4 h-4" /><span className="hidden sm:inline">{t('clients.recordReturn')}</span><span className="sm:hidden">Return</span></TabsTrigger>
+        <TabsList className="w-full grid grid-cols-4 gap-0.5 sm:gap-1 font-cairo h-auto p-0.5 sm:p-1">
+          <TabsTrigger value="give" className="gap-1 font-cairo text-[10px] sm:text-sm px-1.5 sm:px-3 py-1.5 sm:py-2"><Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">{t('clients.giveProduct')}</span><span className="sm:hidden">منتج</span></TabsTrigger>
+          <TabsTrigger value="bulk" className="gap-1 font-cairo text-[10px] sm:text-sm px-1.5 sm:px-3 py-1.5 sm:py-2"><Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">{t('clients.bulkAddProducts')}</span><span className="sm:hidden">جملة</span></TabsTrigger>
+          <TabsTrigger value="payment" className="gap-1 font-cairo text-[10px] sm:text-sm px-1.5 sm:px-3 py-1.5 sm:py-2"><DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">{t('clients.recordPayment')}</span><span className="sm:hidden">دفع</span></TabsTrigger>
+          <TabsTrigger value="return" className="gap-1 font-cairo text-[10px] sm:text-sm px-1.5 sm:px-3 py-1.5 sm:py-2"><RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">{t('clients.recordReturn')}</span><span className="sm:hidden">إرجاع</span></TabsTrigger>
         </TabsList>
 
         {/* Give Product Tab */}
         <TabsContent value="give">
-          <Card><CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card><CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label className="font-cairo">{t('common.product')} *</Label>
                 <Select value={giveForm.product_id} onValueChange={v => {
@@ -547,9 +547,9 @@ export default function AdminClientDetailPage() {
                 </Select>
               </div>
               {selectedProduct && getVariationTypes(giveForm.product_id).length > 0 && (
-                <div className="space-y-2 rounded-md border bg-muted/20 p-3 md:col-span-2">
-                  <Label className="font-cairo">{t('common.variants')}</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2 rounded-md border bg-muted/20 p-2.5 sm:p-3 sm:col-span-2">
+                  <Label className="font-cairo text-sm">{t('common.variants')}</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     {getVariationTypes(giveForm.product_id).map(variationType => {
                       const values = getVariationValues(giveForm.product_id, variationType);
                       return (
@@ -602,37 +602,37 @@ export default function AdminClientDetailPage() {
                 <p className="text-lg font-bold font-cairo mt-1">{formatPrice(giveForm.quantity * giveForm.unit_price)}</p>
               </div>
             </div>
-            <div><Label className="font-cairo">{t('common.notes')}</Label><Input value={giveForm.notes} onChange={e => setGiveForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
-            <Button onClick={handleGiveProduct} disabled={createTx.isPending} className="font-cairo gap-2"><Package className="w-4 h-4" />{t('clients.giveProduct')}</Button>
+            <div><Label className="font-cairo text-sm">{t('common.notes')}</Label><Input value={giveForm.notes} onChange={e => setGiveForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
+            <Button onClick={handleGiveProduct} disabled={createTx.isPending} className="font-cairo gap-2 w-full sm:w-auto"><Package className="w-4 h-4" />{t('clients.giveProduct')}</Button>
           </CardContent></Card>
         </TabsContent>
 
         {/* Bulk Add Products Tab */}
         <TabsContent value="bulk">
-          <Card><CardContent className="p-4 space-y-4">
+          <Card><CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
             {/* Products Selection */}
             <div>
-              <Label className="font-cairo font-semibold mb-3 block">{t('clients.selectProductsForBulk')} *</Label>
-              <div className="border rounded-lg p-3 space-y-3 max-h-96 overflow-y-auto bg-muted/30">
+              <Label className="font-cairo font-semibold mb-2 sm:mb-3 block text-sm">{t('clients.selectProductsForBulk')} *</Label>
+              <div className="border rounded-lg p-2 sm:p-3 space-y-1.5 sm:space-y-3 max-h-60 sm:max-h-96 overflow-y-auto bg-muted/30">
                 {!products?.length ? (
                   <p className="text-sm text-muted-foreground font-cairo text-center py-4">{t('common.noData')}</p>
                 ) : (
                   products.map(product => (
-                    <div key={product.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 transition-colors">
+                    <div key={product.id} className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded hover:bg-muted/50 transition-colors">
                       <Checkbox
                         checked={selectedProductIds.has(product.id)}
                         onCheckedChange={() => toggleProductSelection(product.id, product)}
                         id={`product-${product.id}`}
                       />
-                      <label htmlFor={`product-${product.id}`} className="flex-1 cursor-pointer font-cairo text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{product.name}</span>
+                      <label htmlFor={`product-${product.id}`} className="flex-1 cursor-pointer font-cairo text-xs sm:text-sm min-w-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                          <span className="font-medium truncate">{product.name}</span>
                           {getVariationTypes(product.id).length > 0 && (
-                            <Badge variant="secondary" className="text-xs font-cairo">{t('common.variants')}</Badge>
+                            <Badge variant="secondary" className="text-[10px] sm:text-xs font-cairo">{t('common.variants')}</Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {t('products.stock')}: {product.stock} • {t('common.price')}: {formatPrice(product.price)}
+                        <div className="text-[10px] sm:text-xs text-muted-foreground">
+                          {t('products.stock')}: {product.stock} • {formatPrice(product.price)}
                         </div>
                       </label>
                     </div>
@@ -644,10 +644,64 @@ export default function AdminClientDetailPage() {
             {/* Selected Products Details */}
             {bulkProducts.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="font-cairo font-semibold">{t('clients.selectedProducts')} ({bulkProducts.length})</Label>
+                <Label className="font-cairo font-semibold text-sm">{t('clients.selectedProducts')} ({bulkProducts.length})</Label>
+
+                {/* Mobile card layout */}
+                <div className="sm:hidden space-y-2">
+                  {bulkProducts.map(bulkProduct => {
+                    const variationTypes = getVariationTypes(bulkProduct.product_id);
+                    return (
+                      <div key={bulkProduct.product_id} className="rounded-lg border p-2.5 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-cairo text-sm font-medium truncate">{bulkProduct.product_name}</span>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive flex-shrink-0" onClick={() => removeBulkProduct(bulkProduct.product_id)}>
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                        {variationTypes.length > 0 && (
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {variationTypes.map(vType => {
+                              const values = getVariationValues(bulkProduct.product_id, vType);
+                              return (
+                                <div key={vType}>
+                                  <label className="text-[10px] font-cairo text-muted-foreground">{vType}</label>
+                                  <Select value={bulkProduct.selected_variations[vType] ?? ''} onValueChange={(value) => updateBulkProductVariation(bulkProduct.product_id, vType, value)}>
+                                    <SelectTrigger className="font-cairo h-7 text-xs"><SelectValue placeholder={t('common.select')} /></SelectTrigger>
+                                    <SelectContent>
+                                      {values.map(v => (
+                                        <SelectItem key={v.id} value={v.variation_value} className="font-cairo text-xs">
+                                          {v.variation_value}{v.price_adjustment ? ` (+${formatPrice(v.price_adjustment)})` : ''}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div>
+                            <label className="text-[10px] font-cairo text-muted-foreground">{t('common.quantity')}</label>
+                            <Input type="number" min={1} value={bulkProduct.quantity} onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'quantity', Number(e.target.value))} className="font-cairo h-7 text-xs" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-cairo text-muted-foreground">{t('clients.unitPrice')}</label>
+                            <Input type="number" min={0} value={bulkProduct.unit_price} onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'unit_price', Number(e.target.value))} className="font-cairo h-7 text-xs" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-cairo text-muted-foreground">{t('common.total')}</label>
+                            <p className="font-cairo text-sm font-bold mt-0.5">{formatPrice(bulkProduct.quantity * bulkProduct.unit_price)}</p>
+                          </div>
+                        </div>
+                        <Input type="text" placeholder={t('common.notes')} value={bulkProduct.notes} onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'notes', e.target.value)} className="font-cairo h-7 text-xs" />
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="border rounded-lg overflow-hidden">
+
+                {/* Desktop table layout */}
+                <div className="hidden sm:block border rounded-lg overflow-hidden">
                   <div className="overflow-x-auto max-w-full">
                     <Table className="min-w-full">
                       <TableHeader>
@@ -663,11 +717,10 @@ export default function AdminClientDetailPage() {
                       </TableHeader>
                       <TableBody>
                         {bulkProducts.map(bulkProduct => {
-                          const product = products?.find(p => p.id === bulkProduct.product_id);
                           const variationTypes = getVariationTypes(bulkProduct.product_id);
                           return (
                           <TableRow key={bulkProduct.product_id} className="hover:bg-muted/30">
-                            <TableCell className="font-cairo text-xs sm:text-sm font-medium">{bulkProduct.product_name}</TableCell>
+                            <TableCell className="font-cairo text-sm font-medium">{bulkProduct.product_name}</TableCell>
                             <TableCell className="p-2">
                               {variationTypes.length > 0 ? (
                                 <div className="space-y-2">
@@ -676,18 +729,12 @@ export default function AdminClientDetailPage() {
                                     return (
                                       <div key={vType} className="flex flex-col gap-1">
                                         <label className="text-xs font-cairo text-muted-foreground">{vType}</label>
-                                        <Select
-                                          value={bulkProduct.selected_variations[vType] ?? ''}
-                                          onValueChange={(value) => updateBulkProductVariation(bulkProduct.product_id, vType, value)}
-                                        >
-                                          <SelectTrigger className="font-cairo h-7 text-xs">
-                                            <SelectValue placeholder={t('common.select')} />
-                                          </SelectTrigger>
+                                        <Select value={bulkProduct.selected_variations[vType] ?? ''} onValueChange={(value) => updateBulkProductVariation(bulkProduct.product_id, vType, value)}>
+                                          <SelectTrigger className="font-cairo h-7 text-xs"><SelectValue placeholder={t('common.select')} /></SelectTrigger>
                                           <SelectContent>
                                             {values.map(v => (
                                               <SelectItem key={v.id} value={v.variation_value} className="font-cairo text-xs">
-                                                {v.variation_value}
-                                                {v.price_adjustment ? ` (+${formatPrice(v.price_adjustment)})` : ''}
+                                                {v.variation_value}{v.price_adjustment ? ` (+${formatPrice(v.price_adjustment)})` : ''}
                                               </SelectItem>
                                             ))}
                                           </SelectContent>
@@ -701,49 +748,18 @@ export default function AdminClientDetailPage() {
                               )}
                             </TableCell>
                             <TableCell className="p-2">
-                              <Input
-                                type="number"
-                                min={1}
-                                max={Math.max(1, getEffectiveStock(bulkProduct.product_id, bulkProduct.selected_variations))}
-                                value={bulkProduct.quantity}
-                                onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'quantity', Number(e.target.value))}
-                                className="font-cairo h-8 text-xs sm:text-sm w-16"
-                              />
-                              <p className="mt-1 text-[10px] text-muted-foreground font-cairo">
-                                {t('products.stock')}: {getEffectiveStock(bulkProduct.product_id, bulkProduct.selected_variations)}
-                              </p>
+                              <Input type="number" min={1} max={Math.max(1, getEffectiveStock(bulkProduct.product_id, bulkProduct.selected_variations))} value={bulkProduct.quantity} onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'quantity', Number(e.target.value))} className="font-cairo h-8 text-sm w-16" />
+                              <p className="mt-1 text-[10px] text-muted-foreground font-cairo">{t('products.stock')}: {getEffectiveStock(bulkProduct.product_id, bulkProduct.selected_variations)}</p>
                             </TableCell>
                             <TableCell className="p-2">
-                              <Input
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                value={bulkProduct.unit_price}
-                                onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'unit_price', Number(e.target.value))}
-                                className="font-cairo h-8 text-xs sm:text-sm w-20"
-                              />
+                              <Input type="number" min={0} step="0.01" value={bulkProduct.unit_price} onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'unit_price', Number(e.target.value))} className="font-cairo h-8 text-sm w-20" />
                             </TableCell>
-                            <TableCell className="font-cairo text-xs sm:text-sm font-bold text-right">
-                              {formatPrice(bulkProduct.quantity * bulkProduct.unit_price)}
+                            <TableCell className="font-cairo text-sm font-bold text-right">{formatPrice(bulkProduct.quantity * bulkProduct.unit_price)}</TableCell>
+                            <TableCell className="p-2">
+                              <Input type="text" placeholder={t('common.notes')} value={bulkProduct.notes} onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'notes', e.target.value)} className="font-cairo h-8 text-sm" />
                             </TableCell>
                             <TableCell className="p-2">
-                              <Input
-                                type="text"
-                                placeholder={t('common.notes')}
-                                value={bulkProduct.notes}
-                                onChange={(e) => updateBulkProduct(bulkProduct.product_id, 'notes', e.target.value)}
-                                className="font-cairo h-8 text-xs sm:text-sm"
-                              />
-                            </TableCell>
-                            <TableCell className="p-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-destructive"
-                                onClick={() => removeBulkProduct(bulkProduct.product_id)}
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeBulkProduct(bulkProduct.product_id)}><X className="w-3.5 h-3.5" /></Button>
                             </TableCell>
                           </TableRow>
                           );
@@ -754,18 +770,18 @@ export default function AdminClientDetailPage() {
                 </div>
 
                 {/* Summary Section */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 p-2.5 sm:p-3 bg-muted/30 rounded-lg">
                   <div>
-                    <p className="text-xs text-muted-foreground font-cairo">{t('common.quantity')}</p>
-                    <p className="text-lg font-bold font-cairo">{bulkProducts.reduce((sum, p) => sum + p.quantity, 0)}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('common.quantity')}</p>
+                    <p className="text-sm sm:text-lg font-bold font-cairo">{bulkProducts.reduce((sum, p) => sum + p.quantity, 0)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-cairo">{t('clients.selectedProducts')}</p>
-                    <p className="text-lg font-bold font-cairo">{bulkProducts.length}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.selectedProducts')}</p>
+                    <p className="text-sm sm:text-lg font-bold font-cairo">{bulkProducts.length}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-cairo">{t('clients.totalAmount')}</p>
-                    <p className="text-lg font-bold font-cairo text-primary">{formatPrice(bulkTotalAmount)}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground font-cairo">{t('clients.totalAmount')}</p>
+                    <p className="text-sm sm:text-lg font-bold font-cairo text-primary">{formatPrice(bulkTotalAmount)}</p>
                   </div>
                 </div>
               </div>
@@ -773,25 +789,12 @@ export default function AdminClientDetailPage() {
 
             {/* Buttons */}
             <div className="flex gap-2 flex-col sm:flex-row">
-              <Button
-                onClick={handleBulkAddProducts}
-                disabled={bulkProducts.length === 0 || createTx.isPending}
-                className="font-cairo gap-2 flex-1"
-              >
-                <Plus className="w-4 h-4" />
-                {t('clients.addSelectedProducts')}
+              <Button onClick={handleBulkAddProducts} disabled={bulkProducts.length === 0 || createTx.isPending} className="font-cairo gap-2 flex-1 text-xs sm:text-sm">
+                <Plus className="w-4 h-4" />{t('clients.addSelectedProducts')}
               </Button>
               {bulkProducts.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setBulkProducts([]);
-                    setSelectedProductIds(new Set());
-                  }}
-                  className="font-cairo gap-2"
-                >
-                  <X className="w-4 h-4" />
-                  {t('common.clear')}
+                <Button variant="outline" onClick={() => { setBulkProducts([]); setSelectedProductIds(new Set()); }} className="font-cairo gap-2 text-xs sm:text-sm">
+                  <X className="w-4 h-4" />{t('common.clear')}
                 </Button>
               )}
             </div>
@@ -800,28 +803,28 @@ export default function AdminClientDetailPage() {
 
         {/* Payment Tab */}
         <TabsContent value="payment">
-          <Card><CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card><CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label className="font-cairo">{t('clients.paymentAmount')} *</Label>
+                <Label className="font-cairo text-sm">{t('clients.paymentAmount')} *</Label>
                 <Input type="number" min={0} value={payForm.amount} onChange={e => setPayForm(f => ({ ...f, amount: Number(e.target.value) }))} className="font-cairo" />
               </div>
               <div>
-                <Label className="font-cairo">{t('common.date')}</Label>
+                <Label className="font-cairo text-sm">{t('common.date')}</Label>
                 <Input type="date" value={payForm.date} onChange={e => setPayForm(f => ({ ...f, date: e.target.value }))} className="font-cairo" />
               </div>
             </div>
-            <div><Label className="font-cairo">{t('common.notes')}</Label><Input value={payForm.notes} onChange={e => setPayForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
-            <Button onClick={handlePayment} disabled={createTx.isPending} className="font-cairo gap-2"><DollarSign className="w-4 h-4" />{t('clients.recordPayment')}</Button>
+            <div><Label className="font-cairo text-sm">{t('common.notes')}</Label><Input value={payForm.notes} onChange={e => setPayForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
+            <Button onClick={handlePayment} disabled={createTx.isPending} className="font-cairo gap-2 w-full sm:w-auto"><DollarSign className="w-4 h-4" />{t('clients.recordPayment')}</Button>
           </CardContent></Card>
         </TabsContent>
 
         {/* Return Tab */}
         <TabsContent value="return">
-          <Card><CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card><CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label className="font-cairo">{t('common.product')} *</Label>
+                <Label className="font-cairo text-sm">{t('common.product')} *</Label>
                 <Select value={returnForm.product_id} onValueChange={v => {
                   const p = products?.find(pr => pr.id === v);
                   setReturnForm(f => ({ ...f, product_id: v, unit_price: p?.price ?? 0 }));
@@ -833,27 +836,27 @@ export default function AdminClientDetailPage() {
                 </Select>
               </div>
               <div>
-                <Label className="font-cairo">{t('common.quantity')} *</Label>
+                <Label className="font-cairo text-sm">{t('common.quantity')} *</Label>
                 <Input type="number" min={1} value={returnForm.quantity} onChange={e => setReturnForm(f => ({ ...f, quantity: Number(e.target.value) }))} className="font-cairo" />
               </div>
               <div>
-                <Label className="font-cairo">{t('clients.unitPrice')}</Label>
+                <Label className="font-cairo text-sm">{t('clients.unitPrice')}</Label>
                 <Input type="number" min={0} value={returnForm.unit_price} onChange={e => setReturnForm(f => ({ ...f, unit_price: Number(e.target.value) }))} className="font-cairo" />
               </div>
               <div>
-                <Label className="font-cairo">{t('common.total')}</Label>
-                <p className="text-lg font-bold font-cairo mt-1">{formatPrice(returnForm.quantity * returnForm.unit_price)}</p>
+                <Label className="font-cairo text-sm">{t('common.total')}</Label>
+                <p className="text-base sm:text-lg font-bold font-cairo mt-1">{formatPrice(returnForm.quantity * returnForm.unit_price)}</p>
               </div>
             </div>
-            <div><Label className="font-cairo">{t('common.notes')}</Label><Input value={returnForm.notes} onChange={e => setReturnForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
-            <Button onClick={handleReturn} disabled={createTx.isPending} className="font-cairo gap-2"><RotateCcw className="w-4 h-4" />{t('clients.recordReturn')}</Button>
+            <div><Label className="font-cairo text-sm">{t('common.notes')}</Label><Input value={returnForm.notes} onChange={e => setReturnForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
+            <Button onClick={handleReturn} disabled={createTx.isPending} className="font-cairo gap-2 w-full sm:w-auto"><RotateCcw className="w-4 h-4" />{t('clients.recordReturn')}</Button>
           </CardContent></Card>
         </TabsContent>
       </Tabs>
 
       {/* Transaction History */}
       <Card>
-        <CardHeader><CardTitle className="font-cairo">{t('clients.transactionHistory')}</CardTitle></CardHeader>
+        <CardHeader className="p-3 sm:p-6 pb-0 sm:pb-0"><CardTitle className="font-cairo text-sm sm:text-base">{t('clients.transactionHistory')}</CardTitle></CardHeader>
         <CardContent className="p-0">
           {!transactions?.length ? (
             <p className="p-6 text-center text-muted-foreground font-cairo">{t('common.noData')}</p>

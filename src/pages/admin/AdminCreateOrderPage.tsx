@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,6 +83,18 @@ export default function AdminCreateOrderPage() {
     },
   });
 
+  // New variant system
+  const { data: productVariants } = useQuery({
+    queryKey: ['product-variants-for-order'],
+    queryFn: async () => {
+      const { data } = await supabase.from('product_variants').select('*').eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  // Track selected variant per product for new variant system
+  const [selectedVariantMap, setSelectedVariantMap] = useState<Record<string, string>>({});
+
   const selectedWilaya = wilayas?.find(w => w.id === selectedWilayaId);
   const wilayaName = selectedWilaya?.name || '';
 
@@ -129,6 +141,29 @@ export default function AdminCreateOrderPage() {
 
   const getProductVariations = (productId: string) => {
     return variations?.filter(v => v.product_id === productId) || [];
+  };
+
+  const getProductVariantRows = (productId: string) => {
+    return productVariants?.filter(v => v.product_id === productId) || [];
+  };
+
+  const normalizeOptionValues = (raw: any): Record<string, string> => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    return Object.entries(raw).reduce<Record<string, string>>((acc, [key, value]) => {
+      if (typeof value === 'string' || typeof value === 'number') {
+        acc[key] = String(value);
+      }
+      return acc;
+    }, {});
+  };
+
+  const getVariantLabel = (variant: any) => {
+    const vals = normalizeOptionValues(variant.option_values);
+    return Object.entries(vals).map(([k, v]) => `${k}: ${v}`).join(' / ');
+  };
+
+  const isNewVariantProduct = (product: any) => {
+    return product.has_variants && getProductVariantRows(product.id).length > 0;
   };
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -346,38 +381,88 @@ export default function AdminCreateOrderPage() {
                 <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ابحث عن منتج..." className="pr-10 font-cairo h-11" />
               </div>
 
-              <div className="max-h-80 overflow-y-auto border rounded-xl divide-y">
+              <div className="max-h-[500px] overflow-y-auto border rounded-xl divide-y">
                 {filteredProducts.map(product => {
                   const prodVariations = getProductVariations(product.id);
+                  const prodVariantRows = getProductVariantRows(product.id);
+                  const hasNewVariants = isNewVariantProduct(product);
+                  const hasLegacyVariations = prodVariations.length > 0;
+                  const hasAnyVariants = hasNewVariants || hasLegacyVariations;
+
                   return (
                     <div key={product.id} className="p-3 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
                         {product.images?.[0] && (
-                          <img src={product.images[0]} alt={product.name} className="w-14 h-14 rounded-xl object-cover border" />
+                          <img src={product.images[0]} alt={product.name} className="w-14 h-14 rounded-xl object-cover border flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-cairo text-sm font-semibold truncate">{product.name}</p>
-                          <div className="flex items-center gap-3 mt-0.5">
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                             <span className="font-roboto text-sm font-bold text-primary">{formatPrice(Number(product.price))}</span>
                             <span className={`font-cairo text-xs px-2 py-0.5 rounded-full ${(product.stock ?? 0) > 5 ? 'bg-primary/10 text-primary' : (product.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-600' : 'bg-destructive/10 text-destructive'}`}>
                               {product.stock ?? 0} في المخزون
                             </span>
+                            {hasAnyVariants && (
+                              <span className="font-cairo text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600">
+                                يحتوي متغيرات
+                              </span>
+                            )}
                           </div>
                         </div>
-                        {prodVariations.length === 0 ? (
-                          <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg" onClick={() => addProduct(product)}>
+                        {!hasAnyVariants && (
+                          <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg flex-shrink-0" onClick={() => addProduct(product)}>
                             <Plus className="w-3.5 h-3.5" /> أضف
                           </Button>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {prodVariations.map(v => (
-                              <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[11px] h-7 px-2 rounded-lg" onClick={() => addProduct(product, v)}>
-                                {v.variation_value} — {formatPrice(fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + Number(v.price_adjustment || 0))}
-                              </Button>
-                            ))}
-                          </div>
                         )}
                       </div>
+
+                      {/* Legacy variations */}
+                      {hasLegacyVariations && !hasNewVariants && (
+                        <div className="mt-2 mr-[68px] flex flex-wrap gap-1">
+                          {prodVariations.map(v => (
+                            <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[11px] h-7 px-2 rounded-lg" onClick={() => addProduct(product, v)}>
+                              {v.variation_value} — {formatPrice(fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + Number(v.price_adjustment || 0))}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* New variant system */}
+                      {hasNewVariants && (
+                        <div className="mt-2 mr-0 sm:mr-[68px] space-y-2">
+                          <div className="flex flex-wrap gap-1.5">
+                            {prodVariantRows.map(variant => {
+                              const label = getVariantLabel(variant);
+                              const isSelected = selectedVariantMap[product.id] === variant.id;
+                              const variantPrice = fastFixedPrice > 0 ? fastFixedPrice : Number(variant.price || product.price);
+                              return (
+                                <Button
+                                  key={variant.id}
+                                  size="sm"
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  className={`font-cairo text-[11px] h-auto py-1 px-2 rounded-lg ${isSelected ? '' : ''}`}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      // Add to order
+                                      addProduct(product, { ...variant, variation_value: label, price_adjustment: Number(variant.price || 0) - Number(product.price) });
+                                      setSelectedVariantMap(prev => { const n = { ...prev }; delete n[product.id]; return n; });
+                                    } else {
+                                      setSelectedVariantMap(prev => ({ ...prev, [product.id]: variant.id }));
+                                    }
+                                  }}
+                                >
+                                  <span className="block">{label}</span>
+                                  <span className="block font-roboto font-bold mr-1">{formatPrice(variantPrice)}</span>
+                                  {variant.quantity != null && <span className="block text-[10px] opacity-70">({variant.quantity})</span>}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          {selectedVariantMap[product.id] && (
+                            <p className="font-cairo text-xs text-primary animate-pulse">⬆ اضغط مرة أخرى لإضافة المتغير المحدد</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -604,38 +689,87 @@ export default function AdminCreateOrderPage() {
                 <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ابحث عن منتج..." className="pr-10 font-cairo h-11" />
               </div>
 
-              <div className="max-h-80 overflow-y-auto border rounded-xl divide-y">
+              <div className="max-h-[500px] overflow-y-auto border rounded-xl divide-y">
                 {filteredProducts.map(product => {
                   const prodVariations = getProductVariations(product.id);
+                  const prodVariantRows = getProductVariantRows(product.id);
+                  const hasNewVariants = isNewVariantProduct(product);
+                  const hasLegacyVariations = prodVariations.length > 0;
+                  const hasAnyVariants = hasNewVariants || hasLegacyVariations;
+
                   return (
                     <div key={product.id} className="p-3 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
                         {product.images?.[0] && (
-                          <img src={product.images[0]} alt={product.name} className="w-14 h-14 rounded-xl object-cover border" />
+                          <img src={product.images[0]} alt={product.name} className="w-14 h-14 rounded-xl object-cover border flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-cairo text-sm font-semibold truncate">{product.name}</p>
-                          <div className="flex items-center gap-3 mt-0.5">
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                             <span className="font-roboto text-sm font-bold text-primary">{formatPrice(Number(product.price))}</span>
                             <span className={`font-cairo text-xs px-2 py-0.5 rounded-full ${(product.stock ?? 0) > 5 ? 'bg-primary/10 text-primary' : (product.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-600' : 'bg-destructive/10 text-destructive'}`}>
                               {product.stock ?? 0} في المخزون
                             </span>
+                            {hasAnyVariants && (
+                              <span className="font-cairo text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600">
+                                يحتوي متغيرات
+                              </span>
+                            )}
                           </div>
                         </div>
-                        {prodVariations.length === 0 ? (
-                          <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg" onClick={() => addProduct(product)}>
+                        {!hasAnyVariants && (
+                          <Button size="sm" variant="outline" className="font-cairo text-xs h-9 gap-1 rounded-lg flex-shrink-0" onClick={() => addProduct(product)}>
                             <Plus className="w-3.5 h-3.5" /> أضف
                           </Button>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {prodVariations.map(v => (
-                              <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[11px] h-7 px-2 rounded-lg" onClick={() => addProduct(product, v)}>
-                                {v.variation_value} — {formatPrice(fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + Number(v.price_adjustment || 0))}
-                              </Button>
-                            ))}
-                          </div>
                         )}
                       </div>
+
+                      {/* Legacy variations */}
+                      {hasLegacyVariations && !hasNewVariants && (
+                        <div className="mt-2 mr-[68px] flex flex-wrap gap-1">
+                          {prodVariations.map(v => (
+                            <Button key={v.id} size="sm" variant="outline" className="font-cairo text-[11px] h-7 px-2 rounded-lg" onClick={() => addProduct(product, v)}>
+                              {v.variation_value} — {formatPrice(fastFixedPrice > 0 ? fastFixedPrice : Number(product.price) + Number(v.price_adjustment || 0))}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* New variant system */}
+                      {hasNewVariants && (
+                        <div className="mt-2 mr-0 sm:mr-[68px] space-y-2">
+                          <div className="flex flex-wrap gap-1.5">
+                            {prodVariantRows.map(variant => {
+                              const label = getVariantLabel(variant);
+                              const isSelected = selectedVariantMap[product.id] === variant.id;
+                              const variantPrice = fastFixedPrice > 0 ? fastFixedPrice : Number(variant.price || product.price);
+                              return (
+                                <Button
+                                  key={variant.id}
+                                  size="sm"
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  className={`font-cairo text-[11px] h-auto py-1 px-2 rounded-lg`}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      addProduct(product, { ...variant, variation_value: label, price_adjustment: Number(variant.price || 0) - Number(product.price) });
+                                      setSelectedVariantMap(prev => { const n = { ...prev }; delete n[product.id]; return n; });
+                                    } else {
+                                      setSelectedVariantMap(prev => ({ ...prev, [product.id]: variant.id }));
+                                    }
+                                  }}
+                                >
+                                  <span className="block">{label}</span>
+                                  <span className="block font-roboto font-bold mr-1">{formatPrice(variantPrice)}</span>
+                                  {variant.quantity != null && <span className="block text-[10px] opacity-70">({variant.quantity})</span>}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          {selectedVariantMap[product.id] && (
+                            <p className="font-cairo text-xs text-primary animate-pulse">⬆ اضغط مرة أخرى لإضافة المتغير المحدد</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

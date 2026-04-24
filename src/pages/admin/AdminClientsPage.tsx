@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients';
 import { useClientTransactions } from '@/hooks/useClientTransactions';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from '@/i18n';
 import { formatPrice } from '@/lib/format';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,6 +37,7 @@ export default function AdminClientsPage() {
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
+  const qc = useQueryClient();
 
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,22 +71,58 @@ export default function AdminClientsPage() {
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error(t('common.required')); return; }
     try {
+      // Build payload without fixed_price fields to avoid schema errors
+      // if the migration hasn't been applied yet
+      const basePayload: any = {
+        name: form.name.trim(),
+        phone: form.phone,
+        address: form.address,
+        wilaya: form.wilaya,
+        notes: form.notes,
+        status: form.status,
+      };
+
+      // Try to include fixed_price fields - they'll be silently ignored
+      // if the columns don't exist, but we handle the error gracefully
+      const fullPayload = {
+        ...basePayload,
+        fixed_price_enabled: form.fixed_price_enabled,
+        fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
+      };
+
       if (editingClient) {
-        await updateClient.mutateAsync({
-          id: editingClient.id,
-          ...form,
-          fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
-        } as any);
+        // Try with fixed price fields first
+        const { error } = await supabase.from('clients').update(fullPayload).eq('id', editingClient.id);
+        if (error) {
+          // If fixed_price columns don't exist, retry without them
+          if (error.code === 'PGRST204' || error.message?.includes('fixed_price')) {
+            const { error: retryError } = await supabase.from('clients').update(basePayload).eq('id', editingClient.id);
+            if (retryError) throw retryError;
+          } else {
+            throw error;
+          }
+        }
         toast.success(t('common.savedSuccess'));
       } else {
-        await createClient.mutateAsync({
-          ...form,
-          fixed_unit_price: form.fixed_price_enabled ? (Number(form.fixed_unit_price) || 0) : null,
-        } as any);
+        // Try with fixed price fields first
+        const { error } = await supabase.from('clients').insert(fullPayload).select().single();
+        if (error) {
+          // If fixed_price columns don't exist, retry without them
+          if (error.code === 'PGRST204' || error.message?.includes('fixed_price')) {
+            const { error: retryError } = await supabase.from('clients').insert(basePayload).select().single();
+            if (retryError) throw retryError;
+          } else {
+            throw error;
+          }
+        }
         toast.success(t('common.savedSuccess'));
       }
+      // Invalidate clients cache
+      qc.invalidateQueries({ queryKey: ['clients'] });
       setDialogOpen(false);
-    } catch { toast.error(t('common.errorOccurred')); }
+    } catch (err: any) {
+      toast.error(err?.message || t('common.errorOccurred'));
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -139,56 +176,61 @@ export default function AdminClientsPage() {
   };
 
   return (
-    <div className="space-y-6 p-1">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-cairo font-bold">{t('clients.title')}</h1>
-        <Button onClick={openAdd} className="gap-2 font-cairo w-full sm:w-auto">
-          <Plus className="w-4 h-4" /> {t('clients.addClient')}
+    <div className="space-y-4 sm:space-y-6 px-1">
+      <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-3">
+        <h1 className="text-lg sm:text-2xl font-cairo font-bold">{t('clients.title')}</h1>
+        <Button onClick={openAdd} size="sm" className="gap-1.5 font-cairo text-xs sm:text-sm h-8 sm:h-9 w-full sm:w-auto">
+          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('clients.addClient')}
         </Button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Users className="w-5 h-5 text-primary" /></div>
-          <div><p className="text-sm text-muted-foreground font-cairo">{t('clients.totalClients')}</p><p className="text-xl font-bold font-cairo">{clients?.length ?? 0}</p></div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Card><CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"><Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /></div>
+          <div className="text-center sm:text-right min-w-0"><p className="text-[10px] sm:text-sm text-muted-foreground font-cairo leading-tight">{t('clients.totalClients')}</p><p className="text-base sm:text-xl font-bold font-cairo">{clients?.length ?? 0}</p></div>
         </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center"><Wallet className="w-5 h-5 text-destructive" /></div>
-          <div><p className="text-sm text-muted-foreground font-cairo">{t('clients.totalOwed')}</p><p className="text-xl font-bold font-cairo">{formatPrice(totalOwed)}</p></div>
+        <Card><CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0"><Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" /></div>
+          <div className="text-center sm:text-right min-w-0"><p className="text-[10px] sm:text-sm text-muted-foreground font-cairo leading-tight">{t('clients.totalOwed')}</p><p className="text-sm sm:text-xl font-bold font-cairo truncate">{formatPrice(totalOwed)}</p></div>
         </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center"><DollarSign className="w-5 h-5 text-green-600" /></div>
-          <div><p className="text-sm text-muted-foreground font-cairo">{t('clients.totalCollected')}</p><p className="text-xl font-bold font-cairo">{formatPrice(totalCollected)}</p></div>
+        <Card><CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" /></div>
+          <div className="text-center sm:text-right min-w-0"><p className="text-[10px] sm:text-sm text-muted-foreground font-cairo leading-tight">{t('clients.totalCollected')}</p><p className="text-sm sm:text-xl font-bold font-cairo truncate">{formatPrice(totalCollected)}</p></div>
         </CardContent></Card>
       </div>
 
       {/* Search, Filter, Sort, Export */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('clients.searchPlaceholder')} className="ps-9 font-cairo" />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
+            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-muted-foreground" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('clients.searchPlaceholder')} className="ps-9 font-cairo" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[140px] font-cairo"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="font-cairo">{t('common.all')}</SelectItem>
+              <SelectItem value="active" className="font-cairo">{t('common.active')}</SelectItem>
+              <SelectItem value="inactive" className="font-cairo">{t('common.inactive')}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[140px] font-cairo"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all" className="font-cairo">{t('common.all')}</SelectItem>
-            <SelectItem value="active" className="font-cairo">{t('common.active')}</SelectItem>
-            <SelectItem value="inactive" className="font-cairo">{t('common.inactive')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="sm" className="gap-1 font-cairo w-full sm:w-auto" onClick={() => {
-          if (sortBy === 'name' && sortDir === 'asc') setSortDir('desc');
-          else if (sortBy === 'name' && sortDir === 'desc') { setSortBy('balance'); setSortDir('desc'); }
-          else if (sortBy === 'balance' && sortDir === 'desc') setSortDir('asc');
-          else { setSortBy('name'); setSortDir('asc'); }
-        }}>
-          <ArrowUpDown className="w-4 h-4" />
-          {sortBy === 'name' ? t('clients.sortByName') : t('clients.sortByBalance')} {sortDir === 'asc' ? '↑' : '↓'}
-        </Button>
-        <Button variant="outline" size="sm" className="gap-1 font-cairo w-full sm:w-auto" onClick={handleExport}>
-          <Download className="w-4 h-4" /> {t('common.exportCSV')}
-        </Button>
+        <div className="grid grid-cols-2 sm:flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1 font-cairo w-full sm:w-auto" onClick={() => {
+            if (sortBy === 'name' && sortDir === 'asc') setSortDir('desc');
+            else if (sortBy === 'name' && sortDir === 'desc') { setSortBy('balance'); setSortDir('desc'); }
+            else if (sortBy === 'balance' && sortDir === 'desc') setSortDir('asc');
+            else { setSortBy('name'); setSortDir('asc'); }
+          }}>
+            <ArrowUpDown className="w-4 h-4" />
+            <span className="truncate">{sortBy === 'name' ? t('clients.sortByName') : t('clients.sortByBalance')} {sortDir === 'asc' ? '↑' : '↓'}</span>
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1 font-cairo w-full sm:w-auto" onClick={handleExport}>
+            <Download className="w-4 h-4" />
+            <span className="truncate">{t('common.exportCSV')}</span>
+          </Button>
+        </div>
       </div>
 
       {/* Client List */}
@@ -201,29 +243,29 @@ export default function AdminClientsPage() {
           <Button onClick={openAdd} variant="outline" className="mt-3 font-cairo gap-2"><Plus className="w-4 h-4" />{t('clients.addFirst')}</Button>
         </CardContent></Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filtered.map(c => {
             const balance = getClientBalance(c.id);
             return (
               <Card key={c.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/admin/clients/${c.id}`)}>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-cairo font-bold text-lg">{c.name}</h3>
-                      {c.phone && <p className="text-sm text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{c.phone}</p>}
-                      {c.wilaya && <p className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{c.wilaya}</p>}
+                <CardContent className="p-3 sm:p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-cairo font-bold text-base sm:text-lg truncate">{c.name}</h3>
+                      {c.phone && <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3 flex-shrink-0" /><span className="truncate">{c.phone}</span></p>}
+                      {c.wilaya && <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3 flex-shrink-0" /><span className="truncate">{c.wilaya}</span></p>}
                     </div>
-                    <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="font-cairo">
+                    <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="font-cairo text-[10px] sm:text-xs flex-shrink-0">
                       {c.status === 'active' ? t('common.active') : t('common.inactive')}
                     </Badge>
                   </div>
-                  <div className={`text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                  <div className={`text-base sm:text-lg font-bold font-cairo ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>
                     {balance > 0 ? `${t('clients.owes')}: ${formatPrice(balance)}` : t('clients.settled')}
                   </div>
-                  <div className="grid grid-cols-2 sm:flex gap-2 w-full" onClick={e => e.stopPropagation()}>
-                    <Button size="sm" variant="outline" className="gap-1 font-cairo w-full" onClick={() => navigate(`/admin/clients/${c.id}`)}><Eye className="w-3 h-3" />{t('common.view')}</Button>
-                    <Button size="sm" variant="outline" className="gap-1 font-cairo w-full" onClick={() => openEdit(c)}><Edit className="w-3 h-3" />{t('common.edit')}</Button>
-                    <Button size="sm" variant="destructive" className="gap-1 font-cairo col-span-2 sm:col-span-1 w-full sm:w-auto" onClick={() => handleDelete(c.id)}><Trash2 className="w-3 h-3" /></Button>
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full" onClick={e => e.stopPropagation()}>
+                    <Button size="sm" variant="outline" className="gap-1 font-cairo w-full text-[11px] sm:text-xs h-8 sm:h-9 px-1.5 sm:px-3" onClick={() => navigate(`/admin/clients/${c.id}`)}><Eye className="w-3 h-3" /><span className="hidden xs:inline">{t('common.view')}</span></Button>
+                    <Button size="sm" variant="outline" className="gap-1 font-cairo w-full text-[11px] sm:text-xs h-8 sm:h-9 px-1.5 sm:px-3" onClick={() => openEdit(c)}><Edit className="w-3 h-3" /><span className="hidden xs:inline">{t('common.edit')}</span></Button>
+                    <Button size="sm" variant="destructive" className="gap-1 font-cairo w-full text-[11px] sm:text-xs h-8 sm:h-9 px-1.5 sm:px-3" onClick={() => handleDelete(c.id)}><Trash2 className="w-3 h-3" /></Button>
                   </div>
                 </CardContent>
               </Card>
@@ -234,7 +276,7 @@ export default function AdminClientsPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md w-[95vw]">
+        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-cairo">{editingClient ? t('clients.editClient') : t('clients.addClient')}</DialogTitle>
           </DialogHeader>
