@@ -163,7 +163,7 @@ export default function AdminCreateOrderPage() {
   };
 
   const isNewVariantProduct = (product: any) => {
-    return product.has_variants && getProductVariantRows(product.id).length > 0;
+    return getProductVariantRows(product.id).length > 0;
   };
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
