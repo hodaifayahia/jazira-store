@@ -387,7 +387,7 @@ export default function AdminCreateOrderPage() {
                   const prodVariantRows = getProductVariantRows(product.id);
                   const hasNewVariants = isNewVariantProduct(product);
                   const hasLegacyVariations = prodVariations.length > 0;
-                  const hasAnyVariants = hasNewVariants || hasLegacyVariations;
+                  const hasAnyVariants = product.has_variants || hasNewVariants || hasLegacyVariations;
 
                   return (
                     <div key={product.id} className="p-3 hover:bg-muted/50 transition-colors">
@@ -695,7 +695,7 @@ export default function AdminCreateOrderPage() {
                   const prodVariantRows = getProductVariantRows(product.id);
                   const hasNewVariants = isNewVariantProduct(product);
                   const hasLegacyVariations = prodVariations.length > 0;
-                  const hasAnyVariants = hasNewVariants || hasLegacyVariations;
+                  const hasAnyVariants = product.has_variants || hasNewVariants || hasLegacyVariations;
 
                   return (
                     <div key={product.id} className="p-3 hover:bg-muted/50 transition-colors">
