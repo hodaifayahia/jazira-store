@@ -373,7 +373,7 @@ export default function AdminCreateOrderPage() {
             <div className="bg-card border rounded-2xl p-6 space-y-5">
               <div className="flex items-center gap-2 pb-3 border-b">
                 <Package className="w-5 h-5 text-primary" />
-                <h2 className="font-cairo font-bold text-lg">المنتجات</h2>
+                <h2 className="font-cairo font-bold text-lg">المنتجات (محدثة)</h2>
               </div>
 
               <div className="relative">
@@ -681,7 +681,7 @@ export default function AdminCreateOrderPage() {
             <div className="bg-card border rounded-2xl p-6 space-y-5">
               <div className="flex items-center gap-2 pb-3 border-b">
                 <Package className="w-5 h-5 text-primary" />
-                <h2 className="font-cairo font-bold text-lg">اختيار المنتجات</h2>
+                <h2 className="font-cairo font-bold text-lg">اختيار المنتجات (محدثة)</h2>
               </div>
 
               <div className="relative">
