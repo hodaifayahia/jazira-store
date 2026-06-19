@@ -305,10 +305,7 @@ export default function CheckoutPage() {
       await supabase.from('order_items').insert(orderItems);
 
       // Auto-resolve abandoned cart
-      await supabase.from('abandoned_orders')
-        .update({ status: 'recovered', recovered_order_id: order.id, updated_at: new Date().toISOString() })
-        .eq('customer_phone', phone.trim())
-        .in('status', ['abandoned', 'contacted']);
+      await supabase.rpc('mark_abandoned_recovered', { p_phone: phone.trim(), p_order_id: order.id });
 
       supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
 
