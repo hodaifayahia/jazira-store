@@ -29,10 +29,8 @@ export default function TrackOrderPage() {
     setLoading(true);
     setSearched(true);
     const { data, error } = await supabase
-      .from('orders')
-      .select('*, wilayas(name)')
-      .eq('order_number', orderNumber.trim().toUpperCase())
-      .single();
+      .rpc('get_order_tracking', { p_order_number: orderNumber.trim().toUpperCase() })
+      .maybeSingle();
     setOrder(data);
     setLoading(false);
     if (error || !data) {
