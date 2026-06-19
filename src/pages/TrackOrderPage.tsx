@@ -99,7 +99,7 @@ export default function TrackOrderPage() {
             </div>
             <div className="flex justify-between font-cairo text-sm">
               <span className="text-muted-foreground">{t('trackOrder.wilaya')}</span>
-              <span>{order.wilayas?.name}</span>
+              <span>{order.wilaya_name}</span>
             </div>
             <div className="flex justify-between font-cairo text-sm font-bold">
               <span>{t('trackOrder.total')}</span>
