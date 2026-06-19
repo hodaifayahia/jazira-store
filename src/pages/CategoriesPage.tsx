@@ -5,20 +5,11 @@ import { Grid3X3, ChevronLeft, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AnimatedSection from '@/components/AnimatedSection';
 import { useTranslation } from '@/i18n';
+import { useCategories } from '@/hooks/useCategories';
 
 export default function CategoriesPage() {
   const { t } = useTranslation();
-  const { data: categories, isLoading } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name', { ascending: true });
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: categories, isLoading } = useCategories();
 
   const { data: storeName } = useQuery({
     queryKey: ['store-name'],
