@@ -81,7 +81,7 @@ export default function CategoriesPage() {
                             {cat.name}
                           </h3>
                           <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                            {cat.description || t('categoriesPage.cardFallbackDescription')}
+                            {t('categoriesPage.cardFallbackDescription')}
                           </p>
                         </div>
 
