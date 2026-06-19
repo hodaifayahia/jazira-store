@@ -59,7 +59,7 @@ export default function CategoriesPage() {
           ) : categories && categories.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {categories.map((cat, i) => (
-                <AnimatedSection key={cat.id} delay={i * 60}>
+                <AnimatedSection key={cat.name} delay={i * 60}>
                   <Link to={`/products?category=${encodeURIComponent(cat.name)}`}>
                     <div className="relative rounded-2xl overflow-hidden group cursor-pointer border border-border/40 hover:border-violet-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1 bg-card p-5">
                       {/* Shimmer overlay */}
