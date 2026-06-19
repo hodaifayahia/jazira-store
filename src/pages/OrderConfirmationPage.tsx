@@ -68,7 +68,7 @@ export default function OrderConfirmationPage() {
           </div>
           <div className="flex justify-between font-cairo text-sm">
             <span className="text-muted-foreground">الولاية</span>
-            <span>{(order as any).wilayas?.name}</span>
+            <span>{(order as any).wilaya_name}</span>
           </div>
           {order.baladiya && (
             <div className="flex justify-between font-cairo text-sm">
