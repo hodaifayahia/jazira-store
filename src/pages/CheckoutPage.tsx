@@ -120,32 +120,14 @@ export default function CheckoutPage() {
         }));
         const cartTotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-        const { data: existing } = await supabase
-          .from('abandoned_orders')
-          .select('id')
-          .eq('customer_phone', phone.trim())
-          .eq('status', 'abandoned')
-          .maybeSingle();
-
-        if (existing) {
-          await supabase.from('abandoned_orders').update({
-            customer_name: name.trim(),
-            customer_wilaya: wilayas?.find(w => w.id === wilayaId)?.name || null,
-            cart_items: cartSnapshot,
-            cart_total: cartTotal,
-            item_count: items.length,
-            updated_at: new Date().toISOString(),
-          }).eq('id', existing.id);
-        } else {
-          await supabase.from('abandoned_orders').insert({
-            customer_name: name.trim(),
-            customer_phone: phone.trim(),
-            customer_wilaya: wilayas?.find(w => w.id === wilayaId)?.name || null,
-            cart_items: cartSnapshot,
-            cart_total: cartTotal,
-            item_count: items.length,
-          });
-        }
+        await supabase.rpc('upsert_abandoned_order', {
+          p_name: name.trim(),
+          p_phone: phone.trim(),
+          p_wilaya: wilayas?.find(w => w.id === wilayaId)?.name || null,
+          p_cart_items: cartSnapshot,
+          p_cart_total: cartTotal,
+          p_item_count: items.length,
+        });
         setAbandonedSaved(true);
       } catch {}
     }, 5000);
@@ -323,10 +305,7 @@ export default function CheckoutPage() {
       await supabase.from('order_items').insert(orderItems);
 
       // Auto-resolve abandoned cart
-      await supabase.from('abandoned_orders')
-        .update({ status: 'recovered', recovered_order_id: order.id, updated_at: new Date().toISOString() })
-        .eq('customer_phone', phone.trim())
-        .in('status', ['abandoned', 'contacted']);
+      await supabase.rpc('mark_abandoned_recovered', { p_phone: phone.trim(), p_order_id: order.id });
 
       supabase.functions.invoke('telegram-notify', { body: { type: 'new_order', order_id: order.id } }).catch(() => {});
 

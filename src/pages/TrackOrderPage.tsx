@@ -29,10 +29,8 @@ export default function TrackOrderPage() {
     setLoading(true);
     setSearched(true);
     const { data, error } = await supabase
-      .from('orders')
-      .select('*, wilayas(name)')
-      .eq('order_number', orderNumber.trim().toUpperCase())
-      .single();
+      .rpc('get_order_tracking', { p_order_number: orderNumber.trim().toUpperCase() })
+      .maybeSingle();
     setOrder(data);
     setLoading(false);
     if (error || !data) {
@@ -101,7 +99,7 @@ export default function TrackOrderPage() {
             </div>
             <div className="flex justify-between font-cairo text-sm">
               <span className="text-muted-foreground">{t('trackOrder.wilaya')}</span>
-              <span>{order.wilayas?.name}</span>
+              <span>{order.wilaya_name}</span>
             </div>
             <div className="flex justify-between font-cairo text-sm font-bold">
               <span>{t('trackOrder.total')}</span>

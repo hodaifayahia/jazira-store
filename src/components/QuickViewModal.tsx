@@ -28,12 +28,12 @@ interface QuickViewProps {
 
 export default function QuickViewModal({ product, reviewStats, onClose }: QuickViewProps) {
   const { addItem } = useCart();
-  const { toggleWishlist, isWishlisted } = useWishlist();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const { toast } = useToast();
   const [selectedImage, setSelectedImage] = useState(product.main_image_index ?? 0);
   const images = product.images || [];
   const outOfStock = (product.stock ?? 0) <= 0;
-  const wishlisted = isWishlisted(product.id);
+  const wishlisted = isInWishlist(product.id);
   const discount = product.old_price && product.old_price > product.price
     ? Math.round((1 - product.price / product.old_price) * 100)
     : 0;

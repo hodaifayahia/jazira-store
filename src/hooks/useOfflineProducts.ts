@@ -76,12 +76,14 @@ export function useOfflineCategories() {
     queryKey: ['offline-categories-all'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
+        .from('settings')
+        .select('value')
+        .eq('key', 'categories')
+        .maybeSingle();
       if (error) throw error;
-      return data || [];
+      const raw = data?.value;
+      const parsed = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return []; } })() : raw;
+      return Array.isArray(parsed) ? parsed : [];
     },
     staleTime: 5 * 60 * 1000,
     placeholderData: placeholderData ? () => placeholderData : undefined,

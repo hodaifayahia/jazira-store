@@ -230,23 +230,16 @@ export default function LandingPage() {
           quantity: 1,
           image: product.images?.[0] || '',
         }];
-        const payload = {
-          customer_name: orderName.trim(),
-          customer_phone: phone,
-          customer_wilaya: selectedWilaya?.name || null,
-          cart_items: cartItems,
-          cart_total: displayPrice,
-          item_count: 1,
-          notes: `landing_page_id:${id}`,
-          status: 'abandoned' as const,
-        };
-
-        if (abandonedId) {
-          await supabase.from('abandoned_orders').update(payload).eq('id', abandonedId);
-        } else {
-          const { data } = await supabase.from('abandoned_orders').insert(payload).select('id').single();
-          if (data) setAbandonedId(data.id);
-        }
+        const { data: aid } = await supabase.rpc('upsert_abandoned_order', {
+          p_name: orderName.trim(),
+          p_phone: phone,
+          p_wilaya: selectedWilaya?.name || null,
+          p_cart_items: cartItems,
+          p_cart_total: displayPrice,
+          p_item_count: 1,
+          p_notes: `landing_page_id:${id}`,
+        });
+        if (aid && !abandonedId) setAbandonedId(aid as unknown as string);
       } catch (e) {
         console.error('Abandoned cart capture error:', e);
       }

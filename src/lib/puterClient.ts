@@ -1,13 +1,4 @@
-declare global {
-  interface Window {
-    puter?: {
-      ai: {
-        txt2img(prompt: string, options?: { model?: string }): Promise<HTMLImageElement>;
-        chat(prompt: string, options?: { model?: string }): Promise<{ message: { content: string } } | string>;
-      };
-    };
-  }
-}
+// Puter Window type is declared in src/vite-env.d.ts
 
 let puterLoadPromise: Promise<void> | null = null;
 

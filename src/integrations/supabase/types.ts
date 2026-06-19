@@ -1649,12 +1649,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_order_tracking: {
+        Args: { p_order_number: string }
+        Returns: {
+          baladiya: string
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          delivery_type: string
+          order_number: string
+          payment_method: string
+          status: string
+          total_amount: number
+          wilaya_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      mark_abandoned_recovered: {
+        Args: { p_order_id: string; p_phone: string }
+        Returns: undefined
+      }
+      upsert_abandoned_order: {
+        Args: {
+          p_cart_items: Json
+          p_cart_total: number
+          p_item_count: number
+          p_name: string
+          p_notes?: string
+          p_phone: string
+          p_wilaya: string
+        }
+        Returns: string
       }
     }
     Enums: {
