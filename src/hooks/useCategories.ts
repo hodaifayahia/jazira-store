@@ -23,7 +23,7 @@ const normalizeCategories = (raw: unknown): Category[] => {
   if (!Array.isArray(parsed)) return [];
 
   return parsed
-    .map((item: unknown) => {
+    .map((item: unknown): Category | null => {
       if (typeof item === 'string') {
         const name = item.trim();
         return name ? { name, icon: 'Tag' } : null;
@@ -39,9 +39,9 @@ const normalizeCategories = (raw: unknown): Category[] => {
         name,
         icon: typeof rec.icon === 'string' && rec.icon.trim() ? rec.icon : 'Tag',
         image: typeof rec.image === 'string' ? rec.image : undefined,
-      } satisfies Category;
+      };
     })
-    .filter((cat): cat is Category => Boolean(cat));
+    .filter((cat): cat is Category => cat !== null);
 };
 
 export function useCategories() {
