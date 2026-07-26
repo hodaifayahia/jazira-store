@@ -1,0 +1,31 @@
+# SloutionsHub — Premium Digital Products
+
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SloutionsHub — Premium Digital Products</title>
+    <meta name="description" content="SloutionsHub — Your one-stop marketplace for premium digital products. E-books, templates, software, courses & more. Instant delivery, secure downloads.">
+    <meta name="author" content="SloutionsHub" />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SloutionsHub" />
+    <link rel="apple-touch-icon" href="/solutionshub-logo.svg" />
+    <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="/solutionshub-logo.svg">
+
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="og:title" content="SloutionsHub — Premium Digital Products">
+    <meta name="twitter:title" content="SloutionsHub — Premium Digital Products">
+    <meta property="og:description" content="Your one-stop marketplace for premium digital products. E-books, templates, software, courses & more.">
+    <meta name="twitter:description" content="Your one-stop marketplace for premium digital products. E-books, templates, software, courses & more.">
+    <script type="module" crossorigin src="/assets/index-BWGyVFAy.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dw20Ffed.css">
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

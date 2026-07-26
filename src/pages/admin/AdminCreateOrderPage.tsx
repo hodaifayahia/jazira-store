@@ -59,6 +59,9 @@ export default function AdminCreateOrderPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_type: string; discount_value: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
 
+  // Manual total override (null = use computed total)
+  const [manualTotal, setManualTotal] = useState<number | null>(null);
+
   const { data: wilayas } = useQuery({
     queryKey: ['wilayas-for-order'],
     queryFn: async () => {
@@ -181,7 +184,8 @@ export default function AdminCreateOrderPage() {
     return Math.min(raw, subtotal);
   }, [appliedCoupon, subtotal]);
 
-  const total = subtotal + shippingCost - discountAmount;
+  const computedTotal = subtotal + shippingCost - discountAmount;
+  const total = manualTotal ?? computedTotal;
 
   const addProduct = (product: any, variation?: any) => {
     const existingIndex = orderItems.findIndex(
@@ -540,6 +544,23 @@ export default function AdminCreateOrderPage() {
                 <div className="flex justify-between font-bold text-base">
                   <span>الإجمالي</span>
                   <span className="font-roboto text-primary text-lg">{formatPrice(total)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-muted-foreground text-xs">تعديل الإجمالي يدوياً</span>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      value={manualTotal ?? ''}
+                      placeholder={String(computedTotal)}
+                      onChange={e => setManualTotal(e.target.value === '' ? null : Number(e.target.value))}
+                      className="h-8 w-24 text-sm font-roboto"
+                    />
+                    {manualTotal !== null && (
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setManualTotal(null)} title="إلغاء التعديل">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -945,6 +966,23 @@ export default function AdminCreateOrderPage() {
               <div className="flex justify-between font-bold text-base">
                 <span>الإجمالي</span>
                 <span className="font-roboto text-primary text-lg">{formatPrice(total)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <span className="text-muted-foreground text-xs">تعديل الإجمالي يدوياً</span>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={manualTotal ?? ''}
+                    placeholder={String(computedTotal)}
+                    onChange={e => setManualTotal(e.target.value === '' ? null : Number(e.target.value))}
+                    className="h-8 w-24 text-sm font-roboto"
+                  />
+                  {manualTotal !== null && (
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setManualTotal(null)} title="إلغاء التعديل">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -44,6 +44,8 @@ export const fr: Record<string, string> = {
   'login.loading': 'Connexion en cours...',
   'login.error': 'Erreur',
   'login.invalidCredentials': 'Identifiants incorrects',
+  'offline.loginNotice': "Vous êtes hors ligne. Si vous vous êtes déjà connecté sur cet appareil, vous pouvez continuer.",
+  'offline.loginUnavailable': 'Connexion indisponible hors ligne. Veuillez vous connecter à Internet la première fois.',
 
   // ═══ Common ═══
   'common.save': 'Enregistrer',

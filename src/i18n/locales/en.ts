@@ -44,6 +44,8 @@ export const en: Record<string, string> = {
   'login.loading': 'Logging in...',
   'login.error': 'Error',
   'login.invalidCredentials': 'Invalid credentials',
+  'offline.loginNotice': "You're offline. If you've logged in on this device before, you can continue.",
+  'offline.loginUnavailable': 'Login is unavailable offline. Please connect to the internet the first time.',
 
   // ═══ Common ═══
   'common.save': 'Save',

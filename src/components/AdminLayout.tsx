@@ -252,13 +252,28 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const checkAdmin = async (userId: string) => {
-      const { data } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
-      if (!data) {
-        toast.error(t('sidebar.noAccess'));
-        navigate('/');
-        return;
+      const cacheKey = `admin_role:${userId}`;
+      try {
+        const { data, error } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+        if (error) throw error;
+        if (!data) {
+          localStorage.removeItem(cacheKey);
+          toast.error(t('sidebar.noAccess'));
+          navigate('/');
+          return;
+        }
+        // Cache successful admin verification so it works later while offline
+        localStorage.setItem(cacheKey, '1');
+        setIsAdmin(true);
+      } catch {
+        // Network/offline failure: fall back to a previously cached verification.
+        // Server-side RLS still protects all data, so this only affects UI access.
+        if (localStorage.getItem(cacheKey) === '1' || !navigator.onLine) {
+          setIsAdmin(true);
+        } else {
+          navigate('/');
+        }
       }
-      setIsAdmin(true);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -283,6 +298,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, [navigate, t]);
 
   const handleLogout = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) localStorage.removeItem(`admin_role:${session.user.id}`);
+    } catch { /* ignore */ }
     await supabase.auth.signOut();
     navigate('/admin/login');
   };

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useClient } from '@/hooks/useClients';
-import { useClientTransactions, useCreateClientTransaction, useDeleteClientTransaction, useClientBalance } from '@/hooks/useClientTransactions';
+import { useClientTransactions, useCreateClientTransaction, useDeleteClientTransaction, useClientBalance, type ClientTransaction } from '@/hooks/useClientTransactions';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from '@/i18n';
@@ -16,8 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Package, DollarSign, RotateCcw, Wallet, TrendingUp, TrendingDown, Trash2, Plus, X } from 'lucide-react';
+import { ArrowLeft, Package, DollarSign, RotateCcw, Wallet, TrendingUp, TrendingDown, Trash2, Plus, X, Printer } from 'lucide-react';
 import { toast } from 'sonner';
+import { useStoreLogo } from '@/hooks/useStoreLogo';
+import { printReceipt } from '@/lib/printReceipt';
+
+const CLIENT_DISCOUNT_RATE = 0.13;
 
 export default function AdminClientDetailPage() {
   type ProductRow = {
@@ -74,6 +78,14 @@ export default function AdminClientDetailPage() {
   const { balance, totalGiven, totalPaid, totalReturned, transactions } = useClientBalance(id!);
   const createTx = useCreateClientTransaction();
   const deleteTx = useDeleteClientTransaction();
+  const { data: storeLogo } = useStoreLogo();
+  const { data: storeName } = useQuery({
+    queryKey: ['store-name'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('value').eq('key', 'store_name').maybeSingle();
+      return data?.value || 'جزيرة الطبيعة';
+    },
+  });
 
   const { data: products } = useQuery({
     queryKey: ['products-list'],
@@ -122,6 +134,12 @@ export default function AdminClientDetailPage() {
   
   const [bulkProducts, setBulkProducts] = useState<BulkProduct[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+
+  // Receipt printing & 13% discount options
+  const [givePrint, setGivePrint] = useState(true);
+  const [giveDiscount, setGiveDiscount] = useState(false);
+  const [bulkPrint, setBulkPrint] = useState(true);
+  const [bulkDiscount, setBulkDiscount] = useState(false);
 
   const selectedProduct = products?.find(p => p.id === giveForm.product_id);
   const selectedReturnProduct = products?.find(p => p.id === returnForm.product_id);
@@ -356,10 +374,24 @@ export default function AdminClientDetailPage() {
       }
     }
 
+    // Confirm 13% discount once for the whole bulk
+    let applyDiscount = false;
+    if (bulkDiscount) {
+      const discounted = Math.round(bulkTotalAmount * (1 - CLIENT_DISCOUNT_RATE));
+      if (!confirm(`تطبيق خصم 13٪ على كل المنتجات؟\nقبل الخصم: ${formatPrice(bulkTotalAmount)}\nبعد الخصم: ${formatPrice(discounted)}`)) {
+        return;
+      }
+      applyDiscount = true;
+    }
+
     try {
       // Add all transactions
       for (const product of bulkProducts) {
-        const amount = product.quantity * product.unit_price;
+        const fullAmount = product.quantity * product.unit_price;
+        const amount = applyDiscount ? Math.round(fullAmount * (1 - CLIENT_DISCOUNT_RATE)) : fullAmount;
+        const notes = applyDiscount
+          ? `${product.notes ? product.notes + ' • ' : ''}خصم 13٪ (قبل الخصم: ${formatPrice(fullAmount)})`
+          : (product.notes || null);
         await createTx.mutateAsync({
           client_id: id!,
           transaction_type: 'product_given',
@@ -369,7 +401,7 @@ export default function AdminClientDetailPage() {
           unit_price: product.unit_price,
           amount,
           date: new Date().toISOString().split('T')[0],
-          notes: product.notes || null,
+          notes,
         });
 
         // Deduct stock
@@ -378,6 +410,21 @@ export default function AdminClientDetailPage() {
           .from('products')
           .update({ stock: Math.max(0, stock - product.quantity) })
           .eq('id', product.product_id);
+      }
+
+      // Print bon at full (undiscounted) prices
+      if (bulkPrint) {
+        printReceipt({
+          storeName: storeName || 'جزيرة الطبيعة',
+          logoUrl: storeLogo,
+          clientName: client?.name,
+          clientPhone: client?.phone || undefined,
+          items: bulkProducts.map(p => ({
+            name: `${p.product_name}${buildVariationLabel(p.selected_variations) ? ` (${buildVariationLabel(p.selected_variations)})` : ''}`,
+            quantity: p.quantity,
+            unitPrice: p.unit_price,
+          })),
+        });
       }
 
       toast.success(t('clients.bulkProductsSuccess'));
@@ -400,21 +447,42 @@ export default function AdminClientDetailPage() {
       return;
     }
     
-    const amount = giveForm.quantity * giveForm.unit_price;
+    const fullAmount = giveForm.quantity * giveForm.unit_price;
+    let amount = fullAmount;
+    let notes = giveForm.notes || null;
+    if (giveDiscount) {
+      const discounted = Math.round(fullAmount * (1 - CLIENT_DISCOUNT_RATE));
+      if (!confirm(`تطبيق خصم 13٪؟\nقبل الخصم: ${formatPrice(fullAmount)}\nبعد الخصم: ${formatPrice(discounted)}`)) {
+        return;
+      }
+      amount = discounted;
+      notes = `${giveForm.notes ? giveForm.notes + ' • ' : ''}خصم 13٪ (قبل الخصم: ${formatPrice(fullAmount)})`;
+    }
+    const productName = `${product.name}${buildVariationLabel(giveForm.selected_variations) ? ` (${buildVariationLabel(giveForm.selected_variations)})` : ''}`;
     try {
       await createTx.mutateAsync({
         client_id: id!,
         transaction_type: 'product_given',
         product_id: giveForm.product_id,
-        product_name: `${product.name}${buildVariationLabel(giveForm.selected_variations) ? ` (${buildVariationLabel(giveForm.selected_variations)})` : ''}`,
+        product_name: productName,
         quantity: giveForm.quantity,
         unit_price: giveForm.unit_price,
         amount,
         date: new Date().toISOString().split('T')[0],
-        notes: giveForm.notes || null,
+        notes,
       });
       // Deduct stock
       await supabase.from('products').update({ stock: Math.max(0, (product.stock ?? 0) - giveForm.quantity) }).eq('id', product.id);
+      // Print bon at full (undiscounted) price
+      if (givePrint) {
+        printReceipt({
+          storeName: storeName || 'جزيرة الطبيعة',
+          logoUrl: storeLogo,
+          clientName: client?.name,
+          clientPhone: client?.phone || undefined,
+          items: [{ name: productName, quantity: giveForm.quantity, unitPrice: giveForm.unit_price }],
+        });
+      }
       toast.success(t('clients.productGivenSuccess'));
       setGiveForm({ product_id: '', quantity: 1, unit_price: 0, notes: '', selected_variations: {} });
     } catch { toast.error(t('common.errorOccurred')); }
@@ -470,6 +538,17 @@ export default function AdminClientDetailPage() {
       await deleteTx.mutateAsync({ id: txId, clientId: id! });
       toast.success(t('common.deletedSuccess'));
     } catch { toast.error(t('common.errorOccurred')); }
+  };
+
+  const handleReprint = (tx: ClientTransaction) => {
+    printReceipt({
+      storeName: storeName || 'جزيرة الطبيعة',
+      logoUrl: storeLogo,
+      clientName: client?.name,
+      clientPhone: client?.phone || undefined,
+      date: tx.date,
+      items: [{ name: tx.product_name || '—', quantity: tx.quantity, unitPrice: tx.unit_price }],
+    });
   };
 
   if (isLoading) return <p className="p-4 font-cairo">{t('common.loading')}</p>;
@@ -603,6 +682,16 @@ export default function AdminClientDetailPage() {
               </div>
             </div>
             <div><Label className="font-cairo text-sm">{t('common.notes')}</Label><Input value={giveForm.notes} onChange={e => setGiveForm(f => ({ ...f, notes: e.target.value }))} className="font-cairo" /></div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5 pt-1">
+              <label className="flex items-center gap-2 font-cairo text-sm cursor-pointer">
+                <Checkbox checked={giveDiscount} onCheckedChange={v => setGiveDiscount(Boolean(v))} />
+                تطبيق خصم 13٪
+              </label>
+              <label className="flex items-center gap-2 font-cairo text-sm cursor-pointer">
+                <Checkbox checked={givePrint} onCheckedChange={v => setGivePrint(Boolean(v))} />
+                <Printer className="w-3.5 h-3.5" /> طباعة بون
+              </label>
+            </div>
             <Button onClick={handleGiveProduct} disabled={createTx.isPending} className="font-cairo gap-2 w-full sm:w-auto"><Package className="w-4 h-4" />{t('clients.giveProduct')}</Button>
           </CardContent></Card>
         </TabsContent>
@@ -788,6 +877,16 @@ export default function AdminClientDetailPage() {
             )}
 
             {/* Buttons */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5">
+              <label className="flex items-center gap-2 font-cairo text-sm cursor-pointer">
+                <Checkbox checked={bulkDiscount} onCheckedChange={v => setBulkDiscount(Boolean(v))} />
+                تطبيق خصم 13٪
+              </label>
+              <label className="flex items-center gap-2 font-cairo text-sm cursor-pointer">
+                <Checkbox checked={bulkPrint} onCheckedChange={v => setBulkPrint(Boolean(v))} />
+                <Printer className="w-3.5 h-3.5" /> طباعة بون
+              </label>
+            </div>
             <div className="flex gap-2 flex-col sm:flex-row">
               <Button onClick={handleBulkAddProducts} disabled={bulkProducts.length === 0 || createTx.isPending} className="font-cairo gap-2 flex-1 text-xs sm:text-sm">
                 <Plus className="w-4 h-4" />{t('clients.addSelectedProducts')}
@@ -882,9 +981,16 @@ export default function AdminClientDetailPage() {
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-cairo text-xs text-muted-foreground truncate">{tx.notes || '—'}</p>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive shrink-0" onClick={() => handleDeleteTx(tx.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {tx.transaction_type === 'product_given' && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleReprint(tx)}>
+                            <Printer className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteTx(tx.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -917,9 +1023,16 @@ export default function AdminClientDetailPage() {
                         <TableCell className="font-cairo font-bold text-sm">{formatPrice(tx.amount)}</TableCell>
                         <TableCell className="font-cairo text-xs text-muted-foreground max-w-[150px] truncate">{tx.notes || '—'}</TableCell>
                         <TableCell>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteTx(tx.id)}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {tx.transaction_type === 'product_given' && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleReprint(tx)}>
+                                <Printer className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteTx(tx.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

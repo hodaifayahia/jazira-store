@@ -44,6 +44,8 @@ export const ar: Record<string, string> = {
   'login.loading': 'جاري الدخول...',
   'login.error': 'خطأ',
   'login.invalidCredentials': 'بيانات الدخول غير صحيحة',
+  'offline.loginNotice': 'أنت غير متصل بالإنترنت. إذا سبق لك تسجيل الدخول من هذا الجهاز يمكنك المتابعة.',
+  'offline.loginUnavailable': 'لا يمكن تسجيل الدخول دون اتصال. يرجى الاتصال بالإنترنت أول مرة.',
 
   // ═══ Common ═══
   'common.save': 'حفظ',
